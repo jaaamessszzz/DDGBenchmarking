@@ -76,7 +76,7 @@ def parsePotapov():
 				}]
 			
 			Experiment["ExperimentalScores"] = [{
-				fn.Score				: parseFloat(line[26:35]),
+				fn.ddG				: parseFloat(line[26:35]),
 				fn.NumberOfMeasurements : int(line[36:41])
 				}]
 			
@@ -85,32 +85,32 @@ def parsePotapov():
 			Prediction[fn.ExperimentID] = ExperimentID
 			
 			Prediction[fn.ToolID] = CCPBSA_ID
-			Prediction[fn.Score] = parseFloat(line[41:51]) 
+			Prediction[fn.ddG] = parseFloat(line[41:51]) 
 			Prediction[fn.Description] = {"MutationUsedInEvaluatingTheMethod" : int(line[51:53]) == 1}
 			#insertPrediction(Prediction) #todo
 			
 			Prediction[fn.ToolID] = EGAD_ID
-			Prediction[fn.Score] = parseFloat(line[53:63]) 
+			Prediction[fn.ddG] = parseFloat(line[53:63]) 
 			Prediction[fn.Description] = {"MutationUsedInEvaluatingTheMethod" : int(line[63:65]) == 1}
 			#insertPrediction(Prediction) #todo 
 			
 			Prediction[fn.ToolID] = FoldX_ID
-			Prediction[fn.Score] = parseFloat(line[65:75]) 
+			Prediction[fn.ddG] = parseFloat(line[65:75]) 
 			Prediction[fn.Description] = {"MutationUsedInEvaluatingTheMethod" : int(line[75:77]) == 1}
 			#insertPrediction(Prediction) #todo
 
 			Prediction[fn.ToolID] = Hunter_ID
-			Prediction[fn.Score] = parseFloat(line[77:87]) 
+			Prediction[fn.ddG] = parseFloat(line[77:87]) 
 			Prediction[fn.Description] = {"MutationUsedInEvaluatingTheMethod" : int(line[87:89]) == 1}
 			#insertPrediction(Prediction) #todo
 
 			Prediction[fn.ToolID] = IMutant2_ID
-			Prediction[fn.Score] = parseFloat(line[89:99]) 
+			Prediction[fn.ddG] = parseFloat(line[89:99]) 
 			Prediction[fn.Description] = {"MutationUsedInEvaluatingTheMethod" : int(line[99:101]) == 1}
 			#insertPrediction(Prediction) #todo
 
 			Prediction[fn.ToolID] = Rosetta_ID
-			Prediction[fn.Score] = parseFloat(line[101:111]) 
+			Prediction[fn.ddG] = parseFloat(line[101:111]) 
 			Prediction[fn.Description] = {"MutationUsedInEvaluatingTheMethod" : int(line[111:113]) == 1}
 			#insertPrediction(Prediction) #todo
 					
@@ -132,6 +132,7 @@ def parseProTherm():
 	totalcount = 0
 	count = 0
 	MAX_NUMRES = 350
+	MAX_STANDARD_DEVIATION = 0.5
 	chains = {}
 	singleErrors = 0
 	
@@ -195,9 +196,6 @@ def parseProTherm():
 				print("Error processing chain: ID %d, %s" %  (ID, record["MUTATED_CHAIN"]))
 				store = False
 			
-			if ID == 5439:
-				print("y")
-			
 			# Parse mutation
 			mutationline = record["MUTATION"]
 			if len(mutationline) == 3:
@@ -245,6 +243,10 @@ def parseProTherm():
 				Structure = {fn.PDB_ID : pdbid} 
 				#insertStructure(Structure, pdbIDs) # todo
 				
+				# NOTE: THIS IS A PATCH FOR BOTH BAD AND MISMATCHED DATA IN ProTherm 
+				if pdbid in ["1CSP", "2LZM"]:
+					chainID = "A"
+					
 				Experiment = {
 					fn.Structure	: pdbid,
 					fn.Mutant		: mutant,
@@ -264,30 +266,88 @@ def parseProTherm():
 					}]
 				
 				Experiment["ExperimentalScores"] = [{
-					fn.Score				: ddG,
+					fn.ddG					: ddG,
 					fn.NumberOfMeasurements : 1
 					}]
 				
 									
 				# All necessary information is present. Store the record.
-				mutationID = "%s-%s%d%s" % (pdbid, WildTypeAA, ResidueID, MutantAA)
+				mutationID = "%s-%s-%s%d%s" % (pdbid, chainID, WildTypeAA, ResidueID, MutantAA)
+				if experiments.get(mutationID):
+					for e in experiments[mutationID]:
+						set1 = set([k[fn.Chain] for k in e["ExperimentChains"]])
+						set2 = set([k[fn.Chain] for k in Experiment["ExperimentChains"]])
+						if set1.difference(set2):
+							
+							print(record["LENGTH"][0])
+							print(Experiment)
+							print(e)
+							print(pdbid)
 				experiments[mutationID] = experiments.get(mutationID) or [] 
 				experiments[mutationID].append(Experiment)
 				count += 1
 				newlist.append(ID)
 		else:
 			break	
-	
-	#print(experiments)
+
+	# Exclude experiments with high standard deviation #todo	
+	highvariancecount = 0
+	for mutation, experimentalResults in experiments.iteritems():
+		n = len(experimentalResults)
+		if n > 1:
+			n = float(n)
+			sum = 0
+			for experiment in experimentalResults:
+				sum += experiment["ExperimentalScores"][0]["ddG"]
+			mean = sum / n
+			squaredsum = 0
+			for experiment in experimentalResults:
+				diff = (experiment["ExperimentalScores"][0]["ddG"] - mean)
+				squaredsum += diff * diff
+			stddev = math.sqrt(squaredsum / n)
+			if stddev > MAX_STANDARD_DEVIATION:
+				highvariancecount += 1
+				#print(mutation)
+				#print("\tNumber of results: %d" % n) #result["ddG"])
+				#print("\tStandard deviation: %0.2f" % stddev) #result["ddG"])
+			else:
+				Experiment = experimentalResults[0]
+				# todo: We should sanity-check here and make sure all common fields are equal 
+				if False:
+					Experiment = {
+						fn.Structure	: pdbid,
+						fn.Mutant		: None,
+						fn.Source		: "Potapov",
+						fn.SourceID		: int(line[0:4])
+					}	
+					
+					Experiment["Mutations"] = [{
+						fn.Chain 		: chainID,
+						fn.WildTypeAA	: line[14],
+						fn.MutantAA		: line[19],
+						fn.ResidueID	: int(line[20:25])
+						}]
+					
+					Experiment["ExperimentChains"] = [{
+						fn.Chain		: chainID
+						}]
+				
+				Experiment["ExperimentalScores"] = [{
+					fn.ddG					: mean, # Store the mean of all measurements
+					fn.NumberOfMeasurements : int(n)
+					}]
+				#ExperimentID = insertExperiment(Experiment) #todo
+			
+		elif n == 1:
+			Experiment = experimentalResults[0]
+			#ExperimentID = insertExperiment(Experiment) #todo
+			
 	
 	print("")
 	print("Number of mutations: %d" % totalcount)
 	print("Number of acceptable mutations: %d" % count)
 	print("Number of unique mutations: %d" % len(experiments))
 	print("Number of potentially correctable single errors: %d" % singleErrors)
-	
-	#print("Number of mutations with high variance: %d" % highvariancecount)
-	
 	
 	PDBIDs = [id[0:4] for id in experiments.keys()]
 	pd = {}
@@ -307,156 +367,15 @@ def parseProTherm():
 			pass
 			#print(i, v[i])
 	
+	print("Number of mutations with standard deviation > %0.2f: %d" % (MAX_STANDARD_DEVIATION, highvariancecount))
+
+	
+	
+	print("***\n\n")
 	#print("listOfNoLengths",listOfNoLengths)
 	F = open("PDBIDs.txt", "w")
 	F.write(join(PDBIDs, "\n"))
 	F.close()
-	
-	
-	
-	ID = None
-	mutation = {}
-	
-	listOfNoIDs = []
-	listOfNoLengths = []
-	mutantProcessingErrors = []
-	ddGProcessingErrors = []
-	chainProcessingErrors = []
-	
-	mutations = {}
-	experiments = {}
-	totalcount = 0
-	count = 0
-	MAX_NUMRES = 350
-	chains = {}
-	# Get all 
-	oldlist = []
-	F = open(protherm)
-	totalcount = 0
-	count = 0
-	for line in (F.read().split("\n") + ["NO. 0"]):
-		if line and line[0] != ' ':
-			line = line.split()
-			if line[0] == "NO.":
-				totalcount += 1	
-				if ID:
-					store = True
-					if not (mutation.get("PDB_ID")):# or mutation.get("PIR_ID") or mutation.get("SWISSPROT_IDID")):
-						listOfNoIDs.append(mutation["ID"])
-						store = False
-					if not mutation.get("ProteinLength"):
-						listOfNoLengths.append(ID)
-						store = False
-					if not(mutation.get("ProteinLength")) or mutation["ProteinLength"] > MAX_NUMRES:
-						store = False
-					if not mutation.get(fn.ResidueID):
-						store = False
-					if (mutation.get("ddG") == None):
-						store = False
-					if not mutation.get("chain"):
-						store = False
-						
-					if store:
-						chains[mutation["chain"]] = True
-						#print(mutation)
-						structureID = mutation.get("PDB_ID") or mutation.get("PIR_ID") or mutation.get("SWISSPROT_ID")
-						mutationID = "%s-%s%d%s" % (structureID, mutation[fn.WildTypeAA], mutation[fn.ResidueID], mutation[fn.MutantAA])
-						mutations[mutationID] = mutations.get(mutationID) or [] 
-						mutations[mutationID].append(mutation)
-						#if structureID.lower() == "2ci2":
-						#	print(mutations[mutationID])
-						count += 1
-						oldlist.append(ID)
-	
-				ID = int(line[1])
-				mutation = {"ID" : ID}
-			if len(line) > 1:
-				if line[0] == "PDB_wild":
-					mutation["PDB_ID"] = line[1]
-				elif line[0] == "ddG":
-					try:
-						mutation["ddG"] = float(line[1])
-					except:
-						idx = line[1].find("kJ/mol")
-						if idx != -1:
-							try:
-								mutation["ddG"] = float(line[1][0:idx])
-							except:
-								ddGProcessingErrors.append("Error processing ddG: ID %d, %s" % (ID, line))
-						else:
-							ddGProcessingErrors.append("Error processing ddG: ID %d, %s" % (ID, line)) 
- 
-				elif line[0] == "PIR_ID":
-					mutation["PIR_ID"] = line[1]
-				elif line[0] == "SWISSPROT_ID":
-					mutation["SWISSPROT_ID"] = join(line[1:], " ")
-				elif line[0] == "MUTATION":
-					if len(line) == 4:
-						try:
-							mutation[fn.ResidueID] = int(line[2])
-							mutation[fn.WildTypeAA] = line[1]
-							mutation[fn.MutantAA] = line[3]
-						except:
-							mutantProcessingErrors.append("Error processing mutation: ID %d, %s" % (ID, line)) 
-				elif line[0] == "MUTATED_CHAIN":
-					if not(len(line[1]) > 1 or len(line) > 2):
-						mutation["chain"] = line[1]
-					else:
-						chainProcessingErrors.append("Error processing chain: ID %d, %s" %  (ID, line))
-	
-			if line[0] == "LENGTH":
-				if len(line) > 1:
-					mutation["ProteinLength"] = int(line[1])
-	
-	F.close()
-	print("")
-	print("Number of mutations: %d" % totalcount)
-	print("Number of acceptable mutations: %d" % count)
-	print("Number of unique mutations: %d" % len(mutations))
-	#print("Number of mutations with high variance: %d" % highvariancecount)
-	
-	
-	PDBIDs = [id[0:4] for id in mutations.keys()]
-	pd = {}
-	for x in PDBIDs:
-		pd[x] = True
-	print("Number of unique PDB IDs: %d" % len(pd))
-	print("Chain IDs: %s" % join(sorted(chains.keys()), ", "))
-	
-	#print("listOfNoIDs",listOfNoIDs)
-	errors = mutantProcessingErrors + ddGProcessingErrors + chainProcessingErrors 
-	for e in errors:
-		print(e)
-	
-	for k,v in experiments.iteritems():
-		#print(k)
-		for i in range(len(v)):
-			pass
-			#print(i, v[i])
-			
-	print("In old, not in new")
-	print(set(oldlist).difference(newlist))
-	print("In new, not in old")
-	print(set(newlist).difference(oldlist))
-	return
-	highvariancecount = 0
-	for mutation, results in mutations.iteritems():
-		n = float(len(results))
-		if n > 1.1:
-			print(mutation)
-			sum = 0
-			for result in results:
-				sum += result["ddG"]
-			mean = sum / n
-			squaredsum = 0
-			for result in results:
-				diff = (result["ddG"] - mean)
-				squaredsum += diff * diff
-			stddev = math.sqrt(squaredsum / n)
-			if stddev > 0.5:
-				highvariancecount += 1
-				print("\tNumber of results: %d" % n) #result["ddG"])
-				print("\tStandard deviation: %0.2f" % stddev) #result["ddG"])
 	
 
 def parseUniProt():
