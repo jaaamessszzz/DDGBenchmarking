@@ -19,10 +19,9 @@ fn = db.FieldNames()
 
 AllPDBIDs = {}
 
-def downloadPDBs(pdbIDlist):
-	for pdbID in pdbIDlist:
-		db.downloadPDB(pdbID)
-	pass
+MAX_RESOLUTION = 2.0
+MAX_NUMRES_PROTHERM = 350
+MAX_STANDARD_DEVIATION = 1.0
 
 def parseFloat(str):
 	if str.strip() == "NaN":
@@ -72,7 +71,7 @@ def pdb2sequentialAtoms(pdbID, chainsToParse = []):
 	F.close()
 	return resmap
 	
-def convertSensDatabase(ddGdb):
+def convertSensDataset():
 	'''This function is used to convert Sen's spreadsheet to a uniform spreadsheet.'''
 	mutantsfile = os.path.join("rawdata", "sens-complex-dataset-exp-ddg.csv")
 	outputfile = os.path.join("rawdata",  "sens-complex-dataset-exp-ddg-reformatted.csv")
@@ -342,10 +341,13 @@ def convertSensDatabase(ddGdb):
 				outfile.write(newline + "\n")
 			elif interface =="Rnase-Ang":
 				chains = "B,D"
+				print(line)
 				wt = line[3].strip()
 				if len(wt) == 1:
-					resid = int(line[4][1:-1])
-					mut = line[5].strip()
+					mutres = line[6].split("_")
+					print(mutres)
+					resid = int(mutres[0])
+					mut = mutres[1].strip()
 					
 					#Sanity check
 					assert(resmap[resid][1] == wt)
@@ -482,10 +484,9 @@ def convertSensDatabase(ddGdb):
 		else:
 			assert(not(outcontents[i]))
 			
-				
+def parseSensDataset(ddGdb):
+	print("Parsing Sen's dataset")
 	
-
-def parseSensDatabase(ddGdb):
 	PredictionSet = "SenLiuComplexDatasetExp"
 	mutantsfile = os.path.join("rawdata", "sens-complex-dataset-exp-ddg-reformatted.csv")
 	headers = ['Interface', 'Structure', 'Mutant' ,'Chains', 'Mutations', 'ddGexp']
@@ -510,7 +511,7 @@ def parseSensDatabase(ddGdb):
 			Structure = PDBStructure(pdbID)
 			Structure.commit(ddGdb)
 			
-			Experiment = ExperimentSet(pdbID, "SenLiu", interface = interface)
+			Experiment = ExperimentSet(pdbID, "Sen", interface = interface)
 			if mutant:
 				Experiment.addMutant(mutant)
 			for mutation in mutations:
@@ -529,6 +530,8 @@ def parseSensDatabase(ddGdb):
 	F.close()
 	
 def parsePotapov(ddGdb):
+	print("Parsing Potapov")
+	
 	PredictionSet = "Potapov-2009"
 	
 	CCPBSA_ID = None or 1 # todo
@@ -588,6 +591,7 @@ def parsePotapov(ddGdb):
 	F.close()
 
 def parseProTherm(ddGdb):
+	print("Parsing ProTherm")
 	ID = None
 	mutation = {}
 	
@@ -600,10 +604,127 @@ def parseProTherm(ddGdb):
 	experiments = {}
 	totalcount = 0
 	count = 0
-	MAX_NUMRES = 350
-	MAX_STANDARD_DEVIATION = 0.5
 	chains = {}
-	singleErrors = 0
+	singleErrors = {} 
+	patchthis = {}
+	patchPDBs = {}
+	
+	# NOTE: THESE ARE PATCHES FOR MISSING DATA IN ProTherm
+	s = patch = {
+		2396 : {'PDB_wild' : None}, # -> 2405. P08505 No related PDB entry. 
+		2397 : {'PDB_wild' : None}, #P08505
+		2398 : {'PDB_wild' : None}, #P08505
+		2400 : {'PDB_wild' : None}, #P08505
+		2401 : {'PDB_wild' : None}, #P08505
+		2403 : {'PDB_wild' : None}, #P08505
+		2404 : {'PDB_wild' : None}, #P08505
+		2405 : {'PDB_wild' : None}, #P08505
+		4216 : {'PDB_wild' : None}, #P00912 No related PDB entry.
+		8588 : {'LENGTH' : 104}, #1ONC
+		8589 : {'LENGTH' : 104}, #1ONC
+		8590 : {'LENGTH' : 104}, #1ONC
+		8591 : {'LENGTH' : 104}, #1ONC
+		8592 : {'LENGTH' : 104}, #1ONC
+		8593 : {'LENGTH' : 104}, #1ONC
+		8594 : {'LENGTH' : 104}, #1ONC
+		8595 : {'LENGTH' : 104}, #1ONC
+		8596 : {'LENGTH' : 104}, #1ONC
+		14229 : {'PDB_wild' : None}, # -> 14233. P08821 No related PDB entry.
+		14230 : {'PDB_wild' : None}, #P08821
+		14231 : {'PDB_wild' : None}, #P08821
+		14232 : {'PDB_wild' : None}, #P08821
+		14233 : {'PDB_wild' : None}, #P08821
+		14978 : {'LENGTH' : 238}, #1CHK
+		14979 : {'LENGTH' : 238}, #1CHK
+		14980 : {'LENGTH' : 238}, #1CHK
+		14981 : {'LENGTH' : 238}, #1CHK
+		14987 : {'LENGTH' : 238}, #1CHK
+		14988 : {'LENGTH' : 238}, #1CHK
+		14989 : {'LENGTH' : 238}, #1CHK
+		14990 : {'LENGTH' : 238}, #1CHK
+		14996 : {'LENGTH' : 238}, #1CHK
+		14997 : {'LENGTH' : 238}, #1CHK
+		14998 : {'LENGTH' : 238}, #1CHK
+		14999 : {'LENGTH' : 238}, #1CHK
+		16597 : {'LENGTH' : 435}, #1KFW
+		16598 : {'LENGTH' : 435}, #1KFW
+		16599 : {'LENGTH' : 435}, #1KFW
+		16600 : {'LENGTH' : 435}, #1KFW
+		19423 : {'MUTATED_CHAIN' : None},# -> 19538. 1OTR A33 - I cannot determine what chain this is
+		19424 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19425 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19426 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19427 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19428 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19429 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19430 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19431 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19432 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19433 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19434 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19449 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19450 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19451 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19452 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19453 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19454 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19455 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19456 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19457 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19458 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19459 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19460 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19475 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19476 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19477 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19478 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19479 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19480 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19481 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19482 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19483 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19484 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19485 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19486 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19501 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19502 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19503 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19504 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19505 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19506 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19507 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19508 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19509 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19510 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19511 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19512 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19527 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19528 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19529 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19530 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19531 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19532 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19533 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19534 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19535 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19536 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19537 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		19538 : {'MUTATED_CHAIN' : None},# 1OTR A33
+		21040 : {'MUTATED_CHAIN' : None},# -> 21332. 1CSP Cannot determine what the mutation is
+		21041 : {'MUTATED_CHAIN' : None},# 1CSP
+		21097 : {'MUTATED_CHAIN' : None},# 1CSP
+		21098 : {'MUTATED_CHAIN' : None},# 1CSP
+		21157 : {'MUTATED_CHAIN' : None},# 1CSP
+		21158 : {'MUTATED_CHAIN' : None},# 1CSP
+		21215 : {'MUTATED_CHAIN' : None},# 1CSP
+		21216 : {'MUTATED_CHAIN' : None},# 1CSP
+		21273 : {'MUTATED_CHAIN' : None},# 1CSP
+		21274 : {'MUTATED_CHAIN' : None},# 1CSP
+		21331 : {'MUTATED_CHAIN' : None},# 1CSP
+		21332 : {'MUTATED_CHAIN' : None},# 1CSP
+	}
+
+	
 	
 	# These fields of ProTherm records cannot be empty for our purposes
 	requiredFields = ["NO.", "PDB_wild", "LENGTH", "ddG", "MUTATION", "MUTATED_CHAIN"]
@@ -617,8 +738,9 @@ def parseProTherm(ddGdb):
 		line = F.readline()
 		while line and not(line.startswith("//")):
 			if line[0] != "*" and line[0] != " ":
-				#record.append(line)
 				line = line.split()
+				if not singleErrors.get(line[0]):
+					singleErrors[line[0]] = 0
 				if len(line) > 1:
 					record[line[0]] = line[1:]
 				else:
@@ -641,20 +763,39 @@ def parseProTherm(ddGdb):
 				if len(missingFields) == 1:
 					if record["MUTATION"][0] and record["MUTATION"][0] != "wild" and missingFields[0] != "ddG":
 						if not record["MUTATED_CHAIN"]:
-							print("Error processing chain: ID %d, no chain" %  (ID))
+							if not patch.get(ID):
+								print("Error processing chain: ID %d, no chain" %  (ID))
+								singleErrors["MUTATED_CHAIN"] += 1
+								patchthis[ID] = "MUTATED_CHAIN %s-%s" % (record.get("PDB_wild"), record.get("MUTATION")) 
+							elif patch[ID]["MUTATED_CHAIN"]:
+								record["MUTATED_CHAIN"] = [patch[ID]["MUTATED_CHAIN"]]
+								store = True
 						elif not record["LENGTH"]:
-							print("Error processing length: ID %d, no length" %  (ID))
+							if not patch.get(ID):
+								print("Error processing length: ID %d, no length" %  (ID))
+								singleErrors["LENGTH"] += 1
+								patchthis[ID] = "LENGTH %s" % record.get("PDB_wild") 
+							elif patch[ID]["LENGTH"]:
+								record["LENGTH"] = [patch[ID]["LENGTH"]]
+								store = True
 						elif not record["PDB_wild"]:
-							print("Error processing PDB ID: ID %d, no PDB ID" %  (ID))
+							if not patch.get(ID):
+								print("Error processing PDB ID: ID %d, no PDB ID" %  (ID))
+								singleErrors["PDB_wild"] += 1
+								patchthis[ID] = "PDB_wild: %s" % record.get("SWISSPROT_ID") 
+							elif patch[ID]["PDB_wild"]:
+								record["PDB_wild"] = [patch[ID]["PDB_wild"]]
+								store = True
 						else:
 							print("Error processing structure: ID %d, no %s " % (ID, missingFields[0]))
-						singleErrors += 1
-				continue
-			else:
-				# Only allow proteins with <= MAX_NUMRES residues
-				if int(record["LENGTH"][0]) > MAX_NUMRES:
+							singleErrors[missingFields[0]] += 1
+				if not store:
 					continue
-			
+		
+			# Only allow proteins with <= MAX_NUMRES_PROTHERM residues
+			if int(record["LENGTH"][0]) > MAX_NUMRES_PROTHERM:
+				continue
+		
 			pdbID = record["PDB_wild"][0].upper()
 			
 			# Parse chain
@@ -730,24 +871,6 @@ def parseProTherm(ddGdb):
 				if ID in [13535]:
 					mutantlist.remove("166H")
 				
-				s = '''
-				Number of mutations: 23359
-				Number of acceptable mutations: 2661
-				Number of unique mutations: 1632
-				Number of potentially correctable single errors: 111
-				Number of unique PDB IDs: 63
-				Chain IDs: -, 1, A, B, I, _
-				Number of mutations with standard deviation > 0.50: 111
-'''
-				s=''' <= 2.0 resolution
-				Number of mutations: 23359
-				Number of acceptable mutations: 1814
-				Number of unique mutations: 1201
-				Number of potentially correctable single errors: 111
-				Number of unique PDB IDs: 45
-				Chain IDs: -, 1, A, B, I, _
-				Number of mutations with standard deviation > 0.50: 79
-				'''
 				Structure = PDBStructure(pdbID, protein = protein, source = source)
 				Structure.commit(ddGdb)
 				
@@ -783,8 +906,7 @@ def parseProTherm(ddGdb):
 			highvariancecount += 1
 
 	for mutationID, e in experiments.iteritems():
-		if e.isEligible():
-			e.commit(ddGdb)
+		e.commit(ddGdb)
 	
 	PDBIDs = [id[0:4] for id in experiments.keys()]
 	pd = {}
@@ -796,32 +918,28 @@ def parseProTherm(ddGdb):
 	print("Number of mutations: %d" % totalcount)
 	print("Number of acceptable mutations: %d" % count)
 	print("Number of unique mutations: %d" % len(experiments))
-	print("Number of potentially correctable single errors: %d" % singleErrors)
+	se = 0
+	for k, count in singleErrors.iteritems():
+		se += count
+	print("Number of potentially correctable single errors: %d" % se)
+	for k, count in singleErrors.iteritems():
+		if k in requiredFields and count != 0:
+			print("\t%s: %d" % (k, count))
 	print("Number of unique PDB IDs: %d" % len(pd))
 	print("Chain IDs: %s" % join(sorted(chains.keys()), ", "))
 	print("Number of mutations with standard deviation > %0.2f: %d" % (MAX_STANDARD_DEVIATION, highvariancecount))
-
+	
+	if patchthis:
+		print("patch = {")
+		for id, type in sorted(patchthis.iteritems()):
+			print("%d : {'%s' : ''}," % (id, type))
+		print("}")
+	
 	#print("listOfNoIDs",listOfNoIDs)
 	errors = mutantProcessingErrors + ddGProcessingErrors + chainProcessingErrors 
 	for e in errors:
 		print(e)
 		
-
-def parseUniProt(ddGdb):
-	uniprot = os.path.join("rawdata", "uniprotmapping.csv")
-	F = open(uniprot)
-	lines = F.read().split("\n")[1:]
-	F.close()
-	
-	mapping = {}
-	for line in lines:
-		PDBID, ID = line.split("\t")
-		#print(PDBID, ID)
-		if mapping.get(ID):
-			print("%s -> %s, %s -> %s" % ( mapping[ID], ID, PDBID, ID))
-		mapping[ID] = PDBID
-	print(len(mapping.keys()))
-
 def dumpPDBIDs():
 	F = open("PDBIDs.txt", "w")
 	for id in AllPDBIDs.keys():
@@ -831,16 +949,45 @@ def dumpPDBIDs():
 	F.write(join(pdbids, "\n"))
 	F.close()
 
-def parseRawData():
-	ddGdb = db.ddGDatabase()
-	parseSensDatabase(ddGdb)
+def parseRawData(ddGdb):
+	parseSensDataset(ddGdb)
 	parsePotapov(ddGdb)
-	#parseUniProt(ddGdb)
 	parseProTherm(ddGdb)
 	dumpPDBIDs()
+		
+# MySQL 5.0 has an inefficient stored procedure implementation for non-persistent connections
+# so we will define most SQL queries here.
+SQLQueries = {
+	"SmallToLarge"				:	'SELECT ExperimentID, Structure, Source, Chain, ResidueID, WildtypeAA, MutantAA, wildtype.Size, mutant.Size FROM Experiment INNER JOIN ExperimentMutation ON ID=ExperimentID INNER JOIN AminoAcid as wildtype ON WildtypeAA = wildtype.Code INNER JOIN AminoAcid as mutant ON MutantAA = mutant.Code WHERE wildtype.Size="small" AND mutant.Size="large";',
+	"LargeToSmall"				:	'SELECT ExperimentID, Structure, Source, Chain, ResidueID, WildtypeAA, MutantAA, wildtype.Size, mutant.Size FROM Experiment INNER JOIN ExperimentMutation ON ID=ExperimentID INNER JOIN AminoAcid as wildtype ON WildtypeAA = wildtype.Code INNER JOIN AminoAcid as mutant ON MutantAA = mutant.Code WHERE wildtype.Size="large" AND mutant.Size="small";',
+	"SmallToSmall"				:	'SELECT ExperimentID, Structure, Source, Chain, ResidueID, WildtypeAA, MutantAA, wildtype.Size, mutant.Size FROM Experiment INNER JOIN ExperimentMutation ON ID=ExperimentID INNER JOIN AminoAcid as wildtype ON WildtypeAA = wildtype.Code INNER JOIN AminoAcid as mutant ON MutantAA = mutant.Code WHERE wildtype.Size="small" AND mutant.Size="small";',
+	"LargeToLarge"				:	'SELECT ExperimentID, Structure, Source, Chain, ResidueID, WildtypeAA, MutantAA, wildtype.Size, mutant.Size FROM Experiment INNER JOIN ExperimentMutation ON ID=ExperimentID INNER JOIN AminoAcid as wildtype ON WildtypeAA = wildtype.Code INNER JOIN AminoAcid as mutant ON MutantAA = mutant.Code WHERE wildtype.Size="large" AND mutant.Size="large";',
+	"ProThermWithinResolution"	:	'SELECT Experiment.*, Structure.Techniques, Structure.Resolution FROM Experiment INNER JOIN Structure ON Experiment.Structure = PDB_ID WHERE Experiment.Source = "ProTherm-2008-09-08-23581" AND Structure.Resolution <= %f;' % MAX_RESOLUTION,
+	"AllProTherm"				:	'SELECT Experiment.*, Structure.Techniques, Structure.Resolution FROM Experiment INNER JOIN Structure ON Experiment.Structure = PDB_ID WHERE Experiment.Source = "ProTherm-2008-09-08-23581";',
+	}
 	
 def main():
-	parseRawData()
+	
+	ddGdb = db.ddGDatabase()
+		
+	Within2A = ddGdb.execute(SQLQueries["ProThermWithinResolution"])
+	print(len(Within2A))
+	count = 0
+	for exp in Within2A:
+		if exp["Techniques"].find('X-RAY DIFFRACTION') != -1:
+			if ddGdb.getStandardDeviation(exp["ID"]) <= MAX_STANDARD_DEVIATION:
+				count += 1
+	print(count)  
+	
+	AllProTherm = ddGdb.execute(SQLQueries["AllProTherm"])
+	print(len(AllProTherm))
+	count = 0
+	for exp in AllProTherm:
+		if exp["Techniques"].find('X-RAY DIFFRACTION') != -1:
+			if ddGdb.getStandardDeviation(exp["ID"]) <= MAX_STANDARD_DEVIATION:
+				count += 1
+	print(count)  
+	
 	sys.exit(0)
 	#All results were produced with revision 32231 of rosetta, and revision 32257 of the rosetta database. 
 	commonstr = "in:file:s <INPUT_PDB> -resfile <RESFILE> -database <DATABASE> -ignore_unrecognized_res –in:file:fullatom –constraints::cst_file <CONSTRAINTS_FILE>"
@@ -975,4 +1122,5 @@ def main():
 	#'protocols[1] = "
 	
 	
-main() 
+if __name__ == "__main__":
+	main()
