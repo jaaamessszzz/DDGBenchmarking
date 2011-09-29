@@ -16,6 +16,7 @@
 sources = {
     "" : [],
     "pilot/liz" : ["fix_bb_monomer_ddg"],
+    "pilot/liz" : ["minimize_with_cst"],
 }
 
 include_path = [  ]

@@ -1,0 +1,2 @@
+convert_to_cst_file.sh is the version from Rosetta SVN revision 45037.
+minimize_with_cst.linuxgccrelease and fix_bb_monomer_ddg.linuxgccrelease are build from Rosetta SVN revision 32231.
