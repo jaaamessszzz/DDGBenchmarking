@@ -6,7 +6,7 @@
 ##         parallel computation of the results, and a script to run all of them
 ##
 ## NOTE: - for now, this is ignoring EX [ARO] flags given in the resfile
-##       - all mutations are independent, this script will not generate mutfiles for multi-site mutations
+##       - all mutations are considered independent, this script will not generate mutfiles for multi-site mutations
 ##
 ## author: Amelie Stein (amelie.stein@ucsf.edu)
 
@@ -44,6 +44,8 @@ def main():
 ## generate a script to run all the mutations in this resfile
         run_file_name = "run_mutations_from_"+resfile+".sh"
         run_file = open(run_file_name, "w")
+
+## also generate a mapping between the chain+seqres and the Rosetta position?
 
 ## later: also generate a script that runs all the evaluation commands -- TODO
         
@@ -86,7 +88,7 @@ def main():
             ## currently we can only handle PIKAA, others should probably be implemented eventually -- cf. http://www.rosettacommons.org/manuals/rosetta3_user_guide/file_resfiles.html
             #if line.find("PIKAA") != None:
             if "PIKAA" in line:
-                print "handling "+line ## debugging
+                #print "handling "+line ## debugging
                 [pos, chain, cmd, target_res_set] = line.split()
                 
             ## lookup matching Rosetta numbering and create a subdirectory for the position
@@ -106,51 +108,19 @@ def main():
                 os.popen('ln -s ../../'+ddG_protocol+' %s' % (pos_dir))
                 
                 wt_res = p.residue(rosetta_pos).name1() ## mutfiles need to know the wt residue
-                target_res_set.join(wt_res) ## we also need to generate structures for the WT to calculate the ddG
+                if wt_res not in target_res_set:
+                    target_res_set += wt_res ## we also need to generate structures for the WT to calculate the ddG
                 for target_res in target_res_set:
-                    mutfile = pos_dir+"/"+wt_res+str(rosetta_pos)+target_res
-                    print "trying to generate "+mutfile ## debugging
-                    write_mutfile(wt_res, rosetta_pos, target_res, mutfile)
-                    run_file.write('%s %s %s %s %s %s\n' % (run_cmd, ddG_protocol, pdb_id, rosetta_pos, constraints_file_name, target_res))
+                    mutfile = wt_res+str(rosetta_pos)+target_res+".mut"
+                    # print "trying to generate "+mutfile ## debugging
+                    write_mutfile(wt_res, rosetta_pos, target_res, pos_dir+"/"+mutfile)
+                    run_file.write('%s %s %s %s %s %s\n' % (run_cmd, ddG_protocol, pdb_id, rosetta_pos, constraints_file_name, mutfile))
                 #-
                 run_file.write('cd -\n')
 
         #--
         
-
-
         run_file.close()
-
-
-
-        ## os.popen('mkdir %s' % dir)
-        ## run_file = open(dir + '/../run_'+pdb_core+'.sh', 'w')
-        ## base_ref_dir = "../../"
-        ## cst_name = cst_file.split('/')[-1] ## only the file name -- we'll create a link to make it locally available
-        
-        ## for pos in positions:
-        ##         index = pos.split()[1]
-        ##         wt_res = pos.split()[0]  ## TODO
-        ##         subdirectory = dir+'/'+index
-        ##         local_subdir = pdb_core+'/'+index
-        ##         os.popen('mkdir '+subdirectory)
-        ##         ## consider cleaning up the directory to avoid artifacts from old runs
-        ##         os.popen('ln -s '+base_ref_dir+'/%s %s/%s.pdb' % (pdb_file,subdirectory, pdb_core)) ## links instead of copies save space, but they also mean that changes propagate immediately; also, it doesn't overwrite while cp would do so
-        ##         os.popen('ln -s '+base_ref_dir+protocol+' '+subdirectory+'\n') ## easier for local tests than copying in the runfile, and saves space -- requires fully qualified path!
-        ##         os.popen('ln -s '+base_ref_dir+cst_file+' '+subdirectory+'\n')
-        ##         os.popen('ln -s '+base_ref_dir+param_module+' '+subdirectory+'\n') ## Parameters.pm must be accessible -- or add library path? -- however, I think 'use lib' doesn't work with ~, and the path on the cluster system is different from the local path... 
-        ##         #run_file.write('ln -s '+protocol+' '+subdirectory+' .\n')
-        ##         #run_file.write('ln -s '+cst_file+' '+subdirectory+' .\n')
-        ##         run_file.write('cd '+local_subdir+'\n') # relative path, but should work better for switching between /home and /data
-        ##         run_file.write('echo %s %s\n' % (dir,index))
-        ##         run_file.write('qsub '+protocol+' %s %s %s\n' % (pdb_core,index, cst_name))
-        ##         run_file.write('cd '+base_ref_dir+'\n')
-        ##         for res in AA:
-        ##                 mut_file = open('%s/%s_%s_%s.mut' % (subdirectory,pdb_core,index,res), 'w')
-        ##                 mut_file.write('total 1\n1\n')
-        ##                 mut_file.write('%s %s %s\n' % (wt_res, index, res))
-        ##                 mut_file.close()
-
 
 if __name__ == "__main__":
         main()

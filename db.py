@@ -11,6 +11,7 @@ from datetime import datetime, date
 from string import join
 import math
 from httplib import HTTPConnection
+import getpass
 
 sqrt = math.sqrt
 DictCursor = MySQLdb.cursors.DictCursor
@@ -464,7 +465,13 @@ class Prediction(DBObject):
 class ddGDatabase(object):
 	
 	def __init__(self):
-		self.connection = MySQLdb.Connection(host = "kortemmelab.ucsf.edu", db = "ddG", user = "kortemmelab", passwd = "r2(#J}(K", port = 3306, unix_socket = "/var/lib/mysql/mysql.sock")
+		if os.path.exists("pw"):
+			F = open("pw")
+			passwd = F.read().strip()
+			F.close()
+		else:
+			passwd = getpass.getpass("Enter password to connect to MySQL database:")
+		self.connection = MySQLdb.Connection(host = "kortemmelab.ucsf.edu", db = "ddG", user = "kortemmelab", passwd = passwd, port = 3306, unix_socket = "/var/lib/mysql/mysql.sock")
 		self.numTries = 32
 		self.lastrowid = None
 
