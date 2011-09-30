@@ -1,0 +1,6 @@
+#!/bin/bash
+
+#gtar xvzf rosetta3.3_database.tgz
+#gtar xvzf rosetta3.3_source.tgz
+cd rosetta_source
+./scons.py bin mode=release extras=static
