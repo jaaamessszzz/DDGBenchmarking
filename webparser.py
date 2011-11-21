@@ -7,6 +7,8 @@ from string import join
 import math
 import re
 import db
+sys.path.insert(0, "common")
+import colortext
 
 ExperimentSet = db.ExperimentSet
 Prediction = db.Prediction
@@ -15,7 +17,7 @@ fn = db.FieldNames()
 
 AllPDBIDs = {}
 
-MAX_RESOLUTION = 2.0
+MAX_RESOLUTION = 2.1
 MAX_NUMRES_PROTHERM = 350
 MAX_STANDARD_DEVIATION = 1.0
 
@@ -232,13 +234,12 @@ def convertSensDataset():
 				chains = "A"
 				chain = 'A'
 				wt = line[3].strip()
+				assert(line[4].isdigit())
 				resid = int(line[4])
-				mut = line[5].strip()
-				
+				mut = line[6].strip().split("_")[1]
 				#Sanity check
 				assert(resmap[resid][1] == wt)
 				resid = resmap[resid][0]
-				
 				mutations = '%s-%s%s%s' % (chain, wt, resid, mut)
 				newline = "%s\t%s\t%s\t%s\t%s\t%f" % (interface, pdbID, mutant, chains, mutations, ddG)
 				#print(newline) 
@@ -333,11 +334,9 @@ def convertSensDataset():
 				outfile.write(newline + "\n")
 			elif interface =="Rnase-Ang":
 				chains = "B,D"
-				print(line)
 				wt = line[3].strip()
 				if len(wt) == 1:
 					mutres = line[6].split("_")
-					print(mutres)
 					resid = int(mutres[0])
 					mut = mutres[1].strip()
 					
@@ -477,15 +476,19 @@ def convertSensDataset():
 			assert(not(outcontents[i]))
 			
 def parseSensDataset(ddGdb):
-	print("Parsing Sen's dataset")
+	colortext.message("Parsing Sen's dataset")
 	
-	PredictionSet = "SenLiuComplexDatasetExp"
 	mutantsfile = os.path.join("rawdata", "sens-complex-dataset-exp-ddg-reformatted.csv")
 	headers = ['Interface', 'Structure', 'Mutant' ,'Chains', 'Mutations', 'ddGexp']
 	recordlength = len(headers)
 	F = open(mutantsfile)
 	linecount = 1
+	colortext.printf("|*********************|")			#Progress meter
 	for line in F.read().split("\n")[1:]:
+		if linecount % 16 == 0:
+			colortext.write(".", "lightgreen")
+			colortext.flush()
+		
 		line = line.split("\t")
 		length = len(line)
 		assert((length == 1 and not(line[0])) or (length == recordlength))
@@ -503,7 +506,7 @@ def parseSensDataset(ddGdb):
 			Structure = PDBStructure(pdbID)
 			Structure.commit(ddGdb)
 			
-			Experiment = ExperimentSet(pdbID, "Sen", interface = interface)
+			Experiment = ExperimentSet(pdbID, "SenLiu-ComplexExperimentalDataset", interface = interface)
 			if mutant:
 				Experiment.addMutant(mutant)
 			for mutation in mutations:
@@ -511,79 +514,126 @@ def parseSensDataset(ddGdb):
 				wildtypeAA = mutation[2]
 				residueID = mutation[3:-1]
 				mutantAA = mutation[-1]
-				Experiment.addMutation(chainID, residueID, wildtypeAA, mutantAA)
+				Experiment.addMutation(chainID, residueID, wildtypeAA, mutantAA, ID = linecount)
 			for chainID in chainIDs:
 				 Experiment.addChain(chainID)
-			Experiment.addExperimentalScore(linecount, ddG)
-			Experiment.commit(ddGdb)
+			Experiment.addExperimentalScore(linecount, ddG, pdbID)
+			ExperimentID = Experiment.commit(ddGdb)
 			
-			ExperimentID = 0 #None#Experiment.getDBID() todo
 			linecount += 1
+	colortext.printf("")
 	F.close()
 	
 def parsePotapov(ddGdb):
-	print("Parsing Potapov")
+	colortext.message("Parsing Potapov")
 	
 	PredictionSet = "Potapov-2009"
 	
-	CCPBSA_ID = None or 1 # todo
-	EGAD_ID =  None or 1 # todo
-	FoldX_ID =  None or 1 # todo
-	Hunter_ID = None or 1 # todo
-	IMutant2_ID = None or 1 # todo
-	Rosetta_ID =  None  or 1 # todo
+	CCPBSA_ID = ddGdb.execute("SELECT ID FROM Tool WHERE Name='CC/PBSA' AND Version='Unknown';")
+	assert(len(CCPBSA_ID) == 1)
+	CCPBSA_ID = CCPBSA_ID[0]["ID"]
 	
-	#todo: Get indices for tools above
-	#todo: Only add data if none is in db for Potapov-2009
-
-	mutantsfile = os.path.join("rawdata", "mutants.txt")
-	F = open(mutantsfile)
-	for line in F.read().split("\n"):
-		if line.strip() and line[0] != '#':
+	EGAD_ID = ddGdb.execute("SELECT ID FROM Tool WHERE Name='EGAD' AND Version='Unknown';")
+	assert(len(EGAD_ID) == 1)
+	EGAD_ID = EGAD_ID[0]["ID"]
+	
+	FoldX_ID = ddGdb.execute("SELECT ID FROM Tool WHERE Name='FoldX' AND Version='3.0';")
+	assert(len(FoldX_ID) == 1)
+	FoldX_ID = FoldX_ID[0]["ID"]
+	
+	Hunter_ID = ddGdb.execute("SELECT ID FROM Tool WHERE Name='Hunter' AND Version='Unknown';")
+	assert(len(Hunter_ID) == 1)
+	Hunter_ID = Hunter_ID[0]["ID"]
+	
+	IMutant2_ID = ddGdb.execute("SELECT ID FROM Tool WHERE Name='IMutant2' AND Version='2.0';")
+	assert(len(IMutant2_ID) == 1)
+	IMutant2_ID = IMutant2_ID[0]["ID"]
+	
+	Rosetta_ID = ddGdb.execute("SELECT ID FROM Tool WHERE Name='Rosetta' AND Version='2.2.0';")
+	assert(len(Rosetta_ID) == 1)
+	Rosetta_ID = Rosetta_ID[0]["ID"]
+	
+	results = ddGdb.execute(("SELECT * FROM Experiment WHERE %s" % fn.Source) + "=%s;", parameters = (PredictionSet,))
+	if len(results) != 10:
+		mutantsfile = os.path.join("rawdata", "mutants.txt")
+		F = open(mutantsfile)
+		
+		colortext.printf("|*********************|")			#Progress meter
+		count = 1
+		for line in F.read().split("\n"):
+			if count % 93 == 0:
+				colortext.write(".", "lightgreen")
+				colortext.flush()
+			count += 1
 			
-			chainID = line[9]
-			pdbID = line[5:9].upper()
-			AllPDBIDs[pdbID] = True
-			
-			Structure = PDBStructure(pdbID)
-			Structure.commit(ddGdb)
-			
-			Experiment = ExperimentSet(pdbID, "Potapov")
-			Experiment.addMutation(chainID, int(line[20:25]), line[14], line[19])
-			Experiment.addChain(chainID)
-			Experiment.addExperimentalScore(int(line[0:4]), parseFloat(line[26:35]), int(line[36:41]))
-			Experiment.commit(ddGdb)
-			
-			ExperimentID = 0 #None#Experiment.getDBID() todo
-			
-			p = Prediction(ExperimentID, PredictionSet, CCPBSA_ID, parseFloat(line[41:51]))
-			p.setOptional(Description = {"MutationUsedInEvaluatingTheMethod" : int(line[51:53]) == 1})
-			p.commit(ddGdb)
-			
-			p = Prediction(ExperimentID, PredictionSet, EGAD_ID, parseFloat(line[53:63]))
-			p.setOptional(Description = {"MutationUsedInEvaluatingTheMethod" : int(line[63:65]) == 1})
-			p.commit(ddGdb)
-			
-			p = Prediction(ExperimentID, PredictionSet, FoldX_ID, parseFloat(line[65:75]))
-			p.setOptional(Description = {"MutationUsedInEvaluatingTheMethod" : int(line[75:77]) == 1})
-			p.commit(ddGdb)
-			
-			p = Prediction(ExperimentID, PredictionSet, Hunter_ID, parseFloat(line[77:87]))
-			p.setOptional(Description = {"MutationUsedInEvaluatingTheMethod" : int(line[87:89]) == 1})
-			p.commit(ddGdb)
-			
-			p = Prediction(ExperimentID, PredictionSet, IMutant2_ID, parseFloat(line[89:99]))
-			p.setOptional(Description = {"MutationUsedInEvaluatingTheMethod" : int(line[99:101]) == 1})
-			p.commit(ddGdb)
-			
-			p = Prediction(ExperimentID, PredictionSet, Rosetta_ID, parseFloat(line[101:111]))
-			p.setOptional(Description = {"MutationUsedInEvaluatingTheMethod" : int(line[111:113]) == 1})
-			p.commit(ddGdb)
-			
-	F.close()
+			if line.strip() and line[0] != '#':
+				chainID = line[9]
+				pdbID = line[5:9].upper()
+				AllPDBIDs[pdbID] = True
+				
+				Structure = PDBStructure(pdbID)
+				Structure.commit(ddGdb)
+				
+				PotapovID = int(line[0:4])
+				Experiment = ExperimentSet(pdbID, "Potapov-2009")
+				
+				Experiment.addMutation(chainID, line[20:26], line[14], line[19], ID = PotapovID) # Include the insertion code
+				
+				Experiment.addChain(chainID)
+				Experiment.addExperimentalScore(PotapovID, parseFloat(line[26:35]), pdbID, numMeasurements = int(line[36:41]))
+				ExperimentID = Experiment.commit(ddGdb)
+				
+				score = parseFloat(line[41:51]) 
+				if score:
+					score = pickle.dumps({"type" : "simple", "data" : score})
+					p = Prediction(ExperimentID, PredictionSet, CCPBSA_ID, score, 'done')
+					p.setOptional(Description = {"MutationUsedInEvaluatingTheMethod" : int(line[51:53]) == 1})
+					p.commit(ddGdb)
+				
+				score = parseFloat(line[53:63])
+				if score:
+					score = pickle.dumps({"type" : "simple", "data" : score})
+					p = Prediction(ExperimentID, PredictionSet, EGAD_ID, score, 'done')
+					p.setOptional(Description = {"MutationUsedInEvaluatingTheMethod" : int(line[63:65]) == 1})
+					p.commit(ddGdb)
+					
+				score = parseFloat(line[65:75])
+				if score:
+					score = pickle.dumps({"type" : "simple", "data" : score})
+					p = Prediction(ExperimentID, PredictionSet, FoldX_ID, score, 'done')
+					p.setOptional(Description = {"MutationUsedInEvaluatingTheMethod" : int(line[75:77]) == 1})
+					p.commit(ddGdb)
+					
+				score = parseFloat(line[77:87])
+				if score:
+					score = pickle.dumps({"type" : "simple", "data" : score})
+					p = Prediction(ExperimentID, PredictionSet, Hunter_ID, score, 'done')
+					p.setOptional(Description = {"MutationUsedInEvaluatingTheMethod" : int(line[87:89]) == 1})
+					p.commit(ddGdb)
+					
+				score = parseFloat(line[89:99])
+				if score:
+					score = pickle.dumps({"type" : "simple", "data" : score})
+					p = Prediction(ExperimentID, PredictionSet, IMutant2_ID, score, 'done')
+					p.setOptional(Description = {"MutationUsedInEvaluatingTheMethod" : int(line[99:101]) == 1})
+					p.commit(ddGdb)
+					
+				score = parseFloat(line[101:111])
+				if score:
+					score = pickle.dumps({"type" : "simple", "data" : score})
+					p = Prediction(ExperimentID, PredictionSet, Rosetta_ID, score, 'done')
+					p.setOptional(Description = {"MutationUsedInEvaluatingTheMethod" : int(line[111:113]) == 1})
+					p.commit(ddGdb)
+		colortext.printf("")
+		F.close()
 
 def parseProTherm(ddGdb):
-	print("Parsing ProTherm")
+	'''todo: I realized after the fact that the regexes below do not deal properly with insertion codes in
+	   the mutation e.g. "MUTATION        Y 27D D, S 29 D" in record 5438. However, none of these records
+	   have ddG values for ProTherm on 2008-09-08 (23581 entries) so we can ignore this issue unless the
+	   database is updated.'''
+
+	colortext.message("Parsing ProTherm")
 	ID = None
 	mutation = {}
 	
@@ -592,7 +642,7 @@ def parseProTherm(ddGdb):
 	mutantProcessingErrors = []
 	ddGProcessingErrors = []
 	chainProcessingErrors = []
-	
+					
 	experiments = {}
 	totalcount = 0
 	count = 0
@@ -601,8 +651,15 @@ def parseProTherm(ddGdb):
 	patchthis = {}
 	patchPDBs = {}
 	
+	# These are the records where the mutations include insertion codes
+	# It turns out that none of these are eligible for inclusion in the database
+	# as they are all missing ddG values.
+	# As a precaution, we cast all residue IDs to int which will raise an exception
+	# if an insertion code is parsed.
+	iCodeRecords = [5438, 5439, 5440, 5441, 8060, 13083, 13084]
+
 	# NOTE: THESE ARE PATCHES FOR MISSING DATA IN ProTherm
-	s = patch = {
+	patch = {
 		2396 : {'PDB_wild' : None}, # -> 2405. P08505 No related PDB entry. 
 		2397 : {'PDB_wild' : None}, #P08505
 		2398 : {'PDB_wild' : None}, #P08505
@@ -715,15 +772,146 @@ def parseProTherm(ddGdb):
 		21331 : {'MUTATED_CHAIN' : None},# 1CSP
 		21332 : {'MUTATED_CHAIN' : None},# 1CSP
 	}
-
 	
+	# These PDB files have exactly one chain but ProTherm lists the wrong chain e.g. '-' rather than 'A'
+	singleChainPDBs = {
+		'1A23' : {'MUTATED_CHAIN' : 'A'},
+		'1AG2' : {'MUTATED_CHAIN' : 'A'},
+		'1AKK' : {'MUTATED_CHAIN' : 'A'},
+		'1B5M' : {'MUTATED_CHAIN' : 'A'},
+		'1BCX' : {'MUTATED_CHAIN' : 'A'},
+		'1BPI' : {'MUTATED_CHAIN' : 'A'},
+		'1BTA' : {'MUTATED_CHAIN' : 'A'},
+		'1BVC' : {'MUTATED_CHAIN' : 'A'},
+		'1CAH' : {'MUTATED_CHAIN' : 'A'},
+		'1CSP' : {'MUTATED_CHAIN' : 'A'},
+		'1CYO' : {'MUTATED_CHAIN' : 'A'},
+		'1FLV' : {'MUTATED_CHAIN' : 'A'},
+		'1FTG' : {'MUTATED_CHAIN' : 'A'},
+		'1HME' : {'MUTATED_CHAIN' : 'A'},
+		'1IOB' : {'MUTATED_CHAIN' : 'A'},
+		'1IRO' : {'MUTATED_CHAIN' : 'A'},
+		'1L63' : {'MUTATED_CHAIN' : 'A'},
+		'1LZ1' : {'MUTATED_CHAIN' : 'A'},
+		'1MGR' : {'MUTATED_CHAIN' : 'A'},
+		'1ONC' : {'MUTATED_CHAIN' : 'A'},
+		'1POH' : {'MUTATED_CHAIN' : 'A'},
+		'1RRO' : {'MUTATED_CHAIN' : 'A'},
+		'1RTB' : {'MUTATED_CHAIN' : 'A'},
+		'1RX4' : {'MUTATED_CHAIN' : 'A'},
+		'1SSO' : {'MUTATED_CHAIN' : 'A'},
+		'1STN' : {'MUTATED_CHAIN' : 'A'},
+		'1SUP' : {'MUTATED_CHAIN' : 'A'},
+		'1VQB' : {'MUTATED_CHAIN' : 'A'},
+		'1YCC' : {'MUTATED_CHAIN' : 'A'},
+		'2ABD' : {'MUTATED_CHAIN' : 'A'},
+		'2ACY' : {'MUTATED_CHAIN' : 'A'},
+		'2AKY' : {'MUTATED_CHAIN' : 'A'},
+		'2HPR' : {'MUTATED_CHAIN' : 'A'},
+		'2LZM' : {'MUTATED_CHAIN' : 'A'},
+		'2RN2' : {'MUTATED_CHAIN' : 'A'},
+		'3SSI' : {'MUTATED_CHAIN' : 'A'},
+		'451C' : {'MUTATED_CHAIN' : 'A'},
+		'4LYZ' : {'MUTATED_CHAIN' : 'A'},
+	}
+	
+	# In these cases, the data in ProTherm is incorrect according to the publication
+	overridden = {
+		# These cases have ambiguous entries
+		
+		
+		3469  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1G6N'}, # Two identical chains A and B but '-' specified in ProTherm
+		3470  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1G6N'}, 
+		14153 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1N0J'}, # Two identical chains A and B but '-' specified in ProTherm
+		2418  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1AAR'}, # Two identical chains A and B but '-' specified in ProTherm
+		5979  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1AAR'},
+		5980  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1AAR'},
+		5981  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1AAR'},
+		5982  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1AAR'},
+		5983  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1AAR'},
+		5984  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1AAR'},
+		5985  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1AAR'},
+		5986  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1AAR'},
+		5987  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1AAR'},	
+		3629  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'}, # Two identical chains A and B but '-' specified in ProTherm
+		3630  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3631  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3632  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3633  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3634  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3635  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3636  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3637  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3638  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3639  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3640  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3641  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3642  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3643  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3644  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1FC1'},
+		3604  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'}, # Three identical chains A, B, and C but '-' specified in ProTherm
+		3605  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		3606  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		3607  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		3608  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		3609  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		3610  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		3611  : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		13412 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		13413 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		13414 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		13415 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		13416 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		13417 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		13418 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		13419 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		13420 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		13985 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		13986 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		13421 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		14253 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		14254 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		14255 : {'MUTATED_CHAIN' : 'A', 'PDB' : '1LRP'},
+		8302  : {'MUTATED_CHAIN' : 'A', 'PDB' : '2AFG'}, # Four identical chains A, B, C, and D but '-' specified in ProTherm
+		8303  : {'MUTATED_CHAIN' : 'A', 'PDB' : '2AFG'},
+		8304  : {'MUTATED_CHAIN' : 'A', 'PDB' : '2AFG'},
+		8305  : {'MUTATED_CHAIN' : 'A', 'PDB' : '2AFG'},
+		8306  : {'MUTATED_CHAIN' : 'A', 'PDB' : '2AFG'},
+		14474 : {'MUTATED_CHAIN' : 'A', 'PDB' : '2AFG'},
+		14475 : {'MUTATED_CHAIN' : 'A', 'PDB' : '2AFG'},
+		14476 : {'MUTATED_CHAIN' : 'A', 'PDB' : '2AFG'},
+		10057 : {'MUTATED_CHAIN' : 'B', 'PDB' : '1RN1'}, # Three identical chains A, B, C. These cases are odd ones - the PDB file contains identical chains but residue 45 is missing in chain A
+		10058 : {'MUTATED_CHAIN' : 'B', 'PDB' : '1RN1'},
+	}
+
+	# In these cases, the protein is elongated at the 67th position. This is more than a mutation so I ignore it. 	
+	skipTheseCases = [12156, 12159, 12161, 12188, 12191, 12193, 14468]
+	
+	# In these cases, the structural information needed for the mutations (residues A57, A62) is missing in the PDB file
+	# Some of the information is present in chain B (A57's corresponding residue) but I decided against remapping the residues. 
+	skipTheseCases.extend([13451, 13452])
+	
+	# In this case, I couldn't map the paper's structure well enough onto 1YCC. The mutations mentioned e.g. A57 N->I do not correspond with the PDB structure (attributed to a later paper).
+	skipTheseCases.append(11817)
+		
+	mutationregex = re.compile("^(\w\d+\w,)+(\w\d+\w)[,]{0,1}$")
+
+	CysteineMutationCases = [13663, 13664, 13677, 13678]	
+	multimapCases1 = [22383, 22384]
+	mmapCases1regex = re.compile("PDB:(.+[,]{0,1})+\)")
+	multimapCases2 = range(17681, 17687 + 1) + range(17692, 17698 + 1)
+	mmapCases2regex = re.compile("^.*PDB:(.*);PIR.*$")			
+	multimapCases3 = range(14215, 14223 + 1) + [16991, 17678, 17679, 17680, 17689, 17690, 17691]
+	mmapCases3regex = re.compile("PDB:(\w.*?\w)[;)]")
 	
 	# These fields of ProTherm records cannot be empty for our purposes
 	requiredFields = ["NO.", "PDB_wild", "LENGTH", "ddG", "MUTATION", "MUTATED_CHAIN"]
 	
+	failthis = False
 	newlist = []
 	protherm = os.path.join("rawdata", "ProTherm.dat")
 	F = open(protherm)
+	colortext.printf("|*********************|")
 	while(True):
 		# Read a record
 		record = {}
@@ -738,15 +926,42 @@ def parseProTherm(ddGdb):
 				else:
 				 	record[line[0]] = None
 			line = F.readline()
-		
+					
 		# Parse the results
 		if record:
+			MutantAA = []
+			WildTypeAA = []
+			ResidueID = []
+			chainID = None
+			
 			totalcount += 1	
 			
 			# Find out whether we have enough information
 			store = True
 			ID = int(record["NO."][0])
+			
+			if overridden.get(ID):
+				#print("Overriding case %d" % ID)
+				if record.get('PDB_wild'):
+					if record["PDB_wild"][0] != overridden[ID]["PDB"]:
+						raise colortext.Exception("Error in overridden table: Record %d. Read '%s' for PDB_wild, expected '%s'." % (ID, record["PDB_wild"], overridden[ID]["PDB"]))
+				for k,v in overridden[ID].iteritems():
+					if k != "PDB":
+						record[k] = v.split()
+			if record["PDB_wild"]:
+				pdbID = record["PDB_wild"][0].upper()
+				if singleChainPDBs.get(pdbID):
+					for k,v in singleChainPDBs[pdbID].iteritems():
+						record[k] = v.split()
+				
+			#Progress meter
+			if ID % 1000 == 0:
+				colortext.write(".", "green")
+				colortext.flush()
+			
 			missingFields = []
+			if ID in skipTheseCases:
+				continue
 			for field in requiredFields:
 				if not record[field]:
 					store = False
@@ -756,7 +971,7 @@ def parseProTherm(ddGdb):
 					if record["MUTATION"][0] and record["MUTATION"][0] != "wild" and missingFields[0] != "ddG":
 						if not record["MUTATED_CHAIN"]:
 							if not patch.get(ID):
-								print("Error processing chain: ID %d, no chain" %  (ID))
+								colortext.error("Error processing chain: ID %d, no chain" %  (ID))
 								singleErrors["MUTATED_CHAIN"] += 1
 								patchthis[ID] = "MUTATED_CHAIN %s-%s" % (record.get("PDB_wild"), record.get("MUTATION")) 
 							elif patch[ID]["MUTATED_CHAIN"]:
@@ -764,7 +979,7 @@ def parseProTherm(ddGdb):
 								store = True
 						elif not record["LENGTH"]:
 							if not patch.get(ID):
-								print("Error processing length: ID %d, no length" %  (ID))
+								colortext.error("Error processing length: ID %d, no length" %  (ID))
 								singleErrors["LENGTH"] += 1
 								patchthis[ID] = "LENGTH %s" % record.get("PDB_wild") 
 							elif patch[ID]["LENGTH"]:
@@ -772,14 +987,14 @@ def parseProTherm(ddGdb):
 								store = True
 						elif not record["PDB_wild"]:
 							if not patch.get(ID):
-								print("Error processing PDB ID: ID %d, no PDB ID" %  (ID))
+								colortext.error("Error processing PDB ID: ID %d, no PDB ID" %  (ID))
 								singleErrors["PDB_wild"] += 1
 								patchthis[ID] = "PDB_wild: %s" % record.get("SWISSPROT_ID") 
 							elif patch[ID]["PDB_wild"]:
 								record["PDB_wild"] = [patch[ID]["PDB_wild"]]
 								store = True
 						else:
-							print("Error processing structure: ID %d, no %s " % (ID, missingFields[0]))
+							colortext.error("Error processing structure: ID %d, no %s " % (ID, missingFields[0]))
 							singleErrors[missingFields[0]] += 1
 				if not store:
 					continue
@@ -795,21 +1010,81 @@ def parseProTherm(ddGdb):
 				chainID = record["MUTATED_CHAIN"][0]
 				chains[chainID] = True
 			else:
-				print("Error processing chain: ID %d, %s" %  (ID, record["MUTATED_CHAIN"]))
+				colortext.error("Error processing chain: ID %d, %s" %  (ID, record["MUTATED_CHAIN"]))
 				store = False
 			
 			# Parse mutation
 			mutationline = record["MUTATION"]
-			if len(mutationline) == 3:
+			if ID in CysteineMutationCases: # Hack for input which includes information on the bonds generated from mutation to cysteine
+				ResidueID = [int(mutationline[1])] 
+				WildTypeAA = [mutationline[0]]
+				MutantAA = [mutationline[2]]
+			elif ID in multimapCases1:
+				cline = join(mutationline, "")
+				mtchslst = mmapCases1regex.findall(cline)
+				if mtchslst:
+					assert(len(mtchslst) == 1)
+					mtchslst = mtchslst[0].split(',')
+					for mtch in mtchslst:
+						assert(mtch)
+						ResidueID.append(int(mtch[1:-1]))
+						WildTypeAA.append(mtch[0])
+						MutantAA.append(mtch[-1])
+				else:
+					raise Exception("An exception occurred parsing the mutation %s in record %d." % (cline, ID))
+			elif ID in multimapCases2:
+				cline = join(mutationline, "")
+				mtchslst = mmapCases2regex.match(cline)
+				if mtchslst:
+					mtchslst = mtchslst.group(1).split(",")
+					for mtch in mtchslst:
+						assert(mtch)
+						ResidueID.append(int(mtch[1:-1]))
+						WildTypeAA.append(mtch[0])
+						MutantAA.append(mtch[-1])
+				else:
+					raise Exception("An exception occurred parsing the mutation %s in record %d." % (cline, ID))
+			elif ID in multimapCases3:
+				cline = join(mutationline, "")
+				mtchslst = mmapCases3regex.findall(cline)
+				if mtchslst:
+					for mtch in mtchslst:
+						assert(mtch)
+						ResidueID.append(int(mtch[1:-1]))
+						WildTypeAA.append(mtch[0])
+						MutantAA.append(mtch[-1])
+				else:
+					raise Exception("An exception occurred parsing the mutation %s in record %d." % (cline, ID))
+			elif len(mutationline) == 3:
 				try:
-					ResidueID = int(mutationline[1])
-					WildTypeAA = mutationline[0]
-					MutantAA = mutationline[2]
+					ResidueID = [int(mutationline[1])]
+					WildTypeAA = [mutationline[0]]
+					MutantAA = [mutationline[2]]
 				except:
-					print("Error processing mutation: ID %d, %s" % (ID, record["MUTATION"])) 
+					cline = join(mutationline, "")
+					raise Exception("An exception occurred parsing the mutation %s in record %d." % (cline, ID))
+			elif len(mutationline) == 1:
+				mline = mutationline[0]
+				if mline == "wild" or mline == "wild*" or mline == "wild**":
 					store = False
+				else:
+					cline = join(mutationline, "")
+					raise Exception("An exception occurred parsing the mutation %s in record %d." % (cline, ID))
+			elif len(mutationline) % 3 == 0 or len(mutationline) == 5: #2nd case is a hack for 11146
+				cline = join(mutationline, "").strip()
+				m = mutationregex.match(cline)
+				if m:
+					mutations = [m.group(i)[:-1] for i in range(1, m.lastindex)] + [m.group(m.lastindex)]
+					for mut in mutations:
+						ResidueID.append(int(mut[1:-1]))
+						WildTypeAA.append(mut[0])
+						MutantAA.append(mut[-1])
+				else:
+					raise Exception("An exception occurred parsing the mutation %s in record %d." % (cline, ID))
+				 
 			else:
-				store = False
+				cline = join(mutationline, "")
+				raise Exception("An exception occurred parsing the mutation %s in record %d." % (cline, ID))
 				
 			# Parse ddG
 			try:
@@ -821,7 +1096,7 @@ def parseProTherm(ddGdb):
 					try:
 						ddG = float(ddGline[0:idx])
 					except:
-						print("Error processing ddG: ID %d, %s" % (ID, record["ddG"]))
+						colortext.error("Error processing ddG: ID %d, %s" % (ID, record["ddG"]))
 						store = False
 				else:
 					idx = ddGline.find("kcal/mol")
@@ -829,10 +1104,10 @@ def parseProTherm(ddGdb):
 						try:
 							ddG = 4.184 * float(ddGline[0:idx])
 						except:
-							print("Error processing ddG: ID %d, %s" % (ID, record["ddG"]))
+							colortext.error("Error processing ddG: ID %d, %s" % (ID, record["ddG"]))
 							store = False
 					else:
-						print("Error processing ddG: ID %d, %s" % (ID, record["ddG"]))
+						colortext.error("Error processing ddG: ID %d, %s" % (ID, record["ddG"]))
 						store = False 
 			
 			protein = None
@@ -858,48 +1133,76 @@ def parseProTherm(ddGdb):
 
 				
 				# NOTE: THESE ARE PATCHES FOR BOTH BAD AND MISMATCHED DATA IN ProTherm 
-				if pdbID in ["1CSP", "2LZM"]:
-					chainID = "A"
 				if ID in [13535]:
 					mutantlist.remove("166H")
 				
 				Structure = PDBStructure(pdbID, protein = protein, source = source)
 				Structure.commit(ddGdb)
 				
-				ExperimentID = None#Experiment.getDBID() todo
-				
-										
 				# All necessary information is present. Store the record.
-				mutationID = "%s-%s-%s%d%s" % (pdbID, chainID, WildTypeAA, ResidueID, MutantAA)
+				assert(ResidueID and len(ResidueID) == len(WildTypeAA) and len(WildTypeAA) == len(MutantAA))
+				mutuationIDsuffix = join(["%s%s%s" % (WildTypeAA[i], ResidueID[i], MutantAA[i]) for i in range(len(WildTypeAA))], "-")
+				mutationID = "%s-%s-%s" % (pdbID, chainID, mutuationIDsuffix)
+				Experiment = None
 				existingExperiment = experiments.get(mutationID)
 				if existingExperiment:
 					for mutant in mutantlist:
 						existingExperiment.addMutant(mutant)
 					if existingExperiment.getChains() != [chainID]:
 						raise Exception("Chain mismatch on reading ProTherm database (we are currently only parsing for once chain per experiment): %s, %s " % (existingExperiment.getChains(), chainID))
-					Experiment.addExperimentalScore(ID, ddG)
+					try:
+						existingExperiment.addExperimentalScore(ID, ddG, pdbID)
+					except Exception, e:
+						colortext.error((ID, mutationID))
+						colortext.error(str(e))
+						raise Exception()
 				else:
 					Experiment = ExperimentSet(pdbID, "ProTherm-2008-09-08-23581")
 					for mutant in mutantlist:
 						Experiment.addMutant(m)
-					Experiment.addMutation(chainID, ResidueID, WildTypeAA, MutantAA)
+					
+					test = []
+					for midx in range(len(ResidueID)):
+						if ResidueID[midx] not in test:
+							test.append(ResidueID[midx])
+						else:
+							failthis = True
+							colortext.error("Error in record %d" % ID)
+					for midx in range(len(ResidueID)):
+						Experiment.addMutation(chainID, ResidueID[midx], WildTypeAA[midx], MutantAA[midx], ID = ID)
 					Experiment.addChain(chainID)
-					Experiment.addExperimentalScore(ID, ddG)
+					try:
+						Experiment.addExperimentalScore(ID, ddG, pdbID)
+					except:
+						colortext.error(str(e))
+						raise Exception()
 					experiments[mutationID] = Experiment
 				count += 1
 				newlist.append(ID)
 		else:
 			break	
-
+	colortext.printf("\t[Parsing complete]", 'green')
+	
+	if failthis:
+		sys.exit(0)
 	highvariancecount = 0
 	for mutationID, e in experiments.iteritems():
 		e.mergeScores(maxStdDeviation = MAX_STANDARD_DEVIATION)
 		if not(e.isEligible()):
 			highvariancecount += 1
-
-	for mutationID, e in experiments.iteritems():
-		e.commit(ddGdb)
 	
+	PROGRESS_BAR_LENGTH = 23
+	progressCounter = 1
+	progressStep = (len(experiments) / PROGRESS_BAR_LENGTH) or 2
+	for mutationID, e in experiments.iteritems():
+		#Progress meter
+		if progressCounter % progressStep == 0:
+			colortext.write(".", "lightgreen")
+			colortext.flush()
+		ExperimentID = e.commit(ddGdb)
+		progressCounter += 1
+	colortext.printf("\t[Database storage complete]", 'lightgreen')
+		
 	PDBIDs = [id[0:4] for id in experiments.keys()]
 	pd = {}
 	for x in PDBIDs:
@@ -942,14 +1245,31 @@ def dumpPDBIDs():
 	F.close()
 
 def parseRawData(ddGdb):
+	print("")
 	parseSensDataset(ddGdb)
 	parsePotapov(ddGdb)
 	parseProTherm(ddGdb)
+	if ddGdb.chainWarnings:
+		colortext.warning("UNAMBIGUOUS BADLY-SPECIFIED MUTATIONS")
+		for pdbID, recordsAndChain in sorted(ddGdb.chainWarnings.iteritems()):
+			colortext.warning("%s: Chains %s" % (pdbID, join(db.PDBChains.get(pdbID, ["Missing data"]), ", ")))
+			for rc in recordsAndChain:
+				break
+				records = rc[0]
+				chain = rc[1]
+				colortext.warning("\tRecords: %s, chain %s" % (join(map(str, records), ", "), chain))
+	if ddGdb.chainErrors:
+		colortext.error("AMBIGUOUS BADLY-SPECIFIED MUTATIONS")
+		for pdbID, recordsAndChain in sorted(ddGdb.chainErrors.iteritems()):
+			colortext.error("%s: Chains %s" % (pdbID, join(db.PDBChains.get(pdbID, ["Missing data"]), ", ")))
+			for rc in recordsAndChain:
+				records = rc[0]
+				chain = rc[1]
+				colortext.error("\tRecords: %s, chain %s" % (join(map(str, records), ", "), chain))
 	dumpPDBIDs()
 
-def main():
-	#parseRawData
-	pass
+def main():	
+	parseRawData(db.ddGDatabase())
 	
 if __name__ == "__main__":
 	main()
