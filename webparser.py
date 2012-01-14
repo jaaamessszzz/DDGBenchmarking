@@ -5,15 +5,16 @@ import sys
 import os
 from string import join
 import math
+import pickle
 import re
-import db
 sys.path.insert(0, "common")
+import ddgproject
 import colortext
 
-ExperimentSet = db.ExperimentSet
-Prediction = db.Prediction
-PDBStructure = db.PDBStructure
-fn = db.FieldNames()
+ExperimentSet = ddgproject.ExperimentSet
+Prediction = ddgproject.Prediction
+PDBStructure = ddgproject.PDBStructure
+fn = ddgproject.FieldNames()
 
 AllPDBIDs = {}
 
@@ -529,27 +530,27 @@ def parsePotapov(ddGdb):
 	
 	PredictionSet = "Potapov-2009"
 	
-	CCPBSA_ID = ddGdb.execute("SELECT ID FROM Tool WHERE Name='CC/PBSA' AND Version='Unknown';")
+	CCPBSA_ID = ddGdb.execute("SELECT ID FROM Protocol WHERE ID='Potapov:10.1093/protein/gzp030::CC/PBSA';")
 	assert(len(CCPBSA_ID) == 1)
 	CCPBSA_ID = CCPBSA_ID[0]["ID"]
 	
-	EGAD_ID = ddGdb.execute("SELECT ID FROM Tool WHERE Name='EGAD' AND Version='Unknown';")
+	EGAD_ID = ddGdb.execute("SELECT ID FROM Protocol WHERE ID='Potapov:10.1093/protein/gzp030::EGAD';")
 	assert(len(EGAD_ID) == 1)
 	EGAD_ID = EGAD_ID[0]["ID"]
 	
-	FoldX_ID = ddGdb.execute("SELECT ID FROM Tool WHERE Name='FoldX' AND Version='3.0';")
+	FoldX_ID = ddGdb.execute("SELECT ID FROM Protocol WHERE ID='Potapov:10.1093/protein/gzp030::FoldXv3.0';")
 	assert(len(FoldX_ID) == 1)
 	FoldX_ID = FoldX_ID[0]["ID"]
 	
-	Hunter_ID = ddGdb.execute("SELECT ID FROM Tool WHERE Name='Hunter' AND Version='Unknown';")
+	Hunter_ID = ddGdb.execute("SELECT ID FROM Protocol WHERE ID='Potapov:10.1093/protein/gzp030::Hunter';")
 	assert(len(Hunter_ID) == 1)
 	Hunter_ID = Hunter_ID[0]["ID"]
 	
-	IMutant2_ID = ddGdb.execute("SELECT ID FROM Tool WHERE Name='IMutant2' AND Version='2.0';")
+	IMutant2_ID = ddGdb.execute("SELECT ID FROM Protocol WHERE ID='Potapov:10.1093/protein/gzp030::IMutant2v2.0';")
 	assert(len(IMutant2_ID) == 1)
 	IMutant2_ID = IMutant2_ID[0]["ID"]
 	
-	Rosetta_ID = ddGdb.execute("SELECT ID FROM Tool WHERE Name='Rosetta' AND Version='2.2.0';")
+	Rosetta_ID = ddGdb.execute("SELECT ID FROM Protocol WHERE ID='Potapov:10.1093/protein/gzp030::Rosettav2.2.0';")
 	assert(len(Rosetta_ID) == 1)
 	Rosetta_ID = Rosetta_ID[0]["ID"]
 	
@@ -1240,19 +1241,19 @@ def dumpPDBIDs():
 	for id in AllPDBIDs.keys():
 		if len(id) > 4:
 			print(id)
-	pdbids = sorted(list(set(db.UniqueIDs.keys()).union(set(AllPDBIDs.keys()))))
+	pdbids = sorted(list(set(ddgproject.UniqueIDs.keys()).union(set(AllPDBIDs.keys()))))
 	F.write(join(pdbids, "\n"))
 	F.close()
 
 def parseRawData(ddGdb):
 	print("")
-	parseSensDataset(ddGdb)
 	parsePotapov(ddGdb)
+	parseSensDataset(ddGdb)
 	parseProTherm(ddGdb)
 	if ddGdb.chainWarnings:
 		colortext.warning("UNAMBIGUOUS BADLY-SPECIFIED MUTATIONS")
 		for pdbID, recordsAndChain in sorted(ddGdb.chainWarnings.iteritems()):
-			colortext.warning("%s: Chains %s" % (pdbID, join(db.PDBChains.get(pdbID, ["Missing data"]), ", ")))
+			colortext.warning("%s: Chains %s" % (pdbID, join(ddgproject.PDBChains.get(pdbID, ["Missing data"]), ", ")))
 			for rc in recordsAndChain:
 				break
 				records = rc[0]
@@ -1261,7 +1262,7 @@ def parseRawData(ddGdb):
 	if ddGdb.chainErrors:
 		colortext.error("AMBIGUOUS BADLY-SPECIFIED MUTATIONS")
 		for pdbID, recordsAndChain in sorted(ddGdb.chainErrors.iteritems()):
-			colortext.error("%s: Chains %s" % (pdbID, join(db.PDBChains.get(pdbID, ["Missing data"]), ", ")))
+			colortext.error("%s: Chains %s" % (pdbID, join(ddgproject.PDBChains.get(pdbID, ["Missing data"]), ", ")))
 			for rc in recordsAndChain:
 				records = rc[0]
 				chain = rc[1]
@@ -1269,7 +1270,7 @@ def parseRawData(ddGdb):
 	dumpPDBIDs()
 
 def main():	
-	parseRawData(db.ddGDatabase())
+	parseRawData(ddgproject.ddGDatabase())
 	
 if __name__ == "__main__":
 	main()
