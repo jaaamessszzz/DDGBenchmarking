@@ -6,15 +6,17 @@ import os
 from string import join
 import math
 import re
-import db
 import time
 import subprocess
 from webparser import MAX_RESOLUTION, MAX_NUMRES_PROTHERM, MAX_STANDARD_DEVIATION
 sys.path.insert(0, "common")
+import ddgproject
 from pdb import PDB, ResidueID2String, checkPDBAgainstMutations, aa1
 from Bio.PDB import *
 import colortext
 import traceback
+import pickle
+
 
 #Rosetta3.1 release. mini revision 30964. minirosetta_database revision 30967.
 #Rosetta3.2 release. mini revision 39284
@@ -34,14 +36,15 @@ SQLQueries = {
 	}
 
 StoredProcedures = ["GetScores", "GetChains", "GetInterfaces", "GetMutants", "GetMutations"]
-dbfields = db.FieldNames()
+dbfields = ddgproject.FieldNames()
 
+# todo - for the daemon
 class JobTestRunner(object):
 	'''This class is just here to test the running of jobs at an initial stage of development.
 		Do not rely on it being maintained.''' 
 	
 	def __init__(self):
-		self.ddGdb = db.ddGDatabase()
+		self.ddGdb = ddgproject.ddGDatabase()
 	
 	def __del__(self):
 		self.ddGdb.close()
@@ -59,9 +62,9 @@ class JobTestRunner(object):
 			experimentID = predictionRecord[dbfields.ExperimentID]
 			parameters = (experimentID,)
 			
-			chains = [result[0] for result in ddGdb.callproc("GetChains", parameters = parameters, cursorClass = db.StdCursor)]
-			mutants = [result[0] for result in ddGdb.callproc("GetMutants", parameters = parameters, cursorClass = db.StdCursor)]
-			interfaces = [result[0] for result in ddGdb.callproc("GetInterfaces", parameters = parameters, cursorClass = db.StdCursor)]
+			chains = [result[0] for result in ddGdb.callproc("GetChains", parameters = parameters, cursorClass = ddgproject.StdCursor)]
+			mutants = [result[0] for result in ddGdb.callproc("GetMutants", parameters = parameters, cursorClass = ddgproject.StdCursor)]
+			interfaces = [result[0] for result in ddGdb.callproc("GetInterfaces", parameters = parameters, cursorClass = ddgproject.StdCursor)]
 			mutations = ddGdb.callproc("GetMutations", parameters = parameters)
 		except:
 			pass
@@ -70,11 +73,11 @@ class JobInserter(object):
 	'''This class is responsible for inserting prediction jobs to the database.''' 
 	
 	def __init__(self):
-		self.ddGdb = db.ddGDatabase()
+		self.ddGdb = ddgproject.ddGDatabase()
 	
 	def __del__(self):
 		self.ddGdb.close()
-		
+	
 	def createResfile(self, pdb, mutations):
 		'''The mutations here are in the original PDB numbering. pdb is assumed to use Rosetta numbering.
 			We use the pdb mapping from PDB numbering to Rosetta numbering to generate the resfile.
@@ -95,39 +98,14 @@ class JobInserter(object):
 			resfile = ["NATAA", "start"] + resfile
 			return join(resfile, "\n")
 		else:
-			return None
+			raise Exception("An error occurred creating a resfile for the ddG job.")
 	
-	def addAllEligibleProTherm(self, PredictionSet, ToolID, CommandID, KeepHETATMLines):
-		colortext.printf("\nAdding ProTherm mutations to %s prediction set." % PredictionSet, "lightgreen")
-		ddGdb = self.ddGdb
-		WithinResolution = ddGdb.execute(SQLQueries["ProThermWithinResolution"])
-		experimentIDs = []
-		moreThanOneChain = 0
-		for exp in WithinResolution:
-			experimentID = exp["ID"] 
-			if len(ddGdb.callproc("GetMutations", parameters = (experimentID,))) == 1:
-				if exp["Techniques"].find('X-RAY DIFFRACTION') != -1:
-					if ddGdb.getStandardDeviation(experimentID) <= MAX_STANDARD_DEVIATION:
-							if len(ddGdb.callproc("GetChains", parameters = (experimentID,))) == 1:
-								experimentIDs.append(experimentID)
-							else:
-								moreThanOneChain += 1
-		colortext.message("\nThe number of unique ProTherm experiments with:\n\t- one mutation;\n\t- structures solved by X-ray diffraction and with <= %d residues;\n\t- a maximum standard deviation in experimental results of <= %0.2f;\n\t- and a resolution of <= %0.2f Angstroms.\nis %d.\n" % (MAX_NUMRES_PROTHERM, MAX_STANDARD_DEVIATION, MAX_RESOLUTION, len(experimentIDs)))
-		colortext.message("The number of small-to-large mutations in the database is %d, described in %d experiments." % (len(ddGdb.execute(SQLQueries["SmallToLarge"])), len(ddGdb.execute(SQLQueries["SmallToLargeD"]))))
-		colortext.message("The number of large-to-small mutations in the database is %d, described in %d experiments." % (len(ddGdb.execute(SQLQueries["LargeToSmall"])), len(ddGdb.execute(SQLQueries["LargeToSmallD"]))))
-		colortext.message("The number of experiments discounted as they involved more than one chain is %d.\n" % moreThanOneChain)
-		return
-		raise colortext.Exception("Skip this") #todo
-		for experimentID in experimentIDs:
-			self.add(experimentID, PredictionSet, ToolID, CommandID, KeepHETATMLines)
-	
-	def add(self, experimentID, PredictionSet, ToolID, CommandID, KeepHETATMLines, Description = {}, InputFiles = {}):
+	def add(self, experimentID, PredictionSet, ProtocolID, KeepHETATMLines, Description = {}, InputFiles = {}):
 		'''This function inserts a prediction into the database.
 			The parameters define:
 				the experiment we are running the prediction for;
 				the name of the set of predictions for later grouping;
-				the ID of the Tool to be used for prediction;
-				the ID of the Command to be used for prediction;
+				the short description of the Command to be used for prediction;
 				whether HETATM lines are to be kept or not.
 			We strip the PDB based on the chains used for the experiment and KeepHETATMLines.
 			We then add the prediction record, including the stripped PDB and the inverse mapping
@@ -145,20 +123,24 @@ class JobInserter(object):
 			result = results[0]
 			pdbID = result[dbfields.PDB_ID]
 			contents = result[dbfields.Content]
+			
 			pdb = PDB(contents.split("\n"))
 			
 			# Check that the mutated positions exist and that the wild-type matches the PDB
-			mutations = [result for result in self.ddGdb.callproc("GetMutations", parameters = parameters, cursorClass = db.StdCursor)]
+			mutations = [result for result in self.ddGdb.callproc("GetMutations", parameters = parameters, cursorClass = ddgproject.StdCursor)]
 			checkPDBAgainstMutations(pdbID, pdb, mutations)
 			
 			# Strip the PDB to the list of chains. This also renumbers residues in the PDB for Rosetta.
-			chains = [result[0] for result in self.ddGdb.callproc("GetChains", parameters = parameters, cursorClass = db.StdCursor)]
+			chains = [result[0] for result in self.ddGdb.callproc("GetChains", parameters = parameters, cursorClass = ddgproject.StdCursor)]
 			pdb.stripForDDG(chains, KeepHETATMLines)
+			
 			# - Post stripping checks -
 			# Get the 'Chain ResidueID' PDB-formatted identifier for each mutation mapped to Rosetta numbering
 			# then check again that the mutated positions exist and that the wild-type matches the PDB
 			remappedMutations = pdb.remapMutations(mutations, pdbID)
 			remappedMutations = [[m[0], ResidueID2String(m[1]), m[2], m[3]] for m in remappedMutations]
+			
+			resfile = self.createResfile(pdb, remappedMutations)
 			
 			# Check to make sure that we haven't stripped all the ATOM lines
 			if not pdb.GetAllATOMLines():
@@ -176,97 +158,88 @@ class JobInserter(object):
 			colortext.error(traceback.format_exc())
 			raise colortext.Exception("An exception occurred retrieving the experimental data for Experiment ID #%s." % experimentID)
 		
-		Description["InverseResidueMap"] = pdb.get_ddGInverseResmap()
+		InputFiles["RESFILE"] = resfile
+		
+		ExtraParameters = {}
+		InputFiles = pickle.dumps(InputFiles)
+		Description = pickle.dumps(Description)
+		ExtraParameters = pickle.dumps(ExtraParameters)
 		
 		params = {
 			dbfields.ExperimentID : experimentID,
 			dbfields.PredictionSet : PredictionSet,
-			dbfields.ToolID : ToolID,
-			dbfields.CommandID : CommandID,
+			dbfields.ProtocolID : ProtocolID,
 			dbfields.KeptHETATMLines : KeepHETATMLines,
 			dbfields.StrippedPDB : strippedPDB,
-			dbfields.InputFiles : None,
+			dbfields.ResidueMapping : pdb.get_ddGInverseResmap(),
+			dbfields.InputFiles : InputFiles,
 			dbfields.Description : Description,
 			dbfields.Status : dbfields.queued,
-			
-			"mutations" : mutations,
-			"remappedmutations" : remappedMutations,
-			"pdbID" : pdbID,
-			dbfields.Command : {
-				"Preminimization" : [
-					'%(EXECUTABLE)s',
-					'-in:file:l', '%(INPUT_PDB_LIST)s',
-					'-in:file:fullatom',
-					'-ignore_unrecognized_res',
-					'-fa_max_dis', '9.0',
-					'-database', '%(DATABASE)s',
-					'-ddg::harmonic_ca_tether', '0.5',
-					'-score:weights', 'standard',
-					'-ddg::constraint_weight','1.0',
-					'-ddg::out_pdb_prefix', 'min_cst_0.5',
-					'-ddg::sc_min_only', 'false',
-					'-score:patch', 'score12'
-				]}
-			}
-		return params
-		raise colortext.Exception("holla")
-		dbGdb.insertDict('Prediction', params)
+			dbfields.ExtraParameters : ExtraParameters,
+			#"mutations" : mutations,
+			#"remappedmutations" : remappedMutations,
+			#"pdbID" : pdbID,
+			#dbfields.Command : {
+			#	"Preminimization" : [
+			#		'%(EXECUTABLE)s',
+			#		'-in:file:l', '%(INPUT_PDB_LIST)s',
+			#		'-in:file:fullatom',
+			#		'-ignore_unrecognized_res',
+			#		'-fa_max_dis', '9.0',
+			#		'-database', '%(DATABASE)s',
+			#		'-ddg::harmonic_ca_tether', '0.5',
+			#		'-score:weights', 'standard',
+			#		'-ddg::constraint_weight','1.0',
+			#		'-ddg::out_pdb_prefix', 'min_cst_0.5',
+			#		'-ddg::sc_min_only', 'false',
+			#		'-score:patch', 'score12'
+			#	]}
+		}
+		self.ddGdb.insertDict('Prediction', params)
 							
-	
-def parseResults(logfile, predictions_file):
-	scoresHeader='''
-------------------------------------------------------------
- Scores                       Weight   Raw Score Wghtd.Score
-------------------------------------------------------------'''
-	scoresFooter = '''---------------------------------------------------'''
-	
-	F = open(logfile, "r")
-	log = F.read()
-	F.close()
-	
-	componentNames = []
-	idx = log.find(scoresHeader)
-	if idx:
-		log = log[idx + len(scoresHeader):]
-		idx = log.find(scoresFooter)
-		if idx:
-			log = log[:idx].strip()
-			log = log.split("\n")
-			for line in log:
-				componentNames.append(line.strip().split()[0])
-			componentNames.remove("atom_pair_constraint")
-	
-	F = open(predictions_file, "r")
-	predictions = F.read().split('\n')
-	F.close()
-	results = {}
-	for p in predictions:
-		if p.strip():
-			components = p.split()
-			assert[components[0] == "ddG:"]
-			mutation = components[1]
-			score = components[2]
-			components = components[3:]
-			assert(len(components) == len(componentNames))
-			results["Overall"] = score
-			componentsd = {}
-			for i in range(len(componentNames)):
-				componentsd[componentNames[i]] = components[i]
-			results["Components"] = componentsd
-	return results
+
+def addAllEligibleProTherm( PredictionSet, CommandName, KeepHETATMLines):
+	inserter = JobInserter()
+	colortext.printf("\nAdding ProTherm mutations to %s prediction set." % PredictionSet, "lightgreen")
+	ddGdb = ddgproject.ddGDatabase()
+	WithinResolution = ddGdb.execute(SQLQueries["ProThermWithinResolution"])
+	experimentIDs = []
+	moreThanOneChain = 0
+	for exp in WithinResolution:
+		experimentID = exp["ID"] 
+		if len(ddGdb.callproc("GetMutations", parameters = (experimentID,))) == 1:
+			if exp["Techniques"].find('X-RAY DIFFRACTION') != -1:
+				if ddGdb.getStandardDeviation(experimentID) <= MAX_STANDARD_DEVIATION:
+						if len(ddGdb.callproc("GetChains", parameters = (experimentID,))) == 1:
+							experimentIDs.append(experimentID)
+						else:
+							moreThanOneChain += 1
+	colortext.message("\nThe number of unique ProTherm experiments with:\n\t- one mutation;\n\t- structures solved by X-ray diffraction and with <= %d residues;\n\t- a maximum standard deviation in experimental results of <= %0.2f;\n\t- and a resolution of <= %0.2f Angstroms.\nis %d.\n" % (MAX_NUMRES_PROTHERM, MAX_STANDARD_DEVIATION, MAX_RESOLUTION, len(experimentIDs)))
+	colortext.message("The number of small-to-large mutations in the database is %d, described in %d experiments." % (len(ddGdb.execute(SQLQueries["SmallToLarge"])), len(ddGdb.execute(SQLQueries["SmallToLargeD"]))))
+	colortext.message("The number of large-to-small mutations in the database is %d, described in %d experiments." % (len(ddGdb.execute(SQLQueries["LargeToSmall"])), len(ddGdb.execute(SQLQueries["LargeToSmallD"]))))
+	colortext.message("The number of experiments discounted as they involved more than one chain is %d.\n" % moreThanOneChain)
+	return
+	raise colortext.Exception("Skip this") #todo
+	for experimentID in experimentIDs:
+		inserter.add(experimentID, PredictionSet, CommandName, KeepHETATMLines)
+
+
+#runner = JobTestRunner()
+#runner.runPrediction({dbfields.ExperimentID : 8468})
 		
 def main():
 	#All results were produced with revision 32231 of rosetta, and revision 32257 of the rosetta database.
-	#sys.exit(0)
-	inserter = JobInserter()
-	inserter.addAllEligibleProTherm("testrun", None, None, None)
-	sys.exit(0)
-	#"GetChains", "GetInterfaces", "GetMutants", "GetMutations"
-	#runner = JobTestRunner()
-	#runner.runPrediction({dbfields.ExperimentID : 8468})
 	jobID = 66272
+
+	if False:
+		inserter = JobInserter()
+		#inserter.addAllEligibleProTherm("testrun", None, None, None)
+		inserter.add(jobID, "testrun", "Kellogg:10.1002/prot.22921:protocol16:32231", False)
+		sys.exit(0)
 	
-	params = inserter.add(jobID, "testrun", None, None, None)
+	#params = {
+	#	"PDB_ID" : 
+	#}
 	
 	pdbID = params["pdbID"]
 	pdbfile = "%s.pdb" % pdbID
@@ -300,8 +273,8 @@ def main():
 		}
 	runPreminimization(preminParams, params, pdbID)
 	
-	ddGdb = db.ddGDatabase()
-	scores = [result for result in ddGdb.callproc("GetScores", parameters = (jobID, ), cursorClass = db.StdCursor)]
+	ddGdb = ddgproject.ddGDatabase()
+	scores = [result for result in ddGdb.callproc("GetScores", parameters = (jobID, ), cursorClass = ddgproject.StdCursor)]
 	print(scores)
 
 
