@@ -171,7 +171,7 @@ class JobInserter(object):
 			dbfields.ProtocolID : ProtocolID,
 			dbfields.KeptHETATMLines : KeepHETATMLines,
 			dbfields.StrippedPDB : strippedPDB,
-			dbfields.ResidueMapping : pdb.get_ddGInverseResmap(),
+			dbfields.ResidueMapping : pickle.dumps(pdb.get_ddGInverseResmap()),
 			dbfields.InputFiles : InputFiles,
 			dbfields.Description : Description,
 			dbfields.Status : dbfields.queued,
@@ -229,9 +229,9 @@ def addAllEligibleProTherm( PredictionSet, CommandName, KeepHETATMLines):
 		
 def main():
 	#All results were produced with revision 32231 of rosetta, and revision 32257 of the rosetta database.
-	jobID = 66272
+	jobID = 69064
 
-	if False:
+	if True:
 		inserter = JobInserter()
 		#inserter.addAllEligibleProTherm("testrun", None, None, None)
 		inserter.add(jobID, "testrun", "Kellogg:10.1002/prot.22921:protocol16:32231", False)

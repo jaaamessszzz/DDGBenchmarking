@@ -1273,4 +1273,6 @@ def main():
 	parseRawData(ddgproject.ddGDatabase())
 	
 if __name__ == "__main__":
+	print("Preventing accidental runs. Exiting.")
+	sys.exit(0)
 	main()
