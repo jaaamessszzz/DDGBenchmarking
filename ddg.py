@@ -16,7 +16,8 @@ from Bio.PDB import *
 import colortext
 import traceback
 import pickle
-
+import md5
+import random
 
 #Rosetta3.1 release. mini revision 30964. minirosetta_database revision 30967.
 #Rosetta3.2 release. mini revision 39284
@@ -100,7 +101,7 @@ class JobInserter(object):
 		else:
 			raise Exception("An error occurred creating a resfile for the ddG job.")
 	
-	def add(self, experimentID, PredictionSet, ProtocolID, KeepHETATMLines, Description = {}, InputFiles = {}):
+	def add(self, experimentID, PredictionSet, ProtocolID, KeepHETATMLines, StoreOutput = False, Description = {}, InputFiles = {}):
 		'''This function inserts a prediction into the database.
 			The parameters define:
 				the experiment we are running the prediction for;
@@ -176,29 +177,21 @@ class JobInserter(object):
 			dbfields.Description : Description,
 			dbfields.Status : dbfields.queued,
 			dbfields.ExtraParameters : ExtraParameters,
-			#"mutations" : mutations,
-			#"remappedmutations" : remappedMutations,
-			#"pdbID" : pdbID,
-			#dbfields.Command : {
-			#	"Preminimization" : [
-			#		'%(EXECUTABLE)s',
-			#		'-in:file:l', '%(INPUT_PDB_LIST)s',
-			#		'-in:file:fullatom',
-			#		'-ignore_unrecognized_res',
-			#		'-fa_max_dis', '9.0',
-			#		'-database', '%(DATABASE)s',
-			#		'-ddg::harmonic_ca_tether', '0.5',
-			#		'-score:weights', 'standard',
-			#		'-ddg::constraint_weight','1.0',
-			#		'-ddg::out_pdb_prefix', 'min_cst_0.5',
-			#		'-ddg::sc_min_only', 'false',
-			#		'-score:patch', 'score12'
-			#	]}
+			dbfields.StoreOutput : StoreOutput,
 		}
+		
 		self.ddGdb.insertDict('Prediction', params)
-							
-
-def addAllEligibleProTherm( PredictionSet, CommandName, KeepHETATMLines):
+		
+		# Add cryptID string
+		predictionID = self.ddGdb.getLastRowID()
+		entryDate = self.ddGdb.execute("SELECT EntryDate FROM Prediction WHERE ID=%s", parameters = (predictionID,))[0]["EntryDate"]	
+		rdmstring = join(random.sample('0123456789abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 16), '')
+		cryptID = "%(predictionID)s%(experimentID)s%(PredictionSet)s%(ProtocolID)s%(entryDate)s%(rdmstring)s" % vars()
+		cryptID = md5.new(cryptID.encode('utf-8')).hexdigest()
+		entryDate = self.ddGdb.execute("UPDATE Prediction SET cryptID=%s WHERE ID=%s", parameters = (cryptID, predictionID))	
+		
+								
+def addAllEligibleProTherm( PredictionSet, ProtocolID, KeepHETATMLines):
 	inserter = JobInserter()
 	colortext.printf("\nAdding ProTherm mutations to %s prediction set." % PredictionSet, "lightgreen")
 	ddGdb = ddgproject.ddGDatabase()
@@ -218,10 +211,10 @@ def addAllEligibleProTherm( PredictionSet, CommandName, KeepHETATMLines):
 	colortext.message("The number of small-to-large mutations in the database is %d, described in %d experiments." % (len(ddGdb.execute(SQLQueries["SmallToLarge"])), len(ddGdb.execute(SQLQueries["SmallToLargeD"]))))
 	colortext.message("The number of large-to-small mutations in the database is %d, described in %d experiments." % (len(ddGdb.execute(SQLQueries["LargeToSmall"])), len(ddGdb.execute(SQLQueries["LargeToSmallD"]))))
 	colortext.message("The number of experiments discounted as they involved more than one chain is %d.\n" % moreThanOneChain)
-	return
-	raise colortext.Exception("Skip this") #todo
+	
+	experimentIDs = experimentIDs[0:200]
 	for experimentID in experimentIDs:
-		inserter.add(experimentID, PredictionSet, CommandName, KeepHETATMLines)
+		inserter.add(experimentID, PredictionSet, ProtocolID, KeepHETATMLines, StoreOutput = True)
 
 
 #runner = JobTestRunner()
@@ -232,9 +225,9 @@ def main():
 	jobID = 69064
 
 	if True:
-		inserter = JobInserter()
-		#inserter.addAllEligibleProTherm("testrun", None, None, None)
-		inserter.add(jobID, "testrun", "Kellogg:10.1002/prot.22921:protocol16:32231", False)
+		#inserter = JobInserter()
+		addAllEligibleProTherm("testrun", "Kellogg:10.1002/prot.22921:protocol16:32231", False)
+		#inserter.add(jobID, "testrun", "Kellogg:10.1002/prot.22921:protocol16:32231", False)
 		sys.exit(0)
 	
 	#params = {

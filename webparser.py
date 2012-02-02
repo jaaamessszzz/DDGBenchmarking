@@ -1245,11 +1245,201 @@ def dumpPDBIDs():
 	F.write(join(pdbids, "\n"))
 	F.close()
 
+def parseExtraProThermData(ddGdb):
+	colortext.message("Parsing ProTherm")
+	protherm = os.path.join("rawdata", "ProTherm.dat")
+	F = open(protherm)
+	colortext.printf("|*********************|")
+	
+	DBIDs = {}
+	for r in ddGdb.execute('SELECT SourceID, ExperimentScore.ID AS ID FROM ExperimentScore INNER JOIN Experiment ON ExperimentScore.ExperimentID = Experiment.ID WHERE Experiment.Source="ProTherm-2008-09-08-23581"', cursorClass = ddgproject.StdCursor):
+		DBIDs[int(r[0])] = int(r[1])
+	count=  0
+	
+	exp2DBfield = {
+		"T"				: fn.ExpConTemperature,
+		"pH"			: fn.ExpConpH,
+		"BUFFER_NAME"	: fn.ExpConBuffer,
+		"BUFFER_CONC"	: fn.ExpConBufferConcentration,
+		"ION_NAME_1"	: fn.ExpConIon,
+		"ION_CONC_1"	: fn.ExpConIonConcentration,
+		"PROTEIN_CONC"	: fn.ExpConProteinConcentration,
+		"MEASURE"		: fn.ExpConMeasure,
+		"METHOD"		: fn.ExpConMethodOfDenaturation,
+	}
+	expfields = exp2DBfield.keys()
+	numericexpfields = ["T", "pH"]  
+	missingExpData = {}
+	missingReferences = 0
+	noPMIDs = {}
+	PMIDlist = {}
+	maxDBfieldlengths = {}
+	
+	expCondSQL = "UPDATE ExperimentScore SET"
+	for f in sorted(exp2DBfield.values()):
+		expCondSQL += ((" %s=" % f) + "%s,")
+	expCondSQL = expCondSQL[:-1]
+	expCondSQL += " WHERE ID=%s;"
+	
+	missingRefMap = {
+		"BIOCHEMISTRY 34, 7094-7102 (1995)" 		: ("PMID", 7766619),
+		"BIOCHEMISTRY 34, 7103-7110 (1995)" 		: ("PMID", 7766620), # This is probably the correct record. Pubmed has a different end page (two extra pages)
+		"BIOCHEMISTRY 37, 2477-2487 (1998)" 		: ("PMID", 9485396),
+		"BIOCHIM BIOPHYS ACTA 1429, 365-376 (1999)" : ("PMID", 9989221),
+		"PROTEIN SCI 6, 2196-2202 (1997)" 			: ("PMID", 9336842),
+	} 
+	
+	publicationSources = {}
+	for r in ddGdb.execute('SELECT ID FROM %s' % fn.Source, cursorClass = ddgproject.StdCursor):
+		publicationSources[r[0]] = True
+	
+	count = 0
+	while(True):
+		# Read a record
+		record = {}
+		line = F.readline()
+		while line and not(line.startswith("//")):
+			if line[0] != "*" and line[0] != " ":
+				line = line.split()
+				#if not singleErrors.get(line[0]):
+				#	singleErrors[line[0]] = 0
+				if len(line) > 1:
+					record[line[0]] = line[1:]
+				else:
+				 	record[line[0]] = None
+			line = F.readline()
+		
+		
+		kelvin_regex = re.compile("^(\d*[.]?\d*) K$")
+		celsius_regex = re.compile("^(\d*[.]?\d*) C$")
+							
+		# Parse the results
+		if record:
+			# Find out whether we have enough information
+			store = True
+			ID = int(record["NO."][0])
+			if DBIDs.get(ID):
+				ExperimentScoreID = DBIDs[ID]
+				count +=1
+				
+				ExperimentalScoreUpdate = {}
+				
+				# Add experimental condition 
+				for h in expfields:
+					if not record[h]:
+						missingExpData[h] = missingExpData.get(h, 0) + 1
+					fielddata = record[h]
+					if fielddata:
+						fielddata = join(fielddata, " ")
+					if record[h]:
+						maxDBfieldlengths[h] = max(maxDBfieldlengths.get(h, 0), len(fielddata))
+					if fielddata == "Unknown":
+						fielddata = None
+					if fielddata and h in numericexpfields:
+						try:
+							fielddata = float(fielddata)
+						except:
+							if h == "T":
+								K = kelvin_regex.match(fielddata)
+								C = celsius_regex.match(fielddata)
+								if K:
+									fielddata = float(K.group(1)) - 273.15 
+								elif C:
+									fielddata = float(C.group(1))
+								else:
+									fielddata = None
+						if fielddata == None:
+							colortext.error("Failed to convert field %s's number %s for record %d." % (h, fielddata, ID))
+							
+					ExperimentalScoreUpdate[exp2DBfield[h]] = fielddata or None
+				
+				updateVals = tuple([ExperimentalScoreUpdate[f] for f in sorted(exp2DBfield.values())] + [ExperimentScoreID]) 
+				ddGdb.execute(expCondSQL, parameters = updateVals)
+				
+				# Add reference
+				if not record["REFERENCE"]:
+					missingReferences += 1
+				referenceData = record["REFERENCE"] or ""
+				referenceData = join(referenceData, " ").strip()
+				idx = referenceData.find("PMID:")
+				referenceID = None
+				if idx != -1:
+					refPMID = referenceData[idx+5:].strip()
+					if refPMID:
+						if refPMID.isdigit():
+							referenceID = int(refPMID)
+						else:
+							colortext.error("Check reference for record %(ID)d: %(referenceData)s. It is not numeric." % vars())				
+				if not referenceID:
+					refdetails = None
+					if idx == -1:
+						refdetails = referenceData
+					else:
+						refdetails = referenceData[:idx]
+					if missingRefMap.get(refdetails) and missingRefMap[refdetails][0] == "PMID":
+						referenceID = missingRefMap[refdetails][1]
+					else:
+						missingReferences += 1
+						authors = record["AUTHOR"]
+						colortext.warning("No PMID reference for record %(ID)d: '%(referenceData)s', %(authors)s." % vars())
+						noPMIDs[referenceData.strip()] = authors
+				
+				if referenceID:
+					assert(str(referenceID).isdigit())
+					dbReferencePK = "PMID:%s" % referenceID
+					if not publicationSources.get(dbReferencePK):
+						print("Adding source '%s'." % dbReferencePK)
+						ddGdb.insertDict(fn.Source, {fn.ID : dbReferencePK})
+						publicationSources[dbReferencePK] = True
+					results = ddGdb.execute("SELECT * FROM SourceLocation WHERE SourceID=%s AND Type='PMID'", parameters = (dbReferencePK,))
+					if results:
+						assert(len(results) == 1)
+						result = results[0]
+						if result["ID"] != str(referenceID):
+							colortext.error("Source %s in the database has the PMID '%s' whereas we retrieved a value of '%s' from ProTherm." % (dbReferencePK, result["ID"], referenceID))
+					else:
+						ddGdb.insertDict(fn.SourceLocation, {
+							fn.SourceID	: dbReferencePK,
+							fn.ID		: referenceID,
+							fn.Type		: "PMID",
+						})
+					
+					ddGdb.execute("UPDATE ExperimentScore SET Publication=%s WHERE ID=%s", parameters = (dbReferencePK, int(ExperimentScoreID)))
+					
+
+				
+			#Progress meter
+			if ID % 1000 == 0:
+				colortext.write(".", "green")
+				colortext.flush()
+			
+			
+		else:
+			break
+	
+	F.close()
+	colortext.printf("\n[Parsing complete]\n\n", 'green')
+	colortext.printf("Summary", 'green')
+	colortext.printf("*******\n", 'green')
+	colortext.message("Records counted: %d" % count)
+	colortext.message("Number of unique references (PMIDs): %d\n" % len(PMIDlist))
+	colortext.message("Field lengths: %s" % maxDBfieldlengths)
+	if missingExpData:
+		colortext.warning("Missing experimental data")
+		for h, v in missingExpData.iteritems():
+			colortext.warning("\t%(h)s: for %(v)s records" % vars())
+	if missingReferences:
+		colortext.warning("Missing references for %d records." % missingReferences)
+		for ref, authors in sorted(noPMIDs.iteritems()):
+			colortext.warning("\t%s: %s" % (ref, authors))
+	
 def parseRawData(ddGdb):
 	print("")
-	parsePotapov(ddGdb)
-	parseSensDataset(ddGdb)
-	parseProTherm(ddGdb)
+	#parsePotapov(ddGdb)
+	#parseSensDataset(ddGdb)
+	#parseProTherm(ddGdb)
+	parseExtraProThermData(ddGdb)
+	return
 	if ddGdb.chainWarnings:
 		colortext.warning("UNAMBIGUOUS BADLY-SPECIFIED MUTATIONS")
 		for pdbID, recordsAndChain in sorted(ddGdb.chainWarnings.iteritems()):
@@ -1273,6 +1463,6 @@ def main():
 	parseRawData(ddgproject.ddGDatabase())
 	
 if __name__ == "__main__":
-	print("Preventing accidental runs. Exiting.")
-	sys.exit(0)
+	#print("Preventing accidental runs. Exiting.")
+	#sys.exit(0)
 	main()
