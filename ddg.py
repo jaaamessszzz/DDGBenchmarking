@@ -39,37 +39,6 @@ SQLQueries = {
 StoredProcedures = ["GetScores", "GetChains", "GetInterfaces", "GetMutants", "GetMutations"]
 dbfields = ddgproject.FieldNames()
 
-# todo - for the daemon
-class JobTestRunner(object):
-	'''This class is just here to test the running of jobs at an initial stage of development.
-		Do not rely on it being maintained.''' 
-	
-	def __init__(self):
-		self.ddGdb = ddgproject.ddGDatabase()
-	
-	def __del__(self):
-		self.ddGdb.close()
-	
-	def run(self):
-		results = self.ddGdb.execute(("SELECT * FROM %(Prediction)s WHERE Status=" % dbfields) + "%s", parameters = (dbfields.queued,))
-		for result_dict in results:
-			runPrediction(result_dict)
-			
-	def runPrediction(self, predictionRecord):
-		'''This function takes in a database record with the prediction details and starts
-			running the prediction.'''
-		ddGdb = self.ddGdb
-		try:
-			experimentID = predictionRecord[dbfields.ExperimentID]
-			parameters = (experimentID,)
-			
-			chains = [result[0] for result in ddGdb.callproc("GetChains", parameters = parameters, cursorClass = ddgproject.StdCursor)]
-			mutants = [result[0] for result in ddGdb.callproc("GetMutants", parameters = parameters, cursorClass = ddgproject.StdCursor)]
-			interfaces = [result[0] for result in ddGdb.callproc("GetInterfaces", parameters = parameters, cursorClass = ddgproject.StdCursor)]
-			mutations = ddGdb.callproc("GetMutations", parameters = parameters)
-		except:
-			pass
-
 class JobInserter(object):
 	'''This class is responsible for inserting prediction jobs to the database.''' 
 	
@@ -211,7 +180,8 @@ def addAllEligibleProTherm( PredictionSet, ProtocolID, KeepHETATMLines):
 	colortext.message("The number of small-to-large mutations in the database is %d, described in %d experiments." % (len(ddGdb.execute(SQLQueries["SmallToLarge"])), len(ddGdb.execute(SQLQueries["SmallToLargeD"]))))
 	colortext.message("The number of large-to-small mutations in the database is %d, described in %d experiments." % (len(ddGdb.execute(SQLQueries["LargeToSmall"])), len(ddGdb.execute(SQLQueries["LargeToSmallD"]))))
 	colortext.message("The number of experiments discounted as they involved more than one chain is %d.\n" % moreThanOneChain)
-	
+	return
+
 	experimentIDs = experimentIDs[0:200]
 	for experimentID in experimentIDs:
 		inserter.add(experimentID, PredictionSet, ProtocolID, KeepHETATMLines, StoreOutput = True)
