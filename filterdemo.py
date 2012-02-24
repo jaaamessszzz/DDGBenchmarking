@@ -199,15 +199,28 @@ class Examples:
 		Examples.printOutput(er)
 
 	@staticmethod
-	def getExperimentsFilteredByAminoAcids():
+	def getExperimentsFilteredByAminoAcids1():
 		'''Select all Structure records.'''
-		print("** Experiments filtered by mutation size **") 
+		print("** Experiments filtered by residue (from ALA) **") 
 		Examples.openDB()
 		
 		er = ExperimentResultSet(ddGdb)
 		Examples.printOutput(er)
 		
-		er.addFilter(ExperimentFilter.MutationsBetweenAminoAcids('ALA', None))
+		er.addFilter(ExperimentFilter.MutationsBetweenAminoAcids('ALA', 'G'))
+		
+		Examples.printOutput(er)
+
+	@staticmethod
+	def getExperimentsFilteredByAminoAcids2():
+		'''Select all Structure records.'''
+		print("** Experiments filtered by residue (from ALA) **") 
+		Examples.openDB()
+		
+		er = ExperimentResultSet(ddGdb)
+		Examples.printOutput(er)
+		
+		er.addFilter(ExperimentFilter.MutationsBetweenAminoAcids('A', 'GLY'))
 		
 		Examples.printOutput(er)
 
@@ -376,19 +389,47 @@ class Examples:
 		t2 = time.time()
 		print(t2 - t1)
 		
-		experimentIDs = er1.getFilteredResults()
-		
+		experimentIDs = sorted(list(er1.getFilteredIDs()))
 		colortext.message("\nThe number of unique ProTherm experiments with:\n\t- one mutation;\n\t- structures solved by X-ray diffraction and with <= %d residues;\n\t- a maximum standard deviation in experimental results of <= %0.2f;\n\t- and a resolution of <= %0.2f Angstroms.\nis %d.\n" % (MAX_NUMRES_PROTHERM, MAX_STANDARD_DEVIATION, MAX_RESOLUTION, len(experimentIDs)))
-		return
+		ddG_connection = dbapi.ddG()
+		count = 0
+		print("")
+		for experimentID in experimentIDs:
+			ddG_connection.addPrediction(experimentID, PredictionSet, ProtocolID, KeepHETATMLines, StoreOutput = True)
+			count += 1
+			if count >= 10:
+				colortext.write(".")
+				colortext.flush()
+				count = 0
+		print("")
 		
+	@staticmethod
+	def testAnalysis():
+		ddG_connection = dbapi.ddG()
+		pr = PredictionResultSet(ddGdb, SQL = "WHERE ID >= 12804 and ID <= 12903")
+		ddG_connection.analyze(pr)
+	
+	@staticmethod
+	def testPublications():
+		ddG_connection = dbapi.ddG()
+		pr = PredictionResultSet(ddGdb, SQL = "WHERE ID >= 12804 and ID <= 12903")
+		er = ExperimentResultSet(ddGdb, SQL = "WHERE ID >= 73534 and ID <= 73561")
+		ddG_connection.getPublications(pr)
+		ddG_connection.getPublications(er)
+	
+	
 ddGdb = common.ddgproject.ddGDatabase()
 
-#Examples.help()
+Examples.help()
 
-ddG_connection = dbapi.ddG()
-ddG_connection.dumpData("testzip.zip", 12803)
+#ddG_connection = dbapi.ddG()
+#ddG_connection.dumpData("testzip.zip", 12803)
 
-#Examples.showAllEligibleProTherm("testrun", "Kellogg:10.1002/prot.22921:protocol16:32231", False)
+
+#Examples.testAnalysis()
+Examples.testPublications()
+
+#Examples.showAllEligibleProTherm("kellogg16-A", "Kellogg:10.1002/prot.22921:protocol16:32231", False)
 #Examples.getExperimentsFilteredByStructures()
 #Examples.getStructuresFilteredByStructures()
 #Examples.showResultSetOperations()
@@ -397,7 +438,8 @@ ddG_connection.dumpData("testzip.zip", 12803)
 #Examples.getExperimentsFilteredBySource()
 #Examples.getExperimentsFilteredBySourceAndResolution()
 #Examples.getExperimentsFilteredByMutationSize()
-#Examples.getExperimentsFilteredByAminoAcids()
+#Examples.getExperimentsFilteredByAminoAcids1()
+#Examples.getExperimentsFilteredByAminoAcids2()
 #Examples.help()
 #Examples.getPredictionsUsingMultipleFilters_Speed()
 #help.ShowFilter()
