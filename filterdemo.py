@@ -192,8 +192,6 @@ class Examples:
 		er = ExperimentResultSet(ddGdb)
 		Examples.printOutput(er)
 		
-		#er.addFilter(ExperimentFilter.MutationsBetweenAminoAcidSizes('small', 'large'))
-		#er.addFilter(ExperimentFilter.MutationsBetweenAminoAcidSizes(ExperimentFilter.large, ExperimentFilter.small))
 		er.addFilter(ExperimentFilter.MutationsBetweenAminoAcidSizes(ExperimentFilter.large, ExperimentFilter.large))
 		
 		Examples.printOutput(er)
@@ -258,9 +256,7 @@ class Examples:
 		Examples.openDB()
 		pr = PredictionResultSet(ddGdb, SQL = "WHERE PredictionSet=%s", parameters = "testrun")
 		pr.addFilter(StructureFilter.Techniques(StructureFilter.XRay))
-		#Examples.printOutput(pr)
 		pr.addFilter(StructureFilter.Resolution(1, 1.5) | StructureFilter.Resolution(3.9, 4))
-		#Examples.printOutput(pr)
 		pr.addFilter(StructureFilter.TotalBFactors(0, 10))
 		Examples.printOutput(pr)
 
@@ -406,7 +402,7 @@ class Examples:
 	@staticmethod
 	def testAnalysis():
 		ddG_connection = dbapi.ddG()
-		pr = PredictionResultSet(ddGdb, SQL = "WHERE ID >= 12804 and ID <= 12903")
+		pr = PredictionResultSet(ddGdb, SQL = "WHERE PredictionSet='kellogg16-A' AND Status='done' LIMIT 2000")
 		ddG_connection.analyze(pr)
 	
 	@staticmethod
@@ -420,14 +416,13 @@ class Examples:
 	
 ddGdb = common.ddgproject.ddGDatabase()
 
-Examples.help()
-
+#Examples.help()
 #ddG_connection = dbapi.ddG()
-#ddG_connection.dumpData("testzip.zip", 12803)
+#ddG_connection.dumpData("testzip-13103.zip", 13103)
 
 
-#Examples.testAnalysis()
-Examples.testPublications()
+Examples.testAnalysis()
+#Examples.testPublications()
 
 #Examples.showAllEligibleProTherm("kellogg16-A", "Kellogg:10.1002/prot.22921:protocol16:32231", False)
 #Examples.getExperimentsFilteredByStructures()
