@@ -1,0 +1,4 @@
+<TASKOPERATIONS>
+  <RestrictToInterfaceVector name=interface chain1_num=1 chain2_num=2 CB_dist_cutoff=10.0 nearby_atom_cutoff=5.5 vector_angle_cutoff=75.0 vector_dist_cutoff=9.0/>
+  <InitializeFromCommandline name=cmdline/>
+</TASKOPERATIONS>
