@@ -1,3 +1,0 @@
-start
-99 A PIKAA DERK
-100 A PIKAA STY
