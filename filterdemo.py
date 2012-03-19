@@ -413,18 +413,69 @@ class Examples:
 		ddG_connection.getPublications(pr)
 		ddG_connection.getPublications(er)
 	
-	
+	@staticmethod
+	def addAllMutationsForAGivenPDB():
+		import common.pdb
+		import common.rosettahelper
+		
+		ddG_connection = dbapi.ddG()
+		#ddG_connection.addPDBtoDatabase("3K0NA_lin.pdb")
+		opdb = common.pdb.PDB("3K0NA_lin.pdb")
+		common.rosettahelper.ROSETTAWEB_SK_AAinv
+		count = 1
+		for chainresidueid, wt in sorted(opdb.ProperResidueIDToAAMap().iteritems()):
+			chain = chainresidueid[0]
+			residueid = chainresidueid[1:].strip()
+			allotherAAs = sorted([aa for aa in common.rosettahelper.ROSETTAWEB_SK_AAinv.keys() if aa != wt])
+			for otherAA in allotherAAs: 
+				ms = dbapi.MutationSet()
+				ms.addMutation(chain, residueid, wt, otherAA)
+				print("3K0NA_lin", ms, ms.getChains(), count, 0)
+				ddG_connection.createDummyExperiment("3K0NA_lin", ms, ms.getChains(), count, 0, ExperimentSetName = "DummySource")
+				count += 1
+
+	@staticmethod
+	def addLinsJobs(PredictionSet, ProtocolID):
+		colortext.printf("\nAdding Lin's mutations to %s prediction set." % PredictionSet, "lightgreen")
+		KeepHETATMLines = False
+		Examples.openDB()
+		
+		# Filter by the DummySource set of experiments
+		er1 = ExperimentResultSet(ddGdb)
+		ef1 = ExperimentFilter()
+		ef1.setSource(ExperimentFilter.DummySource)
+		er1.addFilter(ef1)
+		
+		# Filter by the particular PDB
+		sr = StructureResultSet(ddGdb, 'WHERE PDB_ID="3K0NA_lin"')
+		er1 = ExperimentResultSet.fromIDs(ddGdb, er1.getFilteredIDs()).filterBySet(sr)
+		Examples.printOutput(er1)
+		
+		experimentIDs = sorted(list(er1.getFilteredIDs()))
+		colortext.message("\nThe number of unique experiments is %d.\n" % len(experimentIDs))
+		ddG_connection = dbapi.ddG()
+		count = 0
+		return
+		for experimentID in experimentIDs:
+			ddG_connection.addPrediction(experimentID, PredictionSet, ProtocolID, KeepHETATMLines, StoreOutput = True)
+			count += 1
+			if count >= 10:
+				colortext.write(".")
+				colortext.flush()
+				count = 0
+		print("")
+
 ddGdb = common.ddgproject.ddGDatabase()
 
 #Examples.help()
 #ddG_connection = dbapi.ddG()
 #ddG_connection.dumpData("testzip-13103.zip", 13103)
 
+Examples.addLinsJobs("lin-3K0NA", "Kellogg:10.1002/prot.22921:protocol16:32231")
 
-Examples.testAnalysis()
+#Examples.testAnalysis()
 #Examples.testPublications()
 
-#Examples.showAllEligibleProTherm("kellogg16-A", "Kellogg:10.1002/prot.22921:protocol16:32231", False)
 #Examples.getExperimentsFilteredByStructures()
 #Examples.getStructuresFilteredByStructures()
 #Examples.showResultSetOperations()
