@@ -350,8 +350,10 @@ class Examples:
 		colortext.printf("\nAdding ProTherm mutations to %s prediction set." % PredictionSet, "lightgreen")
 		#ddGdb = ddgproject.ddGDatabase()
 		
-		from webparser import MAX_NUMRES_PROTHERM, MAX_STANDARD_DEVIATION, MAX_RESOLUTION
-		
+		MAX_RESOLUTION = 2.1
+		MAX_NUMRES_PROTHERM = 350
+		MAX_STANDARD_DEVIATION = 1.0
+
 		Examples.openDB()
 		
 		import time
@@ -372,6 +374,9 @@ class Examples:
 		t1 = time.time()
 		ef1 = ExperimentFilter()
 		ef1.setSource(ExperimentFilter.ProTherm)
+		er1 = ExperimentResultSet(ddGdb)
+		er1.addFilter(ExperimentFilter.OnSource(ExperimentFilter.ProTherm))
+		Examples.printOutput(er1)
 		ef1.setNumberOfMutations(1, 1)
 		ef1.setNumberOfChains(1, 1)
 		ef1.setStandardDeviation(None, MAX_STANDARD_DEVIATION)
@@ -389,6 +394,7 @@ class Examples:
 		colortext.message("\nThe number of unique ProTherm experiments with:\n\t- one mutation;\n\t- structures solved by X-ray diffraction and with <= %d residues;\n\t- a maximum standard deviation in experimental results of <= %0.2f;\n\t- and a resolution of <= %0.2f Angstroms.\nis %d.\n" % (MAX_NUMRES_PROTHERM, MAX_STANDARD_DEVIATION, MAX_RESOLUTION, len(experimentIDs)))
 		ddG_connection = dbapi.ddG()
 		count = 0
+		sys.exit(0)
 		print("")
 		for experimentID in experimentIDs:
 			ddG_connection.addPrediction(experimentID, PredictionSet, ProtocolID, KeepHETATMLines, StoreOutput = True)
@@ -414,7 +420,7 @@ class Examples:
 		ddG_connection.getPublications(er)
 	
 	@staticmethod
-	def addAllMutationsForAGivenPDB():
+	def addAllMutationsForAGivenPDB1():
 		import common.pdb
 		import common.rosettahelper
 		
@@ -435,6 +441,54 @@ class Examples:
 				count += 1
 
 	@staticmethod
+	def addAllMutationsForAGivenPDB2():
+		import common.pdb
+		import common.rosettahelper
+		
+		ddG_connection = dbapi.ddG()
+		#ddG_connection.addPDBtoDatabase("3K0On_lin.pdb")
+		opdb = common.pdb.PDB("3K0On_lin.pdb")
+		common.rosettahelper.ROSETTAWEB_SK_AAinv
+		count = 3098
+		for chainresidueid, wt in sorted(opdb.ProperResidueIDToAAMap().iteritems()):
+			chain = chainresidueid[0]
+			residueid = chainresidueid[1:].strip()
+			allotherAAs = sorted([aa for aa in common.rosettahelper.ROSETTAWEB_SK_AAinv.keys() if aa != wt])
+			for otherAA in allotherAAs: 
+				ms = dbapi.MutationSet()
+				ms.addMutation(chain, residueid, wt, otherAA)
+				print("3K0On_lin", ms, ms.getChains(), count, 0)
+				ddG_connection.createDummyExperiment("3K0On_lin", ms, ms.getChains(), count, 0, ExperimentSetName = "DummySource")
+				count += 1
+				
+	@staticmethod
+	def addAllMutationsForAGivenPDB3():
+		import common.pdb
+		import common.rosettahelper
+		
+		Examples.openDB()
+		ddG_connection = dbapi.ddG()
+		#ddG_connection.addPDBtoDatabase("pdbs/3K0NB_lin.pdb", UniProtAC = "P62937", UniProtID = "PPIA_HUMAN")
+		opdb = common.pdb.PDB("pdbs/3K0NB_lin.pdb")
+		common.rosettahelper.ROSETTAWEB_SK_AAinv
+		
+		results = ddGdb.execute('''SELECT SourceID FROM ExperimentScore INNER JOIN Experiment ON ExperimentScore.ExperimentID = Experiment.ID WHERE Source="DummySource"''', cursorClass=common.ddgproject.StdCursor) 
+		assert(results)
+		highestID = max([int(r[0]) for r in results])
+		count = highestID + 1
+
+		for chainresidueid, wt in sorted(opdb.ProperResidueIDToAAMap().iteritems()):
+			chain = chainresidueid[0]
+			residueid = chainresidueid[1:].strip()
+			allotherAAs = sorted([aa for aa in common.rosettahelper.ROSETTAWEB_SK_AAinv.keys() if aa != wt])
+			for otherAA in allotherAAs: 
+				ms = dbapi.MutationSet()
+				ms.addMutation(chain, residueid, wt, otherAA)
+				print("3K0NB_lin", ms, ms.getChains(), count, 0, chain, wt, residueid, otherAA)
+				ddG_connection.createDummyExperiment("3K0NB_lin", ms, ms.getChains(), count, 0, ExperimentSetName = "DummySource")
+				count += 1
+				
+	@staticmethod
 	def addLinsJobs(PredictionSet, ProtocolID):
 		colortext.printf("\nAdding Lin's mutations to %s prediction set." % PredictionSet, "lightgreen")
 		KeepHETATMLines = False
@@ -447,7 +501,7 @@ class Examples:
 		er1.addFilter(ef1)
 		
 		# Filter by the particular PDB
-		sr = StructureResultSet(ddGdb, 'WHERE PDB_ID="3K0NA_lin"')
+		sr = StructureResultSet(ddGdb, 'WHERE PDB_ID="3K0NB_lin"')
 		er1 = ExperimentResultSet.fromIDs(ddGdb, er1.getFilteredIDs()).filterBySet(sr)
 		Examples.printOutput(er1)
 		
@@ -455,7 +509,6 @@ class Examples:
 		colortext.message("\nThe number of unique experiments is %d.\n" % len(experimentIDs))
 		ddG_connection = dbapi.ddG()
 		count = 0
-		return
 		for experimentID in experimentIDs:
 			ddG_connection.addPrediction(experimentID, PredictionSet, ProtocolID, KeepHETATMLines, StoreOutput = True)
 			count += 1
@@ -470,10 +523,11 @@ ddGdb = common.ddgproject.ddGDatabase()
 #Examples.help()
 #ddG_connection = dbapi.ddG()
 #ddG_connection.dumpData("testzip-13103.zip", 13103)
+#Examples.addAllMutationsForAGivenPDB3()
+#Examples.showAllEligibleProTherm("test", "test", False)
+#Examples.addLinsJobs("lin-3K0NB", "Kellogg:10.1002/prot.22921:protocol16:32231")
 
-Examples.addLinsJobs("lin-3K0NA", "Kellogg:10.1002/prot.22921:protocol16:32231")
-
-#Examples.testAnalysis()
+Examples.testAnalysis()
 #Examples.testPublications()
 
 #Examples.getExperimentsFilteredByStructures()
