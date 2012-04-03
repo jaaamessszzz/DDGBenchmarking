@@ -520,14 +520,17 @@ class Examples:
 
 ddGdb = common.ddgproject.ddGDatabase()
 
+#ddG_connection = dbapi.ddG()
+#ddG_connection.addPDBtoDatabase(pdbID = "1FKJ")
+
 #Examples.help()
 #ddG_connection = dbapi.ddG()
 #ddG_connection.dumpData("testzip-13103.zip", 13103)
 #Examples.addAllMutationsForAGivenPDB3()
 #Examples.showAllEligibleProTherm("test", "test", False)
 #Examples.addLinsJobs("lin-3K0NB", "Kellogg:10.1002/prot.22921:protocol16:32231")
-
-Examples.testAnalysis()
+		
+#Examples.testAnalysis()
 #Examples.testPublications()
 
 #Examples.getExperimentsFilteredByStructures()
