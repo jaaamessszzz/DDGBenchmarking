@@ -412,6 +412,22 @@ class Examples:
 		ddG_connection.analyze(pr)
 	
 	@staticmethod
+	def testAnalysis2():
+		ddG_connection = dbapi.ddG()
+		pr = PredictionResultSet(ddGdb, SQL = "WHERE PredictionSet='lizsettest1' AND Status='done' LIMIT 2000")
+		ddG_connection.analyze(pr)
+
+		pr = PredictionResultSet(ddGdb, SQL = "WHERE PredictionSet='lizsettest1' AND Status='done' LIMIT 2000")
+		pr.addFilter(ExperimentFilter.MutationsBetweenAminoAcidSizes(ExperimentFilter.large, ExperimentFilter.small))
+		Examples.printOutput(pr)
+		ddG_connection.analyze(pr)
+
+		pr = PredictionResultSet(ddGdb, SQL = "WHERE PredictionSet='lizsettest1' AND Status='done' LIMIT 2000")
+		pr.addFilter(ExperimentFilter.MutationsBetweenAminoAcidSizes(ExperimentFilter.small, ExperimentFilter.large))
+		Examples.printOutput(pr)
+		ddG_connection.analyze(pr)
+
+	@staticmethod
 	def testPublications():
 		ddG_connection = dbapi.ddG()
 		pr = PredictionResultSet(ddGdb, SQL = "WHERE ID >= 12804 and ID <= 12903")
@@ -518,6 +534,32 @@ class Examples:
 				count = 0
 		print("")
 
+	@staticmethod
+	def runLizsSet(PredictionSet, ProtocolID):
+		colortext.printf("\nAdding Liz's data set to %s prediction set." % PredictionSet, "lightgreen")
+		KeepHETATMLines = False
+		Examples.openDB()
+		
+		# Filter by the DummySource set of experiments
+		er1 = ExperimentResultSet(ddGdb)
+		ef1 = ExperimentFilter()
+		ef1.setSource(ExperimentFilter.LizKellogg)
+		er1.addFilter(ef1)
+		Examples.printOutput(er1)
+		
+		experimentIDs = sorted(list(er1.getFilteredIDs()))
+		colortext.message("\nThe number of unique experiments is %d.\n" % len(experimentIDs))
+		ddG_connection = dbapi.ddG()
+		count = 0
+		for experimentID in experimentIDs:
+			ddG_connection.addPrediction(experimentID, PredictionSet, ProtocolID, KeepHETATMLines, StoreOutput = True)
+			count += 1
+			if count >= 10:
+				colortext.write(".")
+				colortext.flush()
+				count = 0
+		print("")
+		
 ddGdb = common.ddgproject.ddGDatabase()
 
 #ddG_connection = dbapi.ddG()
@@ -529,7 +571,8 @@ ddGdb = common.ddgproject.ddGDatabase()
 #Examples.addAllMutationsForAGivenPDB3()
 #Examples.showAllEligibleProTherm("test", "test", False)
 #Examples.addLinsJobs("lin-3K0NB", "Kellogg:10.1002/prot.22921:protocol16:32231")
-		
+Examples.testAnalysis2()
+#Examples.runLizsSet("lizsettest1", "Kellogg:10.1002/prot.22921:protocol16:32231")
 #Examples.testAnalysis()
 #Examples.testPublications()
 
