@@ -1,4 +1,4 @@
-import common.ddgproject
+import ddgdbapi
 import common.colortext as colortext
 from ddglib import help, dbapi
 from ddglib.ddgfilters import *
@@ -7,7 +7,7 @@ from ddglib.ddgfilters import *
 
 def simpleRunExample(self):
 	# Step 1: Open a database connection
-	ddGdb = common.ddgproject.ddGDatabase()
+	ddGdb = ddgdbapi.ddGDatabase()
 
 	# Step 2: Select database records
 	sr = StructureResultSet(ddGdb, AdditionalIDs = ['2BQC', '1LAW', '1LHH', '1LHI'])
@@ -36,7 +36,7 @@ class Examples:
 	@staticmethod
 	def openDB():
 		if not globals().get("ddGdb"):
-			globals()["ddGdb"] = common.ddgproject.ddGDatabase()
+			globals()["ddGdb"] = ddgdbapi.ddGDatabase()
 
 	@staticmethod
 	def help():
@@ -348,7 +348,7 @@ class Examples:
 	def showAllEligibleProTherm(PredictionSet, ProtocolID, KeepHETATMLines):
 		#inserter = JobInserter()
 		colortext.printf("\nAdding ProTherm mutations to %s prediction set." % PredictionSet, "lightgreen")
-		#ddGdb = ddgproject.ddGDatabase()
+		#ddGdb = ddgdbapi.ddGDatabase()
 		
 		MAX_RESOLUTION = 2.1
 		MAX_NUMRES_PROTHERM = 350
@@ -488,7 +488,7 @@ class Examples:
 		opdb = common.pdb.PDB("pdbs/3K0NB_lin.pdb")
 		common.rosettahelper.ROSETTAWEB_SK_AAinv
 		
-		results = ddGdb.execute('''SELECT SourceID FROM ExperimentScore INNER JOIN Experiment ON ExperimentScore.ExperimentID = Experiment.ID WHERE Source="DummySource"''', cursorClass=common.ddgproject.StdCursor) 
+		results = ddGdb.execute('''SELECT SourceID FROM ExperimentScore INNER JOIN Experiment ON ExperimentScore.ExperimentID = Experiment.ID WHERE Source="DummySource"''', cursorClass=ddgdbapi.StdCursor) 
 		assert(results)
 		highestID = max([int(r[0]) for r in results])
 		count = highestID + 1
@@ -560,7 +560,7 @@ class Examples:
 				count = 0
 		print("")
 		
-ddGdb = common.ddgproject.ddGDatabase()
+ddGdb = ddgdbapi.ddGDatabase()
 
 #ddG_connection = dbapi.ddG()
 #ddG_connection.addPDBtoDatabase(pdbID = "1FKJ")

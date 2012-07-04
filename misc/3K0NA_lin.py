@@ -1,7 +1,7 @@
 import sys
 sys.path.insert(0, "..")
 sys.path.insert(1, "../common")
-import common.ddgproject
+import ddgdbapi
 import common.colortext as colortext
 from common.rosettahelper import ROSETTAWEB_SK_AAinv
 from ddglib import help, dbapi
@@ -9,7 +9,7 @@ from ddglib.ddgfilters import *
 from string import join
 import pickle
 
-ddGdb = common.ddgproject.ddGDatabase()
+ddGdb = ddgdbapi.ddGDatabase()
 
 run1 = ("lin-3K0NA", "3K0NA_", "3K0NA_lin")
 run2 = ("lin-3K0On", "3K0On_", "3K0On_lin")
@@ -20,7 +20,7 @@ PredictionSet = current_run[0]
 FilePrefix = current_run[1]
 PDBID = current_run[2]
 
-numMissingResults = ddGdb.execute('''SELECT COUNT(ID) FROM `Prediction` WHERE PredictionSet= %s AND Status<>"done"''', parameters=(PredictionSet,), cursorClass=common.ddgproject.StdCursor)[0][0]
+numMissingResults = ddGdb.execute('''SELECT COUNT(ID) FROM `Prediction` WHERE PredictionSet= %s AND Status<>"done"''', parameters=(PredictionSet,), cursorClass=ddgdbapi.StdCursor)[0][0]
 
 results = ddGdb.execute('''
 SELECT ID, Chain, ResidueID, WildTypeAA, MutantAA, ddG, TIME_TO_SEC(TIMEDIFF(EndDate,StartDate))/60 as TimeTakenInMinutes FROM  `Prediction` 
