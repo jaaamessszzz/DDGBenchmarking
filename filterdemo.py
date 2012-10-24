@@ -1,7 +1,9 @@
-import ddgdbapi
-import common.colortext as colortext
-from ddglib import help, dbapi
-from ddglib.ddgfilters import *
+import sys
+sys.path.insert(0, "common")
+sys.path.insert(0, "ddglib")
+from common import colortext, rosettadb
+from ddglib import dbapi, ddgdbapi #  help
+#from ddglib.ddgfilters import *
 
 #help.help()
 
@@ -559,9 +561,25 @@ class Examples:
 				colortext.flush()
 				count = 0
 		print("")
-		
-ddGdb = ddgdbapi.ddGDatabase()
 
+ddG_connection = dbapi.ddG()
+sys.exit(0)
+import analysis
+analyzer = analysis.Analyzer("AllExperimentsProtocol16")
+analyzer.AddPublishedDDGsToAnalysisTables()
+analyzer.plot(analysis.Analyzer.correlation_coefficient, "Kellogg.rr", table_names = ["Kellogg"])
+#			"kellogg.txt", "Kellogg")
+for table_name, a_table in sorted(analyzer.analysis_tables.iteritems()):
+	print(a_table)
+	print(table_name)
+	
+#print(analysis.AnalysisPoint.headers)
+#print(analysis_tables)
+#print(analysis.AnalysisPoint.headers)
+#print(analysis_tables["Kellogg"])
+
+#ddG_connection.createPredictionsFromUserDataSet("AllValidPGPK", "AllExperimentsProtocol16", "Kellogg:10.1002/prot.22921:protocol16:32231", False, StoreOutput = False, Description = {}, InputFiles = {}, testonly = False)
+	
 #ddG_connection = dbapi.ddG()
 #ddG_connection.addPDBtoDatabase(pdbID = "1FKJ")
 
@@ -571,7 +589,7 @@ ddGdb = ddgdbapi.ddGDatabase()
 #Examples.addAllMutationsForAGivenPDB3()
 #Examples.showAllEligibleProTherm("test", "test", False)
 #Examples.addLinsJobs("lin-3K0NB", "Kellogg:10.1002/prot.22921:protocol16:32231")
-Examples.testAnalysis2()
+#Examples.testAnalysis2()
 #Examples.runLizsSet("lizsettest1", "Kellogg:10.1002/prot.22921:protocol16:32231")
 #Examples.testAnalysis()
 #Examples.testPublications()
