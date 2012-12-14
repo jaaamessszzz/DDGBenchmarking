@@ -2,18 +2,23 @@ import sys
 sys.path.insert(0, "..")
 sys.path.insert(0, "../common")
 sys.path.insert(0, "../ddglib")
-from common import colortext, rosettadb
-import pickle
-from process import Popen
-from common.rosettahelper import readBinaryFile, makeTemp755Directory, writeFile, readFileLines
 import zipfile
 import shutil
 import os
+import time
+import pickle
+import subprocess
+from process import Popen
+from common import colortext, rosettadb
+from common.rosettahelper import readBinaryFile, makeTemp755Directory, writeFile, readFileLines
 from pdb import PDB, ResidueID2String, checkPDBAgainstMutations, aa1
-
+	
 import ddgdbapi
 ddGdb = ddgdbapi.ddGDatabase()
 ddGPredictiondb = ddgdbapi.ddGPredictionDataDatabase()
+
+current_score_revision = '0.23'
+class WrongScoreRevisionException(Exception): pass
 
 class NoahScore(object):
 	
@@ -64,25 +69,127 @@ class NoahScore(object):
 	def __repr__(self):
 		return("Total score: %(total)f\nPositional score: %(positional)f\nPositional score (two-body) %(positional_twoscore)f" % self.__dict__)
 
-def main():
-	results = ddGdb.execute("SELECT ID, ExperimentID, ddG FROM Prediction WHERE PredictionSet='AllExperimentsProtocol16' AND Status='done' AND ScoreVersion <> 0.23")
-	if results:
-		print("Score versions found which are not 0.23. Need to update table structure.")
-		sys.exit(1)
-	else:
-		# Little hacky way to run two processes
-		print( os.getcwd())
-		if os.getcwd().endswith("testing_scoring2"):
-			results = ddGdb.execute("SELECT ID, ExperimentID, ddG FROM Prediction WHERE PredictionSet='AllExperimentsProtocol16' AND Status='done' AND ScoreVersion = 0.23 AND MOD(ID,2)=1")
-		elif os.getcwd().endswith("testing_scoring"):
-			results = ddGdb.execute("SELECT ID, ExperimentID, ddG FROM Prediction WHERE PredictionSet='AllExperimentsProtocol16' AND Status='done' AND ScoreVersion = 0.23 AND MOD(ID,2)=0")
-		else:
-			print("wrong directory")
-			sys.exit(0)
+def delete_scores(results, score_type):
+	'''e.g. delete_scores(results, 'noah_6,0A')'''
+	for r in results:
+		if len(mutations) == 1:
+			ddG_dict = pickle.loads(r['ddG'])
+			if ddG_dict['version'] != current_score_revision:
+				raise WrongScoreRevisionException("Expected score revision %s. Found revision %s instead." % (current_score_revision, ddG_dict['version']))
+			if ddG_dict['data'].get(score_type):
+				del ddG_dict['data'][score_type]
+				pickled_ddG = pickle.dumps(ddG_dict)
+				ddGdb.execute('UPDATE Prediction SET ddG=%s WHERE ID=%s', parameters=(pickled_ddG, r['ID'],))
+
+def rename_score_type(results, old_score_type, new_score_type):
+	'''e.g. rename_score_type(results, 'noah_6,0A', 'noah_6A')'''
+	for r in results:
+		if len(mutations) == 1:
+			ddG_dict = pickle.loads(r['ddG'])
+			if ddG_dict['version'] != current_score_revision:
+				raise WrongScoreRevisionException("Expected score revision %s. Found revision %s instead." % (current_score_revision, ddG_dict['version']))
+			if ddG_dict['data'].get(old_score_type):
+				if ddG_dict['data'].get(new_score_type):
+					raise WrongScoreRevisionException("Found both the old score type %s and the new score type %s." % (old_score_type, new_score_type))
+				ddG_dict['data'][new_score_type] = ddG_dict['data'][old_score_type]
+				del ddG_dict['data'][old_score_type]
+				pickled_ddG = pickle.dumps(ddG_dict)
+				ddGdb.execute('UPDATE Prediction SET ddG=%s WHERE ID=%s', parameters=(pickled_ddG, r['ID'],))
 	
-	import time
+def update_records(results):
+	print("Updating scores to revision %s." % current_score_revision)
+	for r in results:
+		inner_count = 0
+		extracted_data = False
+		
+		count += 1
+		if len(mutations) == 1:
+			ddG_dict = pickle.loads(r['ddG'])
+			if ddG_dict['version'] != current_score_revision:
+				# update code goes here
+				#ddG_dict = pickle.loads(r['ddG'])
+				#do something
+				#pickled_ddG = pickle.dumps(ddG_dict)
+				#ddGdb.execute('UPDATE Prediction SET ddG=%s WHERE ID=%s', parameters=(pickled_ddG, r['ID'],))
+				raise WrongScoreRevisionException("Expected score revision %s. Found revision %s instead." % (current_score_revision, ddG_dict['version']))
+
+from optparse import OptionParser
+
+def get_number_of_processors():
+	'''Only runs on Linux and I'm unsure how general this is. Works for our webserver.'''
+	
+	poutput = subprocess.Popen(['more', '/proc/cpuinfo'], stdout=subprocess.PIPE)
+	poutput = subprocess.Popen(['grep', 'processor'], stdin=poutput.stdout, stdout=subprocess.PIPE)
+	if poutput.returncode:
+		raise Exception("Return code = %s.\n%s" % (str(poutput.errorcode), poutput.stderr))
+	else:
+		return len(poutput.stdout.readlines())
+		
+def main():
+	max_processors = get_number_of_processors() 
+	
+	rescore_process_file = "/tmp/klab_rescore.txt"
+	parser = OptionParser()
+	parser.add_option("-n", "--numprocesses", default=1, type='int', dest="num_processes", help="The number of processes used for the rescoring. The cases are split according to this number.", metavar="NUM_PROCESSES")
+	parser.add_option("-p", "--process", default=1, type='int', dest="process", help="The ID of this process. This should be an integer between 1 and the number of processes used for the rescoring.", metavar="PROCESS_ID")
+	parser.add_option("-d", "--delete",  action="store_true", dest="delete", help="Delete the process tracking file %s." % rescore_process_file)
+	(options, args) = parser.parse_args()
+	
+	if options.delete and os.path.exists(rescore_process_file):
+		print("Removing %s." % rescore_process_file)
+		os.remove(rescore_process_file)
+	
+	num_processes = options.num_processes
+	process_id = options.process
+	if num_processes < 1:
+		raise colortext.Exception("At least 1 processor must be used.")
+	if num_processes > max_processors:
+		raise colortext.Exception("Only %d processors/cores were detected. Cannot run with %d processes." % (max_processors, num_processes))
+	if num_processes > (max_processors * 0.75):
+		colortext.warning("Warning: Using %d processors/cores out of %d which is %0.2f%% of the total available." % (num_processes, max_processors, (100.0*float(num_processes)/float(max_processors))))
+	if not(1 <= process_id <= min(max_processors, num_processes)):
+		raise colortext.Exception("The process ID %d must be between 1 and the number of processes, %d." % (process_id, num_processes))
+	
+	if os.path.exists(rescore_process_file):
+		lines = readFileLines(rescore_process_file)
+		idx = lines[0].find("numprocesses")
+		if idx == -1:
+			raise Exception("Badly formatted %s." % rescore_process_file)
+		existing_num_processes = int(lines[0][idx+len("numprocesses"):])
+		if existing_num_processes != num_processes:
+			raise colortext.Exception("You specified the number of processes to be %d but %s already specifies it as %d." % (num_processes, rescore_process_file, existing_num_processes))
+		for line in [line for line in lines[1:] if line.strip()]:
+			idx = line.find("process")
+			if idx == -1:
+				raise colortext.Exception("Badly formatted %s. Line is '%s'." % (rescore_process_file, line))
+			existing_process = int(line[idx+len('process'):])
+			if process_id == existing_process:
+				raise colortext.Exception("Process %d is already logged as running. Check if this is so and edit %s." % (process_id, rescore_process_file))
+		F = open(rescore_process_file, 'a')
+		F.write("process %d\n" % process_id)
+		F.close()
+	else:
+		F = open(rescore_process_file, 'w')
+		F.write("numprocesses %d\n" % num_processes)
+		F.write("process %d\n" % process_id)
+		F.close()
+	
+	output_dir = 'rescoring/%d' % process_id
+	if not(os.path.exists(output_dir)):
+		os.makedirs(output_dir)
+	abs_output_dir = os.path.abspath(os.path.join(os.getcwd(), output_dir))
+	print("Running process in %s." % abs_output_dir)
+	
+	results = ddGdb.execute("SELECT ID, ExperimentID, ddG FROM Prediction WHERE PredictionSet='AllExperimentsProtocol16' AND Status='done' AND ScoreVersion <> %s", parameters=(float(current_score_revision),))
+	if results:
+		raise WrongScoreRevisionException("Score versions found which are not %s. Need to update table structure." % current_score_revision)
+	else:
+		# Hacky way to run multiple processes
+		results = ddGdb.execute("SELECT ID, ExperimentID, ddG FROM Prediction WHERE PredictionSet='AllExperimentsProtocol16' AND Status='done' AND ScoreVersion=%s AND MOD(ID,%s)=%s", parameters=(float(current_score_revision),num_processes,process_id-1))
 	print(len(results))
-	#exF = open("existingvalues.txt","w")
+	
+	results = results[:1]
+	sys.exit(0)
 	count = 0
 	cases_computed = 0
 	total_time_in_secs = 0
@@ -106,50 +213,8 @@ def main():
 			mutantaa = mutation['MutantAA']
 			
 			ddG_dict = pickle.loads(r['ddG'])
-			if ddG_dict['version'] != '0.23':
-				print(ID, ddG_dict['version'])
-			if ddG_dict['version'] == '0.2':
-				ddG = ddG_dict['data']['kellogg']['total']['ddG']
-			elif ddG_dict['version'] == '0.1':
-				ddG = ddG_dict['data']['ddG']
-			elif ddG_dict['version'] == '0.21':
-				ddG = ddG_dict['data']['kellogg']['total']['ddG']
-				ddG_dict['data']['noah_6.0A'] = ddG_dict['data']['noah']
-				del ddG_dict['data']['noah']
-				ddG_dict['version'] = '0.22'
-				pickled_ddG = pickle.dumps(ddG_dict)
-				ddGdb.execute('UPDATE Prediction SET ddG=%s WHERE ID=%s', parameters=(pickled_ddG, r['ID'],))
-			elif ddG_dict['version'] == '0.22':
-				ddG = ddG_dict['data']['kellogg']['total']['ddG']
-				try:
-					ddG_dict['data']['noah_6,0A'] = ddG_dict['data']['noah_6.0A']
-					del ddG_dict['data']['noah_6.0A']
-				except:
-					pass
-				try:
-					ddG_dict['data']['noah_7,0A'] = ddG_dict['data']['noah_7.0A']
-					del ddG_dict['data']['noah_7.0A']
-				except:
-					pass
-				try:
-					ddG_dict['data']['noah_8,0A'] = ddG_dict['data']['noah_8.0A']
-					del ddG_dict['data']['noah_8.0A']
-				except:
-					pass
-				try:
-					ddG_dict['data']['noah_9,0A'] = ddG_dict['data']['noah_9.0A']
-					del ddG_dict['data']['noah_9.0A']
-				except:
-					pass
-				ddG_dict['version'] = '0.23'
-				pickled_ddG = pickle.dumps(ddG_dict)
-				ddGdb.execute('UPDATE Prediction SET ddG=%s WHERE ID=%s', parameters=(pickled_ddG, r['ID'],))
-			elif ddG_dict['version'] == '0.23':
-				ddG = ddG_dict['data']['kellogg']['total']['ddG']
-			else:
-				raise Exception("Booya!")
-			
-			assert(ddG_dict['version'] == '0.23')
+			ddG = ddG_dict['data']['kellogg']['total']['ddG']
+			assert(ddG_dict['version'] == d)
 			print(ddG_dict)
 			
 			all_done = True
