@@ -124,7 +124,38 @@ def get_number_of_processors():
 		raise Exception("Return code = %s.\n%s" % (str(poutput.errorcode), poutput.stderr))
 	else:
 		return len(poutput.stdout.readlines())
+
+class Timer(object):
+	'''Simple class for non-nested timers.'''
+	
+	max_name_length = 35
+	
+	def __init__(self):
+		self.stages = []
 		
+	def add(self, stage):
+		stage = stage[:Timer.max_name_length]
+		if self.stages:
+			laststage = self.stages[-1]
+			laststage['time_taken'] = time.time() - laststage['timer_start']
+			laststage['timer_start'] = None
+		self.stages.append({'name' : stage, 'time_taken' : 0, 'timer_start' : time.time()})
+	
+	def stop(self):
+		if self.stages:
+			laststage = self.stages[-1]
+			laststage['time_taken'] = time.time() - laststage['timer_start']
+			laststage['timer_start'] = None
+	
+	def sum(self):
+		return sum([s['time_taken'] for s in self.stages])
+	
+	def __repr__(self):
+		s = []
+		for stage in self.stages:
+			s.append('%s %fs' % (stage['name'].ljust(Timer.max_name_length + 2), stage['time_taken']))
+		return "\n".join(s)
+			
 def main():
 	max_processors = get_number_of_processors() 
 	
@@ -178,7 +209,7 @@ def main():
 	if not(os.path.exists(output_dir)):
 		os.makedirs(output_dir)
 	abs_output_dir = os.path.abspath(os.path.join(os.getcwd(), output_dir))
-	print("Running process in %s." % abs_output_dir)
+	print("Running process in %s.\n" % abs_output_dir)
 	
 	results = ddGdb.execute("SELECT ID, ExperimentID, ddG FROM Prediction WHERE PredictionSet='AllExperimentsProtocol16' AND Status='done' AND ScoreVersion <> %s", parameters=(float(current_score_revision),))
 	if results:
@@ -186,18 +217,19 @@ def main():
 	else:
 		# Hacky way to run multiple processes
 		results = ddGdb.execute("SELECT ID, ExperimentID, ddG FROM Prediction WHERE PredictionSet='AllExperimentsProtocol16' AND Status='done' AND ScoreVersion=%s AND MOD(ID,%s)=%s", parameters=(float(current_score_revision),num_processes,process_id-1))
-	print(len(results))
 	
-	results = results[:1]
-	sys.exit(0)
+	radii = [7.0, 8.0, 9.0]
+	
 	count = 0
 	cases_computed = 0
 	total_time_in_secs = 0
 	
-	jobsdone = 0
-	jobsleft = 0
-				
+	number_of_cases_left = len(results) * len(radii)
+	
+	colortext.printf("Rescoring %d predictions over %d radii...\n" % (len(results), len(radii)), 'lightgreen')
 	for r in results:
+		t = Timer()
+		t.add('Preamble')
 		inner_count = 0
 		pdbID = ddGdb.execute('SELECT Structure FROM Experiment WHERE ID=%s', parameters=(r['ExperimentID'],))[0]['Structure']
 		mutations = ddGdb.execute('SELECT * FROM ExperimentMutation WHERE ExperimentID=%s', parameters=(r['ExperimentID'],))
@@ -213,36 +245,40 @@ def main():
 			mutantaa = mutation['MutantAA']
 			
 			ddG_dict = pickle.loads(r['ddG'])
-			ddG = ddG_dict['data']['kellogg']['total']['ddG']
-			assert(ddG_dict['version'] == d)
-			print(ddG_dict)
+			kellogg_ddG = ddG_dict['data']['kellogg']['total']['ddG']
+			assert(ddG_dict['version'] == current_score_revision)
 			
 			all_done = True
-			for radius in [7.0, 8.0, 9.0]:
+			for radius in radii:
 				score_name = ('noah_%0.1fA' % radius).replace(".", ",")
 				if not(ddG_dict['data'].get(score_name)):
 					all_done = False
 				else:
-					jobsdone += 1
+					cases_computed += 1
+					number_of_cases_left -= 1
 			if all_done:
+				print('Prediction %d: done.' % r["ID"])
 				continue
 			
 			# Extract data
+			t.add('Grab data')
 			data = ddGPredictiondb.execute('SELECT Data FROM PredictionData WHERE ID=%s', parameters=(r['ID'],))
 			if len(data) == 0:
 				colortext.error('No data for id %d' % r['ID'])
 				continue
 			archivefile = data[0]['Data']
-			zipfilename = "%d.zip" % r['ID']
+			zipfilename = os.path.join(output_dir, "%d.zip" % r['ID'])
 			F = open(zipfilename, "wb")
 			F.write(archivefile)
 			F.close()
+			
+			t.add('Extract data')
 			zipped_content = zipfile.ZipFile(zipfilename, 'r', zipfile.ZIP_DEFLATED)
 			tmpdir = None
 			repacked_files = []
 			mutant_files = []
 			try:
-				tmpdir = makeTemp755Directory('.')
+				tmpdir = makeTemp755Directory(output_dir)
 				highestIndex = -1
 				foundResfile = False
 				for fname in sorted(zipped_content.namelist()):
@@ -289,30 +325,36 @@ def main():
 				assert(PDB(repacked_files[0]).ProperResidueIDToAAMap()[fullresid] == wtaa)
 				assert(PDB(mutant_files[0]).ProperResidueIDToAAMap()[fullresid] == mutantaa)
 				
-				for radius in [7.0, 8.0, 9.0]:
+				for radius in radii:
 					score_name = ('noah_%0.1fA' % radius).replace(".", ",")
+					
 					if ddG_dict['data'].get(score_name):
+						print('Radius %0.1f: done.' % radius)
 						continue
-					jobsdone += 1
-
-					print("Prediction ID: %d. Calculating radius %0.1f. Calculation #%d of of %d." % (r['ID'], radius, jobsdone, 3*len(results)))
+					cases_computed += 1
+					number_of_cases_left -= 1
+					
+					t.add('Radius %0.3f: repacked' % radius)
+					colortext.printf("Prediction ID: %d. Calculating radius %0.1f. Calculation #%d of %d." % (r['ID'], radius, cases_computed, len(results) * len(radii)), 'orange')
 		
 					repacked_score = NoahScore()
 					repacked_score.calculate(repacked_files, rosetta_chain, rosetta_resid.strip(), radius = radius)
 					colortext.message("Repacked")
 					print(repacked_score)
 					
+					t.add('Radius %0.3f: mutant' % radius)
 					mutant_score = NoahScore()
 					mutant_score.calculate(mutant_files, rosetta_chain, rosetta_resid.strip(), radius = radius)
 					colortext.printf("Mutant", color = 'cyan')
 					print(mutant_score)
 					
+					t.add('Radius %0.3f: postamble' % radius)
 					colortext.printf("ddG", color = 'lightpurple')
 					ddg_score = repacked_score.ddg(mutant_score)
 					print(ddg_score)
 					
 					colortext.printf("Liz's ddG", color = 'yellow')
-					print("Total score: %f" % ddG)
+					print("Total score: %0.3f" % kellogg_ddG)
 					
 					if ddG_dict['version'] == '0.1':
 						ddG_dict['version'] = '0.21'
@@ -344,6 +386,7 @@ def main():
 						
 					pickled_ddG = pickle.dumps(ddG_dict)
 					ddGdb.execute('UPDATE Prediction SET ddG=%s WHERE ID=%s', parameters=(pickled_ddG, r['ID'],))
+				t.add('Cleanup')
 				shutil.rmtree(tmpdir)
 				os.remove(zipfilename)
 					
@@ -354,21 +397,20 @@ def main():
 				if tmpdir:
 					shutil.rmtree(tmpdir)
 
-			cases_computed += 1
-			timetaken_in_secs = time.time() -timestart
-			total_time_in_secs += timetaken_in_secs
-			number_of_cases_left = len(results) - count
+			total_time_in_secs += t.sum()
 			average_time_taken = float(total_time_in_secs)/float(cases_computed)
 			estimate_remaining_time = number_of_cases_left * average_time_taken
 			
-			colortext.message("Time taken for this case: %0.2fs." % timetaken_in_secs)
+			t.stop()
+			colortext.printf("**Profile**", 'orange')
+			print(t)
+			colortext.message("Time taken for this case: %0.2fs." % t.sum())
 			colortext.message("Average time taken per case: %0.2fs." % average_time_taken)
 			colortext.message("Estimated time remaining: %dh%dm%ds." % (int(estimate_remaining_time/3600), int((estimate_remaining_time/60) % 60), estimate_remaining_time % 60))
 			print("\n")
-	print('jobsdone', jobsdone)
-	print('jobsleft', jobsleft)
-	
+			
 	#exF.close()
+	colortext.printf("\nDone.", 'lightgreen')
 	
 main()
 	
