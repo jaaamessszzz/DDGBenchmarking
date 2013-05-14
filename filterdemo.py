@@ -1,9 +1,13 @@
 import sys
-sys.path.insert(0, "common")
-sys.path.insert(0, "ddglib")
-from common import colortext, rosettadb
-from ddglib import dbapi, ddgdbapi #  help
-#from ddglib.ddgfilters import *
+import time
+
+sys.path.insert(0, "..")
+#sys.path.insert(0, "ddglib")
+from tools import colortext
+from tools.deprecated import rosettadb
+from tools.debug.profile import ProfileTimer
+from ddglib import dbapi, ddgdbapi, help
+from ddglib.ddgfilters import *
 
 #help.help()
 
@@ -50,11 +54,18 @@ class Examples:
 
 	@staticmethod
 	def unionFilterExample1():
-		print("** All structures with null OR non-null resolution **") 
+		print("** All structures with null OR non-null resolution **")
+		pt = ProfileTimer()
+		pt.start("Open DB")
 		Examples.openDB()
+		pt.start("Create StructureResultSet")
 		sr = StructureResultSet(ddGdb)
+		pt.start("addFilter")
 		sr.addFilter(StructureFilter.WithNullResolution(False) | StructureFilter.WithNullResolution(True))
+		pt.start("printOutput")
 		Examples.printOutput(sr)
+		pt.stop()
+		print("\nProfile:\n\n%s\n" % pt.getProfile(html = False))
 
 	@staticmethod
 	def unionFilterExample2():
@@ -562,16 +573,15 @@ class Examples:
 				count = 0
 		print("")
 
-ddG_connection = dbapi.ddG()
-sys.exit(0)
-import analysis
-analyzer = analysis.Analyzer("AllExperimentsProtocol16")
-analyzer.AddPublishedDDGsToAnalysisTables()
-analyzer.plot(analysis.Analyzer.correlation_coefficient, "Kellogg.rr", table_names = ["Kellogg"])
-#			"kellogg.txt", "Kellogg")
-for table_name, a_table in sorted(analyzer.analysis_tables.iteritems()):
-	print(a_table)
-	print(table_name)
+if False:
+	import analysis
+	analyzer = analysis.Analyzer("AllExperimentsProtocol16")
+	analyzer.AddPublishedDDGsToAnalysisTables()
+	analyzer.plot(analysis.Analyzer.correlation_coefficient, "Kellogg.rr", table_names = ["Kellogg"])
+	#			"kellogg.txt", "Kellogg")
+	for table_name, a_table in sorted(analyzer.analysis_tables.iteritems()):
+		print(a_table)
+		print(table_name)
 	
 #print(analysis.AnalysisPoint.headers)
 #print(analysis_tables)
@@ -583,10 +593,13 @@ for table_name, a_table in sorted(analyzer.analysis_tables.iteritems()):
 #ddG_connection = dbapi.ddG()
 #ddG_connection.addPDBtoDatabase(pdbID = "1FKJ")
 
-#Examples.help()
+ddG_connection = dbapi.ddG()
+
+Examples.help()
 #ddG_connection = dbapi.ddG()
 #ddG_connection.dumpData("testzip-13103.zip", 13103)
 #Examples.addAllMutationsForAGivenPDB3()
+Examples.unionFilterExample1()
 #Examples.showAllEligibleProTherm("test", "test", False)
 #Examples.addLinsJobs("lin-3K0NB", "Kellogg:10.1002/prot.22921:protocol16:32231")
 #Examples.testAnalysis2()
