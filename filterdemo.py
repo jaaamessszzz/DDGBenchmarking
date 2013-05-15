@@ -1,5 +1,6 @@
 import sys
 import time
+import profile
 
 sys.path.insert(0, "..")
 #sys.path.insert(0, "ddglib")
@@ -31,11 +32,17 @@ def simpleRunExample(self):
 
 # Create a result set
 class Examples:
-	
+
+	@staticmethod
+	def profile(command_):
+		t1 = time.time()
+		profile.run(command_, sort = 'cumulative')
+		print("** Total time taken in %s: %0.2f **" % (command_, time.time() - t1))
+
 	@staticmethod
 	def printOutput(resultset):
 		print("Applying filters")
-		results = resultset.getFilteredResults()
+		results = resultset.getFilteredResults(just_get_primary_keys = True)
 		print("After application")
 		print("\nSummary: %s\n" % resultset)
 
@@ -54,18 +61,12 @@ class Examples:
 
 	@staticmethod
 	def unionFilterExample1():
+		t1 = time.time()
 		print("** All structures with null OR non-null resolution **")
-		pt = ProfileTimer()
-		pt.start("Open DB")
 		Examples.openDB()
-		pt.start("Create StructureResultSet")
 		sr = StructureResultSet(ddGdb)
-		pt.start("addFilter")
 		sr.addFilter(StructureFilter.WithNullResolution(False) | StructureFilter.WithNullResolution(True))
-		pt.start("printOutput")
 		Examples.printOutput(sr)
-		pt.stop()
-		print("\nProfile:\n\n%s\n" % pt.getProfile(html = False))
 
 	@staticmethod
 	def unionFilterExample2():
@@ -76,13 +77,12 @@ class Examples:
 		sr.addFilter(StructureFilter.WithNullResolution(True))
 		Examples.printOutput(sr)
 
-
 	# StructureResultSet examples
 
 	@staticmethod
 	def allStructures():
 		'''Select all Structure records.'''
-		print("** All strucures **") 
+		print("** All structures **")
 		Examples.openDB()
 		sr = StructureResultSet(ddGdb)
 		Examples.printOutput(sr)
@@ -118,7 +118,7 @@ class Examples:
 		sr = StructureResultSet(ddGdb)
 		sr.addFilter(StructureFilter.Resolution(1, 2))
 		Examples.printOutput(sr)
-	
+
 	@staticmethod
 	def getStructuresWithUniProtIDs():
 		print("** All structures with null resolution **") 
@@ -152,12 +152,11 @@ class Examples:
 		Examples.openDB()
 		er = ExperimentResultSet(ddGdb, SQL = "WHERE Structure LIKE %s", parameters = "1A%")
 		Examples.printOutput(er)
-		print(er.structure_map.keys())
-		
+
 		er.addFilter(StructureFilter.Resolution(1, 1.7))
 		
 		Examples.printOutput(er)
-		
+
 	@staticmethod
 	def getExperimentsFilteredByStructures():
 		'''Select all Structure records.'''
@@ -204,7 +203,7 @@ class Examples:
 		
 		er = ExperimentResultSet(ddGdb)
 		Examples.printOutput(er)
-		
+
 		er.addFilter(ExperimentFilter.MutationsBetweenAminoAcidSizes(ExperimentFilter.large, ExperimentFilter.large))
 		
 		Examples.printOutput(er)
@@ -279,8 +278,6 @@ class Examples:
 		print("** Multiple filter example **") 
 		Examples.openDB()
 
-		import time
-		
 		t1 = time.time()
 		pr = PredictionResultSet(ddGdb, SQL = "WHERE PredictionSet=%s", parameters = "testrun")
 		pr.addFilter(StructureFilter.Techniques(StructureFilter.XRay))
@@ -369,7 +366,6 @@ class Examples:
 
 		Examples.openDB()
 		
-		import time
 		if False:
 			t1 = time.time()
 			er1 = ExperimentResultSet(ddGdb)
@@ -595,11 +591,44 @@ if False:
 
 ddG_connection = dbapi.ddG()
 
-Examples.help()
+#Examples.help()
 #ddG_connection = dbapi.ddG()
 #ddG_connection.dumpData("testzip-13103.zip", 13103)
 #Examples.addAllMutationsForAGivenPDB3()
-Examples.unionFilterExample1()
+
+
+# Tested functions
+#Examples.unionFilterExample1()
+#Examples.unionFilterExample2()
+#Examples.allStructures()
+#Examples.getStructuresWithNullResolutionSQL()
+#Examples.getStructuresWithNullResolutionFilter()
+#Examples.pickSpecific()
+#Examples.getStructuresInResolutionRange()
+#Examples.getStructuresWithUniProtIDs()
+#Examples.getStructuresFilteredByStructures()
+#Examples.getExperimentsWithSQL()
+#Examples.getExperimentsFilteredByStructures()
+
+# BROKEN FUNCTIONS
+#Examples.getExperimentsFilteredBySource()
+
+import gc
+gc.disable()
+if False:
+	Examples.profile('Examples.getExperimentsFilteredByMutationSize()')
+else:
+	t1 = time.time()
+	Examples.getExperimentsFilteredByMutationSize()
+	print("** Total time taken in getExperimentsFilteredByMutationSize: %0.2f **" % (time.time() - t1))
+gc.enable()
+
+
+#Examples.getExperimentsFilteredByAminoAcids1()
+#Examples.getExperimentsFilteredByAminoAcids2()
+#Examples.getExperimentsFilteredBySourceAndResolution()
+
+
 #Examples.showAllEligibleProTherm("test", "test", False)
 #Examples.addLinsJobs("lin-3K0NB", "Kellogg:10.1002/prot.22921:protocol16:32231")
 #Examples.testAnalysis2()
@@ -607,18 +636,9 @@ Examples.unionFilterExample1()
 #Examples.testAnalysis()
 #Examples.testPublications()
 
-#Examples.getExperimentsFilteredByStructures()
-#Examples.getStructuresFilteredByStructures()
 #Examples.showResultSetOperations()
-#Examples.getStructuresWithUniProtIDs()
-#Examples.getExperimentsFilteredByStructures()
 #Examples.getExperimentsFilteredBySource()
 #Examples.getExperimentsFilteredBySourceAndResolution()
-#Examples.getExperimentsFilteredByMutationSize()
-#Examples.getExperimentsFilteredByAminoAcids1()
-#Examples.getExperimentsFilteredByAminoAcids2()
 #Examples.help()
 #Examples.getPredictionsUsingMultipleFilters_Speed()
 #help.ShowFilter()
-#Examples.allStructures()
-#Examples.pickSpecific()
