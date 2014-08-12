@@ -33,7 +33,7 @@ def check_failures(prediction_set):
     results_root = '/var/cluster/temp/'
 
     UserDataSetExperimentIDs = {}
-    results = ddGdb.execute_select('''SELECT ID, ExperimentID FROM Prediction WHERE PredictionSet = 'RosettaCon2013_P16_talaris2013' AND STATUS = 'failed' ''')
+    results = ddGdb.execute_select('''SELECT ID, ExperimentID FROM Prediction WHERE PredictionSet = %s AND STATUS = 'failed' ''', parameters=(prediction_set,))
     reported_failures = [r['ID'] for r in results]
     for r in results:
         UserDataSetExperimentIDs[r['ID']] = r['ExperimentID']
@@ -119,7 +119,7 @@ def fix_1TEN_InputFiles():
     import pickle
     ddGdb = ddgdbapi.ddGDatabase()
 
-    BadPredictions = sorted(set([(r['PredictionID'], r['Status']) for r in ddGdb.execute_select("SELECT Prediction.ID AS PredictionID, Status FROM Prediction INNER JOIN Experiment ON Experiment.ID=Prediction.ExperimentID INNER JOIN ExperimentMutation ON Experiment.ID=ExperimentMutation.ExperimentID WHERE PredictionSet = 'RosCon2013_P16_talaris2013' AND PDBFileID='1TEN' ")]))
+    BadPredictions = sorted(set([(r['PredictionID'], r['Status']) for r in ddGdb.execute_select("SELECT Prediction.ID AS PredictionID, Status FROM Prediction INNER JOIN Experiment ON Experiment.ID=Prediction.ExperimentID INNER JOIN ExperimentMutation ON Experiment.ID=ExperimentMutation.ExperimentID WHERE PredictionSet = 'RosCon2013_P16_talaris2013sc' AND PDBFileID='1TEN' ")]))
     BadPredictionIDs = sorted(set([r[0] for r in BadPredictions]))
     num_active = len([r for r in BadPredictions if r[1] == 'active'])
     num_queued = len([r for r in BadPredictions if r[1] == 'queued'])
@@ -201,5 +201,8 @@ def count_num_residues_in_active_jobs():
 
 
 #check_failures('RosettaCon2013_P16_talaris2013')
+
+#check_failures('RosCon2013_P16_score12prime')
+#check_failures('RosCon2013_P16_talaris2013')
 fix_1TEN_InputFiles()
 #count_num_residues_in_active_jobs()

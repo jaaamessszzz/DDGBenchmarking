@@ -2,14 +2,79 @@ import sys
 sys.path.insert(0, "..")
 sys.path.insert(0, "../common")
 sys.path.insert(0, "../ddglib")
-from common import colortext, rosettadb
+sys.path.insert(0, "../..")
 import analysis
 
 filetype = "pdf"
 
+prediction_set_for_analysis = 'RosettaCon2013_P16_talaris2013'
+prediction_set_for_analysis = 'RosettaCon2013_P16_score12prime'
+
+prediction_set_for_analysis = 'RosCon2013_P16_score12prime'
+prediction_set_for_analysis = 'RosCon2013_P16_talaris2013'
+prediction_set_for_analysis = 'RosCon2013_P16_score12prime'
+prediction_set_for_analysis = 'RosCon2013_P16_talaris2013sc'
+
 import ddgdbapi
 ddGdb = ddgdbapi.ddGDatabase()
-results = ddGdb.execute("SELECT ID, ExperimentID, Status FROM Prediction WHERE PredictionSet=%s", parameters=('AllExperimentsProtocol16',))
+
+results = ddGdb.execute("SELECT ID, ExperimentID, Status FROM Prediction WHERE PredictionSet=%s AND Status IN ('done','failed')", parameters=(prediction_set_for_analysis,))
+
+if False:
+    FailedJobs = {}
+    results = ddGdb.execute("SELECT ID, ExperimentID, UserDataSetExperimentID FROM Prediction WHERE PredictionSet='RosCon2013_P16_score12prime' AND Status IN ('failed')")
+    FailedJobs['RosCon2013_P16_score12prime'] = [r['ID'] for r in results]
+    FailedExperiments1 = set([(r['ExperimentID'], r['UserDataSetExperimentID']) for r in results])
+
+    results = ddGdb.execute("SELECT ID, ExperimentID, UserDataSetExperimentID FROM Prediction WHERE PredictionSet='RosettaCon2013_P16_talaris2013' AND Status IN ('failed')")
+    FailedJobs['RosettaCon2013_P16_talaris2013'] = [r['ID'] for r in results]
+    FailedExperiments2 = set([(r['ExperimentID'], r['UserDataSetExperimentID']) for r in results])
+
+    results = ddGdb.execute("SELECT ID, ExperimentID, UserDataSetExperimentID FROM Prediction WHERE PredictionSet='RosCon2013_P16_talaris2013' AND Status IN ('failed')")
+    FailedJobs['RosCon2013_P16_talaris2013'] = [r['ID'] for r in results]
+    FailedExperiments3= set([(r['ExperimentID'], r['UserDataSetExperimentID']) for r in results])
+
+    assert(FailedExperiments1 == FailedExperiments2)
+    assert(FailedExperiments1.union(FailedExperiments3) == FailedExperiments1)
+
+    print('FailedExperiments1 = %s' % str(list(FailedExperiments1)))
+    print('FailedJobs = %s' % str(FailedJobs))
+
+    check_dir = '/mnt/livewebserver/cluster/temp/'
+    real_dir = '/var/cluster/temp/'
+    import os
+    for k, v in FailedJobs.iteritems():
+        pth = os.path.join(check_dir, k)
+        real_pth = os.path.join(real_dir, k)
+        assert(os.path.exists(pth))
+        for jobID in v:
+            respath = os.path.join(pth, str(jobID))
+            if os.path.exists(respath):
+                respath = os.path.join(real_pth, str(jobID))
+                print("sudo mv %s /var/cluster/temp/checkerrors/" % respath) # sudo -u klabqb3backrub
+    sys.exit(0)
+
+
+if False:
+    for r in ddGdb.execute("SELECT ID, ExperimentID, PredictionSet, ddG FROM Prediction WHERE UserDataSetExperimentID=2698"):
+        import tools.colortext as colortext
+        colortext.message("%d, %s" % (r['ID'], r['PredictionSet']))
+        import pickle
+        ddG = pickle.loads(r['ddG'])
+        for k, v in ddG['data'].iteritems():
+            colortext.warning(k)
+            print(v)
+
+if False:
+    print("***")
+    for r in ddGdb.execute("SELECT ID, ExperimentID, PredictionSet, ddG FROM Prediction WHERE UserDataSetExperimentID=1588"):
+        import tools.colortext as colortext
+        colortext.message("%d, %s" % (r['ID'], r['PredictionSet']))
+        import pickle
+        ddG = pickle.loads(r['ddG'])
+        for k, v in ddG['data'].iteritems():
+            colortext.warning(k)
+            print(v)
 
 single_passed = 0
 single_failed = 0
@@ -38,18 +103,23 @@ print("single_failed",single_failed)
 print("multiple_passed",multiple_passed)
 print('multiple_failed',multiple_failed)
 
-if False:
-	analyzer = analysis.Analyzer("AllExperimentsProtocol16", ddG_score_type = 'kellogg.total')
+from tools import colortext
+colortext.message("*** %s ***" % prediction_set_for_analysis)
+
+if True:
+	colortext.message("\n*** %s kellogg.total ***" % prediction_set_for_analysis)
+	analyzer = analysis.Analyzer(prediction_set_for_analysis, ddG_score_type = 'kellogg.total', quiet_level = 1)
 	analyzer.AddPublishedDDGsToAnalysisTables()
 	reporter = analysis.Reporter(analyzer)
-	reporter.CreateReport(description = analyzer.description, outfname = 'kellogg.pdf', filetype = filetype)
-
-for score_type in ['noah_8,0A', 'noah_9,0A']:
-	for score_method in ['total', 'positional', 'positional_twoscore']:
-		analyzer = analysis.Analyzer("AllExperimentsProtocol16", ddG_score_type = '%s.%s' % (score_type, score_method))
-		analyzer.AddPublishedDDGsToAnalysisTables()
-		reporter = analysis.Reporter(analyzer)
-		reporter.CreateReport(description = analyzer.description, outfname = '%s_%s.pdf' % (score_type, score_method), filetype = filetype)
+	reporter.CreateReport(description = analyzer.description, outfname = '%s_kellogg.pdf' % prediction_set_for_analysis, filetype = filetype)
+if True:
+	for score_type in ['noah_6,0A', 'noah_7,0A', 'noah_8,0A', 'noah_9,0A']:
+		for score_method in ['total', 'positional', 'positional_twoscore']:
+			colortext.message("\n*** %s %s.%s ***" % (score_type, score_method, prediction_set_for_analysis))
+			analyzer = analysis.Analyzer(prediction_set_for_analysis, ddG_score_type = '%s.%s' % (score_type, score_method))
+			analyzer.AddPublishedDDGsToAnalysisTables()
+			reporter = analysis.Reporter(analyzer)
+			reporter.CreateReport(description = analyzer.description, outfname = '%s_%s_%s.pdf' % (prediction_set_for_analysis, score_type, score_method), filetype = filetype)
 		
 #analysis.plot(analysis._R_correlation_coefficient, analysis._createAveragedInputFile, results, "my_plot2.pdf", average_fn = analysis._mean)
 		
