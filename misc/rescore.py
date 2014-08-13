@@ -7,9 +7,11 @@ import os
 import time
 import pickle
 import subprocess
+import json
 from tools import colortext
 from tools.deprecated.rosettahelper import readBinaryFile, makeTemp755Directory, writeFile, readFileLines
-from tools.pdb import PDB, ResidueID2String, checkPDBAgainstMutations, aa1
+from tools.bio.pdb import PDB
+from tools.bio.basics import residue_type_3to1_map as aa1
 
 import ddgdbapi
 ddGdb = ddgdbapi.ddGDatabase()
@@ -42,15 +44,18 @@ class NoahScore(object):
         self.positional = positional
         self.positional_twoscore = positional_twoscore
 
-    def calculate(self, list_of_files, rosetta_chain, rosetta_resid, radius = 6.0):
+    def calculate(self, list_of_files, rosetta_chain, rosetta_resids, radius = 6.0):
         from string import join
-        cmd = ([
-            './score_residue.default.linuxgccrelease',
-            '--database=/var/binarybuilder/r3.4/rosetta_database',
-            '-s']
-            + list_of_files
-            + ['-score:fa_max_dis %0.1f' % radius]
-            + ['-score_residue::residue', '%(rosetta_resid)s%(rosetta_chain)s' % vars()])
+
+        #cmd = ([
+        #    './score_residue.default.linuxgccrelease',
+        #    '--database=/var/binarybuilder/r3.4/rosetta_database',
+        #    '-s']
+        #    + list_of_files
+        #    + ['-score:fa_max_dis %0.1f' % radius]
+        #    + ['-score_residue::residue', '%(rosetta_resid)s%(rosetta_chain)s' % vars()])
+
+        resnum_list = ','.join(['%s%s' % (rosetta_resid, rosetta_chain) for rosetta_resid in rosetta_resids])
 
         cmd = ([
             '/home/oconchus/RosettaCon2013_rescoring/score_residue.static.linuxgccrelease',
@@ -58,13 +63,14 @@ class NoahScore(object):
             '-s']
             + list_of_files
             + ['-score:fa_max_dis %0.1f' % radius]
-            + ['-score_residue::residue', '%(rosetta_resid)s%(rosetta_chain)s' % vars()])
+            + ['-score_residue::residue', '%(resnum_list)s' % vars()])
 
         a = join(cmd, " ")
         writeFile("test.sh", a)
         poutput = Popen('.', cmd)
 
         if poutput.errorcode:
+            print(poutput.stdout)
             raise Exception("Return code = %s.\n%s" % (str(poutput.errorcode), poutput.stderr))
         else:
             found = {}
@@ -93,8 +99,18 @@ class NoahScore(object):
     def __repr__(self):
         return("Total score: %(total)f\nPositional score: %(positional)f\nPositional score (two-body) %(positional_twoscore)f" % self.__dict__)
 
+def convert_scores_to_json():
+    '''A function which converts the old pickled ddG scores to JSON string. Once we switch completely to JSON and remove
+       the ddG field in the Prediction table, this function will become deprecated.'''
+    results = ddGdb.execute_select('SELECT ID, ddG FROM Prediction WHERE ddG IS NOT NULL AND Scores IS NULL AND ScoreVersion="0.23"')
+    for r in results:
+        ddG_dict = pickle.loads(r['ddG'])
+        ddGdb.execute('UPDATE Prediction SET Scores=%s WHERE ID=%s', parameters=(json.dumps(ddG_dict), r['ID'],))
+    results = ddGdb.execute_select('SELECT ID, ddG FROM Prediction WHERE Scores IS NULL AND ScoreVersion="0.23"')
+
 def delete_scores(results, score_type):
     '''e.g. delete_scores(results, 'noah_6,0A')'''
+    raise Exception('I need to update this to use the Scores JSON field.')
     for r in results:
         if len(mutations) == 1:
             ddG_dict = pickle.loads(r['ddG'])
@@ -105,8 +121,10 @@ def delete_scores(results, score_type):
                 pickled_ddG = pickle.dumps(ddG_dict)
                 ddGdb.execute('UPDATE Prediction SET ddG=%s WHERE ID=%s', parameters=(pickled_ddG, r['ID'],))
 
+
 def rename_score_type(results, old_score_type, new_score_type):
     '''e.g. rename_score_type(results, 'noah_6,0A', 'noah_6A')'''
+    raise Exception('I need to update this to use the Scores JSON field.')
     for r in results:
         if len(mutations) == 1:
             ddG_dict = pickle.loads(r['ddG'])
@@ -121,6 +139,7 @@ def rename_score_type(results, old_score_type, new_score_type):
                 ddGdb.execute('UPDATE Prediction SET ddG=%s WHERE ID=%s', parameters=(pickled_ddG, r['ID'],))
 
 def update_records(results):
+    raise Exception('I need to update this to use the Scores JSON field.')
     print("Updating scores to revision %s." % current_score_revision)
     for r in results:
         inner_count = 0
@@ -180,8 +199,6 @@ class Timer(object):
             s.append('%s %fs' % (stage['name'].ljust(Timer.max_name_length + 2), stage['time_taken']))
         return "\n".join(s)
 
-
-from tools.pdb import PDB, ResidueID2String, checkPDBAgainstMutations, aa1
 
 def _createMutfile(pdb, mutations):
     '''The mutations here are in the original PDB numbering. pdb is assumed to use Rosetta numbering.
@@ -246,7 +263,7 @@ def regenerate_mutfile(PredictionID):
             assert(int(mutation['ResidueID']) < 1000)
             mutation['ResidueID'] = str(int(mutation['ResidueID']) + 1762)
 
-    checkPDBAgainstMutations(pdbID, pdb, mutations)
+    pdb.validate_mutations(mutations)
 
     # Strip the PDB to the list of chains. This also renumbers residues in the PDB for Rosetta.
     chains = [result['Chain'] for result in ddGdb.call_select_proc("GetChains", parameters = (ExperimentID,))]
@@ -256,123 +273,13 @@ def regenerate_mutfile(PredictionID):
     # Get the 'Chain ResidueID' PDB-formatted identifier for each mutation mapped to Rosetta numbering
     # then check again that the mutated positions exist and that the wild-type matches the PDB
     remappedMutations = pdb.remapMutations(mutations, pdbID)
-    remappedMutations = [[m[0], ResidueID2String(m[1]), m[2], m[3]] for m in remappedMutations]
+    remappedMutations = [[m[0], PDB.ResidueID2String(m[1]), m[2], m[3]] for m in remappedMutations]
 
     #resfile = self._createResfile(pdb, remappedMutations)
     return( _createMutfile(pdb, remappedMutations))
 
-def main(FixedIDs = []):
+def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
     max_processors = get_number_of_processors()
-
-    remaining_unscored = [43830,
-44802,
-45316,
-45317,
-45880,
-45990,
-45991,
-47179,
-47435,
-47459,
-47485,
-47531,
-47533,
-47555,
-47557,
-47581,
-47613,
-47627,
-47629,
-47637,
-47651,
-47653,
-47661,
-47662,
-47675,
-47677,
-47685,
-47686,
-47699,
-47701,
-47705,
-47709,
-47710,
-47723,
-47725,
-47729,
-47733,
-47734,
-47753,
-47757,
-47771,
-47773,
-47777,
-47781,
-47782,
-47801,
-47869,
-47873,
-47949,
-47950,
-47963,
-47965,
-47969,
-47973,
-47974,
-47987,
-47989,
-47993,
-47997,
-47998,
-48045,
-48046,
-48059,
-48061,
-48065,
-48069,
-48155,
-48161,
-48165,
-48179,
-48181,
-48185,
-48227,
-48229,
-48257,
-48261,
-48262,
-48275,
-48285,
-48357,
-48358,
-48371,
-48373,
-48377,
-48545,
-48549,
-48550,
-48593,
-48643,
-48645,
-48646,
-48665,
-48669,
-48670,
-48683,
-48685,
-48689,
-48693,
-48694,
-48707,
-48709,
-48713,
-48717,
-48718,
-48731,
-48733,
-48737,
-48741,
-48742,]
 
     rescore_process_file = "/tmp/klab_rescore.txt"
     parser = OptionParser()
@@ -440,30 +347,28 @@ def main(FixedIDs = []):
         F.write("process %d\n" % process_id)
         F.close()
 
-    output_dir = 'rescoring/%d' % process_id
+    output_dir = os.path.join('rescoring', str(process_id))
     if not(os.path.exists(output_dir)):
         os.makedirs(output_dir)
     abs_output_dir = os.path.abspath(os.path.join(os.getcwd(), output_dir))
     print("Running process in %s.\n" % abs_output_dir)
 
     ReallyFixedIDs = False
-    num_to_score = len(remaining_unscored)
-    num_for_this_to_score = num_to_score / num_processes
-    IDs_to_score = remaining_unscored[(process_id-1) * num_for_this_to_score : (process_id) * num_for_this_to_score]
 
-    results = ddGdb.execute("SELECT ID, ExperimentID, ddG FROM Prediction WHERE PredictionSet=%s AND Status='done' AND ScoreVersion <> %s", parameters=(prediction_set, float(current_score_revision),))
+    results = ddGdb.execute("SELECT ID, ExperimentID, Scores FROM Prediction WHERE PredictionSet=%s AND Status='done' AND ScoreVersion <> %s", parameters=(prediction_set, float(current_score_revision),))
     if not(FixedIDs) and results:
         raise WrongScoreRevisionException("Score versions found which are not %s. Need to update table structure." % current_score_revision)
     else:
         # Hacky way to run multiple processes
         if ReallyFixedIDs:
-            results = ddGdb.execute("SELECT ID, ExperimentID, ddG FROM Prediction WHERE ID IN (%s)" % (",".join(map(str, IDs_to_score))))
+            num_to_score = len(remaining_unscored)
+            num_for_this_to_score = num_to_score / num_processes
+            IDs_to_score = remaining_unscored[(process_id-1) * num_for_this_to_score : (process_id) * num_for_this_to_score]
+            results = ddGdb.execute("SELECT ID, ExperimentID, Scores FROM Prediction WHERE ID IN (%s)" % (",".join(map(str, IDs_to_score))))
         elif FixedIDs:
-            results = ddGdb.execute("SELECT ID, ExperimentID, ddG FROM Prediction WHERE ID IN (%s) AND MOD(ID,%s)=%s" % (",".join(map(str, FixedIDs)), num_processes,process_id-1))
+            results = ddGdb.execute("SELECT ID, ExperimentID, Scores FROM Prediction WHERE ID IN (%s) AND MOD(ID,%s)=%s" % (",".join(map(str, FixedIDs)), num_processes,process_id-1))
         else:
-            results = ddGdb.execute("SELECT ID, ExperimentID, ddG FROM Prediction WHERE PredictionSet=%s AND Status='done' AND ScoreVersion=%s AND MOD(ID,%s)=%s", parameters=(prediction_set, float(current_score_revision),num_processes,process_id-1))
-
-    radii = [6.0, 7.0, 8.0, 9.0]
+            results = ddGdb.execute("SELECT ID, ExperimentID, Scores FROM Prediction WHERE PredictionSet=%s AND Status='done' AND ScoreVersion=%s AND MOD(ID,%s)=%s", parameters=(prediction_set, float(current_score_revision),num_processes,process_id-1))
 
     count = 0
     cases_computed = 0
@@ -479,21 +384,23 @@ def main(FixedIDs = []):
         inner_count = 0
         pdbID = ddGdb.execute('SELECT PDBFileID FROM Experiment WHERE ID=%s', parameters=(r['ExperimentID'],))[0]['PDBFileID']
         mutations = ddGdb.execute('SELECT * FROM ExperimentMutation WHERE ExperimentID=%s', parameters=(r['ExperimentID'],))
+        mutation_str = ', '.join(['%s %s%s%s' % (m['Chain'], m['WildTypeAA'], m['ResidueID'], m['MutantAA']) for m in mutations])
         extracted_data = False
 
         details = ddGdb.execute_select('SELECT Prediction.ID, PDBFileID, Chain FROM Prediction INNER JOIN Experiment ON Prediction.ExperimentID=Experiment.ID INNER JOIN ExperimentChain ON Prediction.ExperimentID=ExperimentChain.ExperimentID WHERE Prediction.ID=%s', parameters=(r['ID'],))
-        colortext.message("Prediction: %d, %s chain %s" % (details[0]['ID'], details[0]['PDBFileID'], details[0]['Chain']))
-
+        colortext.message("Prediction: %d, %s chain %s. Mutations: %s" % (details[0]['ID'], details[0]['PDBFileID'], details[0]['Chain'], mutation_str))
         count += 1
-        if len(mutations) == 1:
+        if True:#len(mutations) == 1:
             timestart = time.time()
 
-            mutation = mutations[0]
-            wtaa = mutation['WildTypeAA']
-            dbchain = mutation['Chain']
-            mutantaa = mutation['MutantAA']
+            #mutation = mutations[0]
+            dbchains = sorted(set([mutation['Chain'] for mutation in mutations]))
+            # todo: note: assuming monomeric structures here
+            assert(len(dbchains) == 1)
+            dbchain = dbchains[0]
+            #mutantaa = mutation['MutantAA']
 
-            ddG_dict = pickle.loads(r['ddG'])
+            ddG_dict = json.loads(r['Scores'])
             kellogg_ddG = ddG_dict['data']['kellogg']['total']['ddG']
 
             #assert(ddG_dict['version'] == current_score_revision)
@@ -527,6 +434,8 @@ def main(FixedIDs = []):
             tmpdir = None
             repacked_files = []
             mutant_files = []
+
+            rosetta_resids = []
             try:
                 tmpdir = makeTemp755Directory(output_dir)
                 highestIndex = -1
@@ -558,6 +467,7 @@ def main(FixedIDs = []):
                         #elif fname.startswith("%s/%s-%s" % (r['ID'],r['ExperimentID'],pdbID)) or fname.startswith("%s/repacked_" % r['ID']):
                         #    writeFile(os.path.join(tmpdir, '%s.pdb' % pdbID), zipped_content.read(fname))
                     if fname.startswith("%s/%s-%s.resfile" % (r['ID'],r['ExperimentID'],pdbID)):
+                        raise Exception('This case needs to be updated (see the mutfile section below). We mainly use mutfiles now so I did not update this section.')
                         foundResfile = True
                         lines = zipped_content.read(fname).split("\n")
                         assert(len(lines) == 3)
@@ -572,26 +482,30 @@ def main(FixedIDs = []):
                         assert(dbchain == rosetta_chain)
                         assert(resfile_mutation[2] == 'PIKAA')
                         assert(len(rosetta_mutaa) == 1)
-                    if False and fname.startswith("%s/%s-%s.mutfile" % (r['ID'],r['ExperimentID'],pdbID)):
+                    if fname.startswith("%s/%s-%s.mutfile" % (r['ID'],r['ExperimentID'],pdbID)):
                         foundMutfile = True
                         lines = zipped_content.read(fname).split("\n")
-                        assert(len(lines) == 3)
-                        assert(lines[0] == "total 1")
-                        assert(lines[1] == "1")
-                        resfile_mutation = lines[2].split(" ")
-                        assert(len(resfile_mutation) == 3)
-                        rosetta_resid = resfile_mutation[1]
+                        assert(lines[0].startswith('total '))
+                        num_mutations = int(lines[0][6:])
+                        assert(lines[1] == str(num_mutations))
+                        # todo: note: assuming monomeric structures here
                         rosetta_chain = ddGdb.execute("SELECT Chain FROM ExperimentChain WHERE ExperimentID=%s", parameters=(r['ExperimentID'],))
                         assert(len(rosetta_chain) == 1)
                         rosetta_chain = rosetta_chain[0]['Chain']
-                        rosetta_mutaa = resfile_mutation[2]
-                        assert(dbchain == rosetta_chain)
-                        assert(len(rosetta_mutaa) == 1)
+
+                        resfile_mutations = lines[2:]
+                        for resfile_mutation in resfile_mutations:
+                            resfile_mutation = resfile_mutation.split(" ")
+                            assert(len(resfile_mutation) == 3)
+                            rosetta_resids.append(resfile_mutation[1])
+                            rosetta_mutaa = resfile_mutation[2]
+                            assert(dbchain == rosetta_chain)
+                            assert(len(rosetta_mutaa) == 1)
 
                 # Make sure the wtaa->mutantaa types match the structures
                 assert(not(foundResfile))
-                assert(not(foundMutfile))
                 if not foundMutfile:
+                    raise Exception('This case needs to be updated (see the mutfile section below). This was added as a hack for cases where I did not store the mutfile so I did not update this section.')
                     input_files = ddGdb.execute_select('SELECT InputFiles FROM Prediction WHERE ID=%s', parameters=(r['ID'],))
                     assert(len(input_files) == 1)
                     lines = pickle.loads(input_files[0]['InputFiles'])['MUTFILE'].split("\n")
@@ -611,11 +525,16 @@ def main(FixedIDs = []):
                     assert(len(rosetta_mutaa) == 1)
                     assert("%s%s%s" % (resfile_mutation[0], resfile_mutation[1], resfile_mutation[2]) == presumed_mutation)
 
-                if rosetta_resid.isdigit():
-                    fullresid = '%s%s%s ' % (rosetta_chain, (4-len(rosetta_resid)) * ' ', rosetta_resid)
-                else:
-                    assert(False)
-                    fullresid = '%s%s%s' % (rosetta_chain, (5-len(rosetta_resid)) * ' ', rosetta_resid)
+                fullresids = []
+
+                for rosetta_resid in rosetta_resids:
+                    fullresid = None
+                    if rosetta_resid.isdigit():
+                        fullresid = '%s%s%s ' % (rosetta_chain, (4-len(rosetta_resid)) * ' ', rosetta_resid)
+                    else:
+                        assert(False)
+                        fullresid = '%s%s%s' % (rosetta_chain, (5-len(rosetta_resid)) * ' ', rosetta_resid)
+                    fullresids.append(fullresid)
 
 
                 resultst1 = ddGdb.execute_select("SELECT ExperimentID, UserDataSetExperimentID FROM Prediction WHERE ID=%s", parameters = (r['ID'],))
@@ -623,13 +542,22 @@ def main(FixedIDs = []):
                 ExperimentIDt1 = resultst1[0]['ExperimentID']
                 UserDataSetExperimentIDt1 = resultst1[0]['UserDataSetExperimentID']
 
-                resultst2 = ddGdb.execute_select("SELECT PDBFileID FROM UserDataSetExperiment WHERE ID=%s", parameters = (UserDataSetExperimentIDt1,))
+                if UserDataSetExperimentIDt1:
+                    resultst2 = ddGdb.execute_select("SELECT PDBFileID FROM UserDataSetExperiment WHERE ID=%s", parameters = (UserDataSetExperimentIDt1,))
+                else:
+                    resultst2 = ddGdb.execute_select("SELECT PDBFileID FROM Experiment WHERE ID=%s", parameters = (ExperimentIDt1,))
                 assert(len(resultst2) == 1)
                 prediction_PDB_ID = resultst2[0]['PDBFileID']
 
                 if prediction_PDB_ID != '1TEN':
-                    assert(PDB(repacked_files[0]).ProperResidueIDToAAMap()[fullresid] == wtaa)
-                    #assert(PDB(mutant_files[0]).ProperResidueIDToAAMap()[fullresid] == mutantaa)
+                    for fullresid in fullresids:
+                        wtaa = None
+                        for m in mutations:
+                            if m['Chain'] == fullresid[0] and m['ResidueID'] == fullresid[1:].strip():
+                                wtaa = m['WildTypeAA']
+                        assert(wtaa != None)
+                        assert(PDB.from_filepath(repacked_files[0]).get_residue_id_to_type_map()[fullresid] == wtaa)
+                    #assert(PDB(mutant_files[0]).get_residue_id_to_type_map()[fullresid] == mutantaa)
 
                 for radius in radii:
                     score_name = ('noah_%0.1fA' % radius).replace(".", ",")
@@ -644,13 +572,13 @@ def main(FixedIDs = []):
                     colortext.printf("Prediction ID: %d. Calculating radius %0.1f. Calculation #%d of %d." % (r['ID'], radius, cases_computed, len(results) * len(radii)), 'orange')
 
                     repacked_score = NoahScore()
-                    repacked_score.calculate(repacked_files, rosetta_chain, rosetta_resid.strip(), radius = radius)
+                    repacked_score.calculate(repacked_files, rosetta_chain, sorted([rosetta_resid.strip() for rosetta_resid in rosetta_resids]), radius = radius)
                     colortext.message("Repacked")
                     print(repacked_score)
 
                     t.add('Radius %0.3f: mutant' % radius)
                     mutant_score = NoahScore()
-                    mutant_score.calculate(mutant_files, rosetta_chain, rosetta_resid.strip(), radius = radius)
+                    mutant_score.calculate(mutant_files, rosetta_chain, sorted([rosetta_resid.strip() for rosetta_resid in rosetta_resids]), radius = radius)
                     colortext.printf("Mutant", color = 'cyan')
                     print(mutant_score)
 
@@ -691,9 +619,8 @@ def main(FixedIDs = []):
                         ddG_dict['data'][score_name]['positional']['ddG'] = ddg_score.positional
                         ddG_dict['data'][score_name]['positional_twoscore']['ddG'] = ddg_score.positional_twoscore
 
-                    pickled_ddG = pickle.dumps(ddG_dict)
-
-                    ddGdb.execute('UPDATE Prediction SET ddG=%s WHERE ID=%s', parameters=(pickled_ddG, r['ID'],))
+                    jsonified_ddG = json.dumps(ddG_dict)
+                    ddGdb.execute('UPDATE Prediction SET Scores=%s WHERE ID=%s', parameters=(jsonified_ddG, r['ID'],))
                 t.add('Cleanup')
                 shutil.rmtree(tmpdir)
                 os.remove(zipfilename)
@@ -726,7 +653,10 @@ def main(FixedIDs = []):
 
 #main(FixedIDs = [38766, 39738, 40379, 40381] + range(40610, 40611))
 #main(FixedIDs = [39044])
-main(FixedIDs = [48898,49870,50948,51058,51059,52247,53633,53711])
+#main(FixedIDs = [48898,49870,50948,51058,51059,52247,53633,53711])
+main(radii = [8.0])
 
 #FixedIDs = [43830,44802,45880,45990,45991,47179,48643])
+
+
 
