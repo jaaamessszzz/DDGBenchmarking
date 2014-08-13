@@ -6,6 +6,7 @@ import random
 import glob
 import shutil
 import json
+import itertools
 sys.path.insert(0, "..")
 
 import numpy as np
@@ -15,7 +16,7 @@ import matplotlib.pyplot as plt
 
 from tools import colortext
 from tools.bio.pdb import PDB
-from tools.bio.basics import Mutation
+from tools.bio.basics import Mutation, ChainMutation
 from tools.bio.alignment import ScaffoldModelChainMapper
 from tools.fs.fsio import read_file, write_file
 from tools.process import Popen
@@ -289,6 +290,105 @@ F70Y, L78Y, W111K, E141L, S142A, L150I, I153V,
 W103M, L78Y, W111K, E141L, S142A, L150I, I153V,
 F70Y, W103M, L78Y, W111K, E141L, S142A, L150I, I153V,
 '''
+
+#@profile
+def mutation_combinations2(mutations):
+    '''A generator which returns all non-empty combinations of mutations, respecting residue position i.e. if two residues
+       have the same chain and residue ID then we do not return a combination with both residues.
+       Note that this simple function does a lot of memory allocations (positions, set(positions), string creation).
+       We could remove these allocations with a n^2 linear search. Better, since the mutations are sorted, we could compare
+       each mutation with its neighbor for an O(n) search.
+    '''
+    mutations = sorted(mutations)
+    #unique_positions = ['%s%s' % (m.Chain, m.ResidueID.strip()) for m in mutations]
+    #expected_number_of_mutations = 2^unique_positions - 1
+    #mutation
+    #L150I, W111K, W111L, E141L, and W103M
+    #is_the_same_position
+
+    combntn = itertools.chain.from_iterable(itertools.combinations(mutations, x) for x in range(len(mutations) + 1))
+    for c in combntn:
+        if len(c) > 0: # filter out the empty combination
+            positions = ['%s%s' % (m.Chain, m.ResidueID.strip()) for m in c]
+            if len(positions) == len(set(positions)): # filter out combinations where
+                yield c
+
+    #mutation_sets = [mutation_set for mutation_set in b]
+    #print(len(mutation_sets))
+
+#@profile
+def mutation_combinations(mutations):
+    '''A generator which returns all non-empty combinations of mutations, respecting residue position i.e. if two residues
+       have the same chain and residue ID then we do not return a combination with both residues.
+       Note that this simple function does a lot of memory allocations (positions, set(positions), string creation).
+       We could remove these allocations with a n^2 linear search. Better, since the mutations are sorted, we could compare
+       each mutation with its neighbor for an O(n) search.
+    '''
+    mutations = sorted(mutations)
+
+    combntn = itertools.chain.from_iterable(itertools.combinations(mutations, x) for x in range(len(mutations) + 1))
+    for c in combntn:
+        num_mutations = len(c)
+        if num_mutations > 0: # filter out the empty combination
+
+            return_this = True
+            x = 0
+            cache = num_mutations - 1
+
+            # This while loop is slower than the for loop below
+            if False:
+                while x < cache:
+                    assert(c[x] <= c[x + 1])
+                    if c[x].is_the_same_position(c[x+1]):
+                        return_this = False
+                        break
+                    x += 1
+
+            for x in xrange(cache):
+                assert(c[x] <= c[x + 1])
+                if c[x].is_the_same_position(c[x+1]):
+                    return_this = False
+                    break
+
+            if return_this:
+                yield c
+
+#@profile
+def generate_all_combinations_of_mutations(mutations):
+    mutation_sets = [mutation_set for mutation_set in mutation_combinations(mutations)]
+    print(len(mutation_sets))
+
+#@profile
+def generate_all_combinations_of_mutations2(mutations):
+    mutation_sets2 = [mutation_set for mutation_set in mutation_combinations2(mutations)]
+    print(len(mutation_sets2))
+
+mutations = [
+    ChainMutation('F',  '70', 'Y', Chain = 'A'),
+    ChainMutation('W', '103', 'M', Chain = 'A'),
+    ChainMutation('W', '111', 'K', Chain = 'A'),
+    ChainMutation('E', '141', 'L', Chain = 'A'),
+    ChainMutation('S', '142', 'A', Chain = 'A'),
+    ChainMutation('L', '150', 'I', Chain = 'A'),
+    ChainMutation('I', '153', 'V', Chain = 'A'),
+]
+
+mutations = [
+    ChainMutation('W', '103', 'M', Chain = 'A'),
+    ChainMutation('W', '111', 'K', Chain = 'A'),
+    ChainMutation('W', '111', 'L', Chain = 'A'),
+    ChainMutation('E', '141', 'L', Chain = 'A'),
+    ChainMutation('L', '150', 'I', Chain = 'A'),
+]
+
+mutations = [ChainMutation('A', str(x), 'G', Chain = 'A') for x in range(1, 16 + 1)]
+
+import time
+t1 = time.time()
+generate_all_combinations_of_mutations(mutations)
+print(time.time() - t1)
+
+sys.exit(0)
 
 def add_pdb_file(filepath, pdb_id):
     existing_pdb = DDGdb.execute_select('SELECT ID FROM PDBFile WHERE ID=%s', parameters=(pdb_id,))
