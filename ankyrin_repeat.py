@@ -3,9 +3,9 @@ import os
 import datetime
 import string
 import random
-import pickle
 import glob
 import shutil
+import json
 sys.path.insert(0, "..")
 
 import numpy as np
@@ -386,7 +386,7 @@ def add_cluster_jobs(pdb_ID, PredictionSet, ProtocolID):
 
 def get_results(PredictionSet):
     return DDGdb.execute_select('''
-SELECT Prediction.ID AS PredictionID, Prediction.ExperimentID, Experiment.PDBFileID, ExperimentMutations.FlattenedMutations, Prediction.ddG, TIMEDIFF(Prediction.EndDate, Prediction.StartDate) AS TimeTaken FROM Prediction INNER JOIN
+SELECT Prediction.ID AS PredictionID, Prediction.ExperimentID, Experiment.PDBFileID, ExperimentMutations.FlattenedMutations, Prediction.Scores, TIMEDIFF(Prediction.EndDate, Prediction.StartDate) AS TimeTaken FROM Prediction INNER JOIN
 (
   SELECT ExperimentID, GROUP_CONCAT(Mutation SEPARATOR ', ') AS FlattenedMutations FROM
   (
@@ -399,11 +399,11 @@ INNER JOIN Experiment ON Prediction.ExperimentID=Experiment.ID
 WHERE Prediction.PredictionSet=%s
 ORDER BY Prediction.ExperimentID''', parameters=(PredictionSet,))
 
-def analyze_results(PredictionSet, graph_filename):
+def analyze_results(PredictionSet, graph_filename, scoring_method, scoring_type):
     results = get_results(PredictionSet)
     sorted_results = {}
     for r in results:
-        sorted_results[(pickle.loads(r['ddG'])['data']['kellogg']['total']['ddG'], r['ExperimentID'])] = r
+        sorted_results[(json.loads(r['Scores'])['data'][scoring_method][scoring_type]['ddG'], r['ExperimentID'])] = r
     count = 0
 
     set_of_mutations = set()
@@ -424,9 +424,9 @@ def analyze_results(PredictionSet, graph_filename):
         mutations = [m for m in map(string.strip, r['FlattenedMutations'].split(',')) if m]
         for m in mutations:
             set_of_mutations.add((int(m.split()[1][1:-1]), m))
-        #if r['FlattenedMutations'].find('A L78Y') == -1:
-            #print('%f, %s' % (k[0], r['FlattenedMutations']))
-            #count += 1
+        if r['FlattenedMutations'].find('A L78Y') == -1:
+            print('%f, %s' % (k[0], r['FlattenedMutations']))
+        #    #count += 1
 
     data = []
     pruned_data = []
@@ -437,16 +437,16 @@ def analyze_results(PredictionSet, graph_filename):
                 line.append(1)
             else:
                 line.append(0)
-        data.append((pickle.loads(r['ddG'])['data']['kellogg']['total']['ddG'], line))
+        data.append((json.loads(r['Scores'])['data'][scoring_method][scoring_type]['ddG'], line))
         if r['FlattenedMutations'].find('A L78Y') == -1:
-            pruned_data.append((pickle.loads(r['ddG'])['data']['kellogg']['total']['ddG'], line))
+            pruned_data.append((json.loads(r['Scores'])['data'][scoring_method][scoring_type]['ddG'], line))
 
     labels = [m[1] for m in sorted(set_of_mutations)]
 
     #hinton('all_mutants.png', labels, data)
-    create_graph(graph_filename, labels, pruned_data)
+    create_graph(graph_filename, labels, pruned_data, scoring_method, scoring_type)
 
-def create_graph(filename, labels, data, max_weight=None, ax=None):
+def create_graph(filename, labels, data, scoring_method, scoring_type):
     matplotlib.rc('figure', figsize=(8.27, 20.69))
 
     x_values = []
@@ -470,6 +470,7 @@ def create_graph(filename, labels, data, max_weight=None, ax=None):
     else:
         plt.scatter(x_values, y_values, c=ddg_values, s=50, cmap=matplotlib.cm.jet, edgecolors='none', zorder=99)
 
+    plt.tight_layout(pad=2.08)
     plt.axis((0, 27, -5, (7 * len(data)) + 15))
 
     plt.tick_params(
@@ -483,7 +484,7 @@ def create_graph(filename, labels, data, max_weight=None, ax=None):
 
     x = 1.9
     for l in labels:
-        plt.text(x, -30, l.split()[1], fontdict=None, withdash=True, fontsize=9)
+        plt.text(x, -12, l.split()[1], fontdict=None, withdash=True, fontsize=9)
         x += 3
 
     added_zero_line = False
@@ -511,7 +512,7 @@ def create_graph(filename, labels, data, max_weight=None, ax=None):
         plt.text(25, y-1.75, str('%.3f' % line[0]), fontdict=None, withdash=True, fontsize=6)
 
     plt.colorbar()
-    plt.title(r'$\Delta\Delta$G predictions for FPP biosensor mutants', fontdict=None)
+    plt.title(r'$\Delta\Delta$G predictions for FPP biosensor mutants (%s.%s)' % (scoring_method.replace(',0A', '.0$\AA$').replace('_', ' '), scoring_type), fontdict=None)
 
     if len(data) > 140:
         plt.savefig(filename, dpi=800)
@@ -654,7 +655,7 @@ if False:
     get_results('FPP biosensor: protocol 16')
 
     # The analyze_results function will create a sorted graph of the results showing which sets of mutations are predicted to be more stable
-    analyze_results('FPP biosensor: protocol 16', 'L87Y_removed.png')
+    analyze_results('FPP biosensor: protocol 16', 'L87Y_removed.png', 'kellogg', 'total')
 
     # This is a simple test function which prints out the sequences of the monomer wildtype sequence and mutant sequence,
     # highlighting where they differ in case there was a mistake in the pipeline.
@@ -669,4 +670,5 @@ if False:
     # highlighted.
     create_pymol_session('test.pse', 'random_output_data', 53858, 25)
 
-test_results('random_output_data', 'FPP biosensor: protocol 16')
+analyze_results('FPP biosensor: protocol 16', 'L87Y_removed_Noah.png', 'noah_8,0A', 'positional')
+#analyze_results('FPP biosensor: protocol 16', 'L87Y_removed.png', 'kellogg', 'total')
