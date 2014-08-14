@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 from tools import colortext
 from tools.bio.pdb import PDB
-from tools.bio.basics import Mutation, ChainMutation
+from tools.bio.basics import Mutation, ChainMutation, generate_all_combinations_of_mutations
 from tools.bio.alignment import ScaffoldModelChainMapper
 from tools.fs.fsio import read_file, write_file
 from tools.process import Popen
@@ -31,364 +31,6 @@ A83P, I86L, S87A
 L95I, I98V
 A83P, I86L, S87A, L95I, I98V
 '''
-
-all_mutations = '''
-# All mutations are on chain A
-F70Y,
-W103M,
-L78Y,
-W111K,
-E141L,
-S142A,
-L150I,
-I153V,
-F70Y, W103M,
-F70Y, L78Y,
-F70Y, W111K,
-F70Y, E141L,
-F70Y, S142A,
-F70Y, L150I,
-F70Y, I153V,
-W103M, L78Y,
-W103M, W111K,
-W103M, E141L,
-W103M, S142A,
-W103M, L150I,
-W103M, I153V,
-L78Y, W111K,
-L78Y, E141L,
-L78Y, S142A,
-L78Y, L150I,
-L78Y, I153V,
-W111K, E141L,
-W111K, S142A,
-W111K, L150I,
-W111K, I153V,
-E141L, S142A,
-E141L, L150I,
-E141L, I153V,
-S142A, L150I,
-S142A, I153V,
-L150I, I153V,
-F70Y, W103M, L78Y,
-F70Y, W103M, W111K,
-F70Y, W103M, E141L,
-F70Y, W103M, S142A,
-F70Y, W103M, L150I,
-F70Y, W103M, I153V,
-F70Y, L78Y, W111K,
-F70Y, L78Y, E141L,
-F70Y, L78Y, S142A,
-F70Y, L78Y, L150I,
-F70Y, L78Y, I153V,
-F70Y, W111K, E141L,
-F70Y, W111K, S142A,
-F70Y, W111K, L150I,
-F70Y, W111K, I153V,
-F70Y, E141L, S142A,
-F70Y, E141L, L150I,
-F70Y, E141L, I153V,
-F70Y, S142A, L150I,
-F70Y, S142A, I153V,
-F70Y, L150I, I153V,
-W103M, L78Y, W111K,
-W103M, L78Y, E141L,
-W103M, L78Y, S142A,
-W103M, L78Y, L150I,
-W103M, L78Y, I153V,
-W103M, W111K, E141L,
-W103M, W111K, S142A,
-W103M, W111K, L150I,
-W103M, W111K, I153V,
-W103M, E141L, S142A,
-W103M, E141L, L150I,
-W103M, E141L, I153V,
-W103M, S142A, L150I,
-W103M, S142A, I153V,
-W103M, L150I, I153V,
-L78Y, W111K, E141L,
-L78Y, W111K, S142A,
-L78Y, W111K, L150I,
-L78Y, W111K, I153V,
-L78Y, E141L, S142A,
-L78Y, E141L, L150I,
-L78Y, E141L, I153V,
-L78Y, S142A, L150I,
-L78Y, S142A, I153V,
-L78Y, L150I, I153V,
-W111K, E141L, S142A,
-W111K, E141L, L150I,
-W111K, E141L, I153V,
-W111K, S142A, L150I,
-W111K, S142A, I153V,
-W111K, L150I, I153V,
-E141L, S142A, L150I,
-E141L, S142A, I153V,
-E141L, L150I, I153V,
-S142A, L150I, I153V,
-F70Y, W103M, L78Y, W111K,
-F70Y, W103M, L78Y, E141L,
-F70Y, W103M, L78Y, S142A,
-F70Y, W103M, L78Y, L150I,
-F70Y, W103M, L78Y, I153V,
-F70Y, W103M, W111K, E141L,
-F70Y, W103M, W111K, S142A,
-F70Y, W103M, W111K, L150I,
-F70Y, W103M, W111K, I153V,
-F70Y, W103M, E141L, S142A,
-F70Y, W103M, E141L, L150I,
-F70Y, W103M, E141L, I153V,
-F70Y, W103M, S142A, L150I,
-F70Y, W103M, S142A, I153V,
-F70Y, W103M, L150I, I153V,
-F70Y, L78Y, W111K, E141L,
-F70Y, L78Y, W111K, S142A,
-F70Y, L78Y, W111K, L150I,
-F70Y, L78Y, W111K, I153V,
-F70Y, L78Y, E141L, S142A,
-F70Y, L78Y, E141L, L150I,
-F70Y, L78Y, E141L, I153V,
-F70Y, L78Y, S142A, L150I,
-F70Y, L78Y, S142A, I153V,
-F70Y, L78Y, L150I, I153V,
-F70Y, W111K, E141L, S142A,
-F70Y, W111K, E141L, L150I,
-F70Y, W111K, E141L, I153V,
-F70Y, W111K, S142A, L150I,
-F70Y, W111K, S142A, I153V,
-F70Y, W111K, L150I, I153V,
-F70Y, E141L, S142A, L150I,
-F70Y, E141L, S142A, I153V,
-F70Y, E141L, L150I, I153V,
-F70Y, S142A, L150I, I153V,
-W103M, L78Y, W111K, E141L,
-W103M, L78Y, W111K, S142A,
-W103M, L78Y, W111K, L150I,
-W103M, L78Y, W111K, I153V,
-W103M, L78Y, E141L, S142A,
-W103M, L78Y, E141L, L150I,
-W103M, L78Y, E141L, I153V,
-W103M, L78Y, S142A, L150I,
-W103M, L78Y, S142A, I153V,
-W103M, L78Y, L150I, I153V,
-W103M, W111K, E141L, S142A,
-W103M, W111K, E141L, L150I,
-W103M, W111K, E141L, I153V,
-W103M, W111K, S142A, L150I,
-W103M, W111K, S142A, I153V,
-W103M, W111K, L150I, I153V,
-W103M, E141L, S142A, L150I,
-W103M, E141L, S142A, I153V,
-W103M, E141L, L150I, I153V,
-W103M, S142A, L150I, I153V,
-L78Y, W111K, E141L, S142A,
-L78Y, W111K, E141L, L150I,
-L78Y, W111K, E141L, I153V,
-L78Y, W111K, S142A, L150I,
-L78Y, W111K, S142A, I153V,
-L78Y, W111K, L150I, I153V,
-L78Y, E141L, S142A, L150I,
-L78Y, E141L, S142A, I153V,
-L78Y, E141L, L150I, I153V,
-L78Y, S142A, L150I, I153V,
-W111K, E141L, S142A, L150I,
-W111K, E141L, S142A, I153V,
-W111K, E141L, L150I, I153V,
-W111K, S142A, L150I, I153V,
-E141L, S142A, L150I, I153V,
-F70Y, W103M, L78Y, W111K, E141L,
-F70Y, W103M, L78Y, W111K, S142A,
-F70Y, W103M, L78Y, W111K, L150I,
-F70Y, W103M, L78Y, W111K, I153V,
-F70Y, W103M, L78Y, E141L, S142A,
-F70Y, W103M, L78Y, E141L, L150I,
-F70Y, W103M, L78Y, E141L, I153V,
-F70Y, W103M, L78Y, S142A, L150I,
-F70Y, W103M, L78Y, S142A, I153V,
-F70Y, W103M, L78Y, L150I, I153V,
-F70Y, W103M, W111K, E141L, S142A,
-F70Y, W103M, W111K, E141L, L150I,
-F70Y, W103M, W111K, E141L, I153V,
-F70Y, W103M, W111K, S142A, L150I,
-F70Y, W103M, W111K, S142A, I153V,
-F70Y, W103M, W111K, L150I, I153V,
-F70Y, W103M, E141L, S142A, L150I,
-F70Y, W103M, E141L, S142A, I153V,
-F70Y, W103M, E141L, L150I, I153V,
-F70Y, W103M, S142A, L150I, I153V,
-F70Y, L78Y, W111K, E141L, S142A,
-F70Y, L78Y, W111K, E141L, L150I,
-F70Y, L78Y, W111K, E141L, I153V,
-F70Y, L78Y, W111K, S142A, L150I,
-F70Y, L78Y, W111K, S142A, I153V,
-F70Y, L78Y, W111K, L150I, I153V,
-F70Y, L78Y, E141L, S142A, L150I,
-F70Y, L78Y, E141L, S142A, I153V,
-F70Y, L78Y, E141L, L150I, I153V,
-F70Y, L78Y, S142A, L150I, I153V,
-F70Y, W111K, E141L, S142A, L150I,
-F70Y, W111K, E141L, S142A, I153V,
-F70Y, W111K, E141L, L150I, I153V,
-F70Y, W111K, S142A, L150I, I153V,
-F70Y, E141L, S142A, L150I, I153V,
-W103M, L78Y, W111K, E141L, S142A,
-W103M, L78Y, W111K, E141L, L150I,
-W103M, L78Y, W111K, E141L, I153V,
-W103M, L78Y, W111K, S142A, L150I,
-W103M, L78Y, W111K, S142A, I153V,
-W103M, L78Y, W111K, L150I, I153V,
-W103M, L78Y, E141L, S142A, L150I,
-W103M, L78Y, E141L, S142A, I153V,
-W103M, L78Y, E141L, L150I, I153V,
-W103M, L78Y, S142A, L150I, I153V,
-W103M, W111K, E141L, S142A, L150I,
-W103M, W111K, E141L, S142A, I153V,
-W103M, W111K, E141L, L150I, I153V,
-W103M, W111K, S142A, L150I, I153V,
-W103M, E141L, S142A, L150I, I153V,
-L78Y, W111K, E141L, S142A, L150I,
-L78Y, W111K, E141L, S142A, I153V,
-L78Y, W111K, E141L, L150I, I153V,
-L78Y, W111K, S142A, L150I, I153V,
-L78Y, E141L, S142A, L150I, I153V,
-W111K, E141L, S142A, L150I, I153V,
-F70Y, W103M, L78Y, W111K, E141L, S142A,
-F70Y, W103M, L78Y, W111K, E141L, L150I,
-F70Y, W103M, L78Y, W111K, E141L, I153V,
-F70Y, W103M, L78Y, W111K, S142A, L150I,
-F70Y, W103M, L78Y, W111K, S142A, I153V,
-F70Y, W103M, L78Y, W111K, L150I, I153V,
-F70Y, W103M, L78Y, E141L, S142A, L150I,
-F70Y, W103M, L78Y, E141L, S142A, I153V,
-F70Y, W103M, L78Y, E141L, L150I, I153V,
-F70Y, W103M, L78Y, S142A, L150I, I153V,
-F70Y, W103M, W111K, E141L, S142A, L150I,
-F70Y, W103M, W111K, E141L, S142A, I153V,
-F70Y, W103M, W111K, E141L, L150I, I153V,
-F70Y, W103M, W111K, S142A, L150I, I153V,
-F70Y, W103M, E141L, S142A, L150I, I153V,
-F70Y, L78Y, W111K, E141L, S142A, L150I,
-F70Y, L78Y, W111K, E141L, S142A, I153V,
-F70Y, L78Y, W111K, E141L, L150I, I153V,
-F70Y, L78Y, W111K, S142A, L150I, I153V,
-F70Y, L78Y, E141L, S142A, L150I, I153V,
-F70Y, W111K, E141L, S142A, L150I, I153V,
-W103M, L78Y, W111K, E141L, S142A, L150I,
-W103M, L78Y, W111K, E141L, S142A, I153V,
-W103M, L78Y, W111K, E141L, L150I, I153V,
-W103M, L78Y, W111K, S142A, L150I, I153V,
-W103M, L78Y, E141L, S142A, L150I, I153V,
-W103M, W111K, E141L, S142A, L150I, I153V,
-L78Y, W111K, E141L, S142A, L150I, I153V,
-F70Y, W103M, L78Y, W111K, E141L, S142A, L150I,
-F70Y, W103M, L78Y, W111K, E141L, S142A, I153V,
-F70Y, W103M, L78Y, W111K, E141L, L150I, I153V,
-F70Y, W103M, L78Y, W111K, S142A, L150I, I153V,
-F70Y, W103M, L78Y, E141L, S142A, L150I, I153V,
-F70Y, W103M, W111K, E141L, S142A, L150I, I153V,
-F70Y, L78Y, W111K, E141L, S142A, L150I, I153V,
-W103M, L78Y, W111K, E141L, S142A, L150I, I153V,
-F70Y, W103M, L78Y, W111K, E141L, S142A, L150I, I153V,
-'''
-
-#@profile
-def mutation_combinations2(mutations):
-    '''A generator which returns all non-empty combinations of mutations, respecting residue position i.e. if two residues
-       have the same chain and residue ID then we do not return a combination with both residues.
-       Note that this simple function does a lot of memory allocations (positions, set(positions), string creation).
-       We could remove these allocations with a n^2 linear search. Better, since the mutations are sorted, we could compare
-       each mutation with its neighbor for an O(n) search.
-    '''
-    mutations = sorted(mutations)
-    #unique_positions = ['%s%s' % (m.Chain, m.ResidueID.strip()) for m in mutations]
-    #expected_number_of_mutations = 2^unique_positions - 1
-    #mutation
-    #L150I, W111K, W111L, E141L, and W103M
-    #is_the_same_position
-
-    combntn = itertools.chain.from_iterable(itertools.combinations(mutations, x) for x in range(len(mutations) + 1))
-    for c in combntn:
-        if len(c) > 0: # filter out the empty combination
-            positions = ['%s%s' % (m.Chain, m.ResidueID.strip()) for m in c]
-            if len(positions) == len(set(positions)): # filter out combinations where
-                yield c
-
-    #mutation_sets = [mutation_set for mutation_set in b]
-    #print(len(mutation_sets))
-
-#@profile
-def mutation_combinations(mutations):
-    '''A generator which returns all non-empty combinations of mutations, respecting residue position i.e. if two residues
-       have the same chain and residue ID then we do not return a combination with both residues.
-       Note that this simple function does a lot of memory allocations (positions, set(positions), string creation).
-       We could remove these allocations with a n^2 linear search. Better, since the mutations are sorted, we could compare
-       each mutation with its neighbor for an O(n) search.
-    '''
-    mutations = sorted(mutations)
-
-    combntn = itertools.chain.from_iterable(itertools.combinations(mutations, x) for x in range(len(mutations) + 1))
-    for c in combntn:
-        num_mutations = len(c)
-        if num_mutations > 0: # filter out the empty combination
-
-            return_this = True
-            x = 0
-            cache = num_mutations - 1
-
-            # This while loop is slower than the for loop below
-            if False:
-                while x < cache:
-                    assert(c[x] <= c[x + 1])
-                    if c[x].is_the_same_position(c[x+1]):
-                        return_this = False
-                        break
-                    x += 1
-
-            for x in xrange(cache):
-                assert(c[x] <= c[x + 1])
-                if c[x].is_the_same_position(c[x+1]):
-                    return_this = False
-                    break
-
-            if return_this:
-                yield c
-
-#@profile
-def generate_all_combinations_of_mutations(mutations):
-    mutation_sets = [mutation_set for mutation_set in mutation_combinations(mutations)]
-    print(len(mutation_sets))
-
-#@profile
-def generate_all_combinations_of_mutations2(mutations):
-    mutation_sets2 = [mutation_set for mutation_set in mutation_combinations2(mutations)]
-    print(len(mutation_sets2))
-
-mutations = [
-    ChainMutation('F',  '70', 'Y', Chain = 'A'),
-    ChainMutation('W', '103', 'M', Chain = 'A'),
-    ChainMutation('W', '111', 'K', Chain = 'A'),
-    ChainMutation('E', '141', 'L', Chain = 'A'),
-    ChainMutation('S', '142', 'A', Chain = 'A'),
-    ChainMutation('L', '150', 'I', Chain = 'A'),
-    ChainMutation('I', '153', 'V', Chain = 'A'),
-]
-
-mutations = [
-    ChainMutation('W', '103', 'M', Chain = 'A'),
-    ChainMutation('W', '111', 'K', Chain = 'A'),
-    ChainMutation('W', '111', 'L', Chain = 'A'),
-    ChainMutation('E', '141', 'L', Chain = 'A'),
-    ChainMutation('L', '150', 'I', Chain = 'A'),
-]
-
-mutations = [ChainMutation('A', str(x), 'G', Chain = 'A') for x in range(1, 16 + 1)]
-
-import time
-t1 = time.time()
-generate_all_combinations_of_mutations(mutations)
-print(time.time() - t1)
-
-sys.exit(0)
 
 def add_pdb_file(filepath, pdb_id):
     existing_pdb = DDGdb.execute_select('SELECT ID FROM PDBFile WHERE ID=%s', parameters=(pdb_id,))
@@ -415,44 +57,14 @@ def add_pdb_file(filepath, pdb_id):
         }
         DDGdb.insertDictIfNew('PDBFile', d, ['ID'])
 
-
-def add_mutations_from_file(pdb_ID, chain, filepath):
-    '''filepath should have the following format:
-         - each non-empty line which does not begin with '#' should be a comma-separated list of mutations in the format
-           wtAA_resID_mutantAA where resID can contain a insertion code e.g. P50A. Each line corresponds to one 'experiment'
-           so a line with one mutation corresponds to a single mutant, a line with two mutations corresponds to a double mutant etc.
-         - empty lines are lines beginning with '#' are ignored.'''
-    add_mutations_from_string(pdb_ID, chain, read_file(filepath))
-
-
-def add_mutations_from_string(pdb_ID, chain, str):
-    '''str should have the following format:
-         - each non-empty line which does not begin with '#' should be a comma-separated list of mutations in the format
-           wtAA_resID_mutantAA where resID can contain a insertion code e.g. P50A. Each line corresponds to one 'experiment'
-           so a line with one mutation corresponds to a single mutant, a line with two mutations corresponds to a double mutant etc.
-         - empty lines are lines beginning with '#' are ignored.'''
-
-    lines = []
-    for l in str.split('\n'):
-        l = l.strip()
-        if l and not(l.startswith('#')):
-            lines.append(l)
-    for l in lines:
-        add_mutations(pdb_ID, chain, l)
-
-
-def add_mutations(pdb_ID, chain, mutation_string):
-    '''Use this function to add one set of mutations (i.e. corresponding to one mutant) to the database.
-
-       mutation_string here is a comma-separated list of mutations in the format wtAA_resID_mutantAA where resID can contain a insertion code
-       (even though the model is from Rosetta in this case so there will be no insertion code).
+def add_mutant(pdb_ID, mutant_mutations):
+    '''Use this function to add one set of mutations ON THE SAME CHAIN (i.e. corresponding to one mutant) to the database.
+       todo: generalize this to allow different chains
     '''
-    mutations = []
-    for mutation_string in [m.strip() for m in mutation_string.split(',') if m.strip()]:
-        mutations.append(Mutation(mutation_string[0], mutation_string[1:-1], mutation_string[-1], chain))
-
-    colortext.warning("Adding mutation: %s." % ', '.join(map(str, mutations)))
-    ddG_connection.createDummyExperiment_ankyrin_repeat(pdb_ID, mutations, chain)
+    chains = set([m.Chain for m in mutant_mutations])
+    assert(len(chains) == 1)
+    colortext.warning("Adding mutation: %s." % ', '.join(map(str, mutant_mutations)))
+    ddG_connection.createDummyExperiment_ankyrin_repeat(pdb_ID, mutant_mutations, chains.pop())
 
 
 def add_cluster_jobs(pdb_ID, PredictionSet, ProtocolID):
@@ -689,29 +301,33 @@ def test_results(output_dir, PredictionSet):
         print(t)
 
 def create_pymol_session(output_filepath, download_dir, PredictionID, task_number, keep_files = True):
-    #print(os.path.join(working_dir, '*.pdb'))
-    # Retrieve and unzip results
+    '''Create a PyMOL session for a pair of structures.'''
 
+    # Retrieve and unzip results
     if not(os.path.exists(download_dir)):
         os.mkdir(download_dir)
-
     working_dir = os.path.join(os.path.join(download_dir, str(PredictionID)))
     if not(os.path.exists(working_dir)) or not(os.path.exists(os.path.join(working_dir, 'repacked_wt_round_%d.pdb' % task_number))):
         extract_data(ddG_connection, download_dir, PredictionID)
     if not(os.path.exists(working_dir)) or not(os.path.exists(os.path.join(working_dir, 'repacked_wt_round_%d.pdb' % task_number))):
         raise Exception('Could not extract the models for task #%d of Prediction #%d.' % (task_number, PredictionID))
 
+    # Retrieve the two structures corresponding to the task_number
     files = sorted(glob.glob(os.path.join(working_dir, '*_round_%d.pdb' % task_number)), reverse = True)
     assert(os.path.split(files[0])[1].startswith('repacked_wt_'))
     assert(os.path.split(files[1])[1].startswith('mut_'))
 
+    # Creator the alignment object and write the PSE file
     chain_mapper = ScaffoldModelChainMapper.from_file_paths(files[0], files[1])
-    PSE_file = chain_mapper.generate_pymol_session()
 
-    write_file(output_filepath, PSE_file[0], 'wb')
-
+    # Remove the downloaded files
     if not keep_files:
         shutil.rmtree(download_dir)
+    return chain_mapper.generate_pymol_session()
+
+def write_pymol_session(output_filepath, download_dir, PredictionID, task_number, keep_files = True):
+    PSE_file = create_pymol_session(output_filepath, download_dir, PredictionID, task_number, keep_files = keep_files)
+    write_file(output_filepath, PSE_file[0], 'wb')
 
 if False:
 
@@ -728,10 +344,37 @@ if False:
     add_pdb_file('/kortemmelab/home/oconchus/BiosensorDesign/1SVX.pdb', '1SVX')
 
     # Step 2: Add a list of mutations for this PDB
-    add_mutations_from_string('S9G10_best', 'A', all_mutations)
-    add_mutations_from_string('1SVX', 'A', all_wildtype_mutations)
-    # Step 2: If you wanted to add a single mutation:
-    add_mutations('S9G10_best', 'A', 'F70Y, W111K,') # pdb_id, chain, comma-separated list of mutations
+    #
+    # generate_all_combinations_of_mutations generates all possible combinations of the list of mutations which can be useful.
+
+    mutation_set_1 = [
+        ChainMutation('F',  '70', 'Y', Chain = 'A'),
+        #ChainMutation('L',  '78', 'Y', Chain = 'A'),
+        ChainMutation('W', '103', 'M', Chain = 'A'),
+        ChainMutation('W', '111', 'K', Chain = 'A'),
+        ChainMutation('E', '141', 'L', Chain = 'A'),
+        ChainMutation('S', '142', 'A', Chain = 'A'),
+        ChainMutation('L', '150', 'I', Chain = 'A'),
+        ChainMutation('I', '153', 'V', Chain = 'A'),
+    ]
+    mutant_list = generate_all_combinations_of_mutations(mutation_set_1)
+    colortext.message('Adding %d mutants.' % len(mutant_list))
+    for mutant_mutations in mutant_list:
+        add_mutant('S9G10_best', mutant_mutations)
+
+    mutation_set_2 = [
+        ChainMutation('W', '103', 'M', Chain = 'A'),
+        ChainMutation('W', '111', 'K', Chain = 'A'),
+        ChainMutation('W', '111', 'L', Chain = 'A'),
+        ChainMutation('E', '141', 'L', Chain = 'A'),
+        ChainMutation('L', '150', 'I', Chain = 'A'),
+    ]
+    for mutant_mutations in generate_all_combinations_of_mutations(mutation_set_2):
+        add_mutant('S9G10_best', mutant_mutations)
+
+    # Step 2: If you wanted to add a single mutant:
+    add_mutant('S9G10_best', [ChainMutation('F',  '70', 'Y', Chain = 'A'), ChainMutation('W', '103', 'M', Chain = 'A')]) # pdb_id, chain, comma-separated list of mutations
+
 
     # Step 3:
     # This function will queue any mutations of 3SO8_BS1 that we added with add_mutations which have not previously run on
@@ -741,8 +384,9 @@ if False:
     # The third parameter is the name of the DDG protocol. All protocols currently in the database are variants of protocol 16
     # from the Kellogg, Leaver-Fay, Baker paper (doi:10.1002/prot.22921).
 
-    #add_cluster_jobs('S9G10_best', 'FPP biosensor: protocol 16', 'Protocol16 3.5.1 (talaris2013sc)')
-    add_cluster_jobs('1SVX', 'FPP biosensor: protocol 16', 'Protocol16 3.5.1 (talaris2013sc)')
+    add_cluster_jobs('S9G10_best', 'FPP biosensor: protocol 16', 'Protocol16 3.5.1 (talaris2013sc)')
+    #add_cluster_jobs('1SVX', 'FPP biosensor: protocol 16', 'Protocol16 3.5.1 (talaris2013sc)')
+
 
     # Steps 2 and 3 can be repeated as often as you need however it is best to add as many mutations in step 2 first as this
     # will result in a better use of the cluster (larger array jobs).
@@ -752,14 +396,17 @@ if False:
     ### Analysis stage ###
 
     # To see the results quickly, you can use the get_results function e.g.
+    colortext.message('Retrieving results')
     get_results('FPP biosensor: protocol 16')
 
     # The analyze_results function will create a sorted graph of the results showing which sets of mutations are predicted to be more stable
+    colortext.message('Analyzing results')
     analyze_results('FPP biosensor: protocol 16', 'L87Y_removed.png', 'kellogg', 'total')
 
     # This is a simple test function which prints out the sequences of the monomer wildtype sequence and mutant sequence,
     # highlighting where they differ in case there was a mistake in the pipeline.
     # First, the output files are downloaded and extracted to the directory specified in the first argument.
+    colortext.message('Testing results')
     test_results('random_output_data', 'FPP biosensor: protocol 16')
 
     # This function creates a PyMOL session
@@ -768,7 +415,9 @@ if False:
     # The fourth argument is a task ID e.g. Protocol 16 generates 50 pairs of wildtype and mutant models by default, numbered
     # 1 to 50. This argument picks one of those pairs and creates a PyMOL session with aligned structures and with the mutations
     # highlighted.
+    colortext.message('Creating PyMOL session')
     create_pymol_session('test.pse', 'random_output_data', 53858, 25)
 
-analyze_results('FPP biosensor: protocol 16', 'L87Y_removed_Noah.png', 'noah_8,0A', 'positional')
+#analyze_results('FPP biosensor: protocol 16', 'L87Y_removed_Noah.png', 'noah_8,0A', 'positional')
 #analyze_results('FPP biosensor: protocol 16', 'L87Y_removed.png', 'kellogg', 'total')
+#add_cluster_jobs('S9G10_best', 'FPP biosensor: protocol 16', 'Protocol16 3.5.1 (talaris2013sc)')
