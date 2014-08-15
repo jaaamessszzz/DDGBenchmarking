@@ -113,5 +113,22 @@ if False:
 #analyze_results('FPP biosensor: protocol 16', 'noah_8,0A', 'positional', graph_filename = 'L87Y_removed_Noah.png')
 #analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'L87Y_removed.png')
 #ddG_connection.add_predictions_by_pdb_id('S9G10_best', 'FPP biosensor: protocol 16', 'Protocol16 3.5.1 (talaris2013sc)', priority = 9)
+#ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'L87Y_removed_new.png')
 
-ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'L87Y_removed_new.png')
+def test_abacus_graph():
+    '''This function can be deleted. It was added to test the abacus graph with different numbers of datapoints.'''
+    import os
+    import json
+    if not(os.path.exists('results_cache.txt')):
+        results = ddG_connection.get_flattened_prediction_results('FPP biosensor: protocol 16')
+        for r in results:
+            r['TimeTaken'] = r['TimeTaken'].total_seconds() # timedelta objects are not JSON serializable
+        write_file('results_cache.txt', json.dumps(results), 'w')
+    results = json.loads(read_file('results_cache.txt'))
+
+    ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_10.png', cached_results = results, num_datapoints = 10)
+    ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_50.png', cached_results = results, num_datapoints = 50)
+    ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_127.png', cached_results = results, num_datapoints = 127)
+    ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_255.png', cached_results = results, num_datapoints = 255)
+
+test_abacus_graph()
