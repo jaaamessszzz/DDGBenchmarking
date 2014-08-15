@@ -10,8 +10,9 @@ from tools.fs.fsio import read_file, write_file
 
 from ddglib import ddgdbapi, dbapi
 
-DDGdb = ddgdbapi.ddGDatabase()
-ddG_connection = dbapi.ddG()
+if __name__ == '__main__':
+    DDGdb = ddgdbapi.ddGDatabase()
+    ddG_connection = dbapi.ddG()
 
 all_wildtype_mutations = '''
 # All mutations are on chain A
@@ -92,7 +93,7 @@ if False:
 
     # The analyze_results function will create a sorted graph of the results showing which sets of mutations are predicted to be more stable
     colortext.message('Analyzing results')
-    ddG_connection.analyze_results('FPP biosensor: protocol 16', 'L87Y_removed.png', 'kellogg', 'total')
+    ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'L87Y_removed.png')
 
     # This is a simple test function which prints out the sequences of the monomer wildtype sequence and mutant sequence,
     # highlighting where they differ in case there was a mistake in the pipeline.
@@ -109,8 +110,8 @@ if False:
     colortext.message('Creating PyMOL session')
     ddG_connection.create_pymol_session('test.pse', 'random_output_data', 53858, 25)
 
-#analyze_results('FPP biosensor: protocol 16', 'L87Y_removed_Noah.png', 'noah_8,0A', 'positional')
-#analyze_results('FPP biosensor: protocol 16', 'L87Y_removed.png', 'kellogg', 'total')
+#analyze_results('FPP biosensor: protocol 16', 'noah_8,0A', 'positional', graph_filename = 'L87Y_removed_Noah.png')
+#analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'L87Y_removed.png')
 #ddG_connection.add_predictions_by_pdb_id('S9G10_best', 'FPP biosensor: protocol 16', 'Protocol16 3.5.1 (talaris2013sc)', priority = 9)
 
-ddG_connection.analyze_results('FPP biosensor: protocol 16', 'L87Y_removed_new.png', 'kellogg', 'total')
+ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'L87Y_removed_new.png')
