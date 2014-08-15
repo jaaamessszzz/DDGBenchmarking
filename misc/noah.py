@@ -75,7 +75,8 @@ def get_related_single_mutants(ExperimentID, details, single_mutant_ids, json_ob
                     related_single_mutations[RelatedExperimentID] = {'PDB' : record['PDBFileID'], 'Mutations' : mutation_list, 'DDGData' : DDG_data}
     return related_single_mutations
 
-ddGdb = ddgdbapi.ddGDatabase()
+if __name__ == '__main__':
+    ddGdb = ddgdbapi.ddGDatabase()
 
 json_object = get_double_mutants(ddGdb)
 single_mutant_ids = get_list_of_single_mutants(ddGdb)

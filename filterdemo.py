@@ -690,8 +690,7 @@ ddG_connection = dbapi.ddG()
 
 if __name__ == '__main__':
 	#help()
-
-	# Tested functions
+    # Tested functions
 	tests = [
 		FilterTester.unionFilterExample1,
 		FilterTester.unionFilterExample2,

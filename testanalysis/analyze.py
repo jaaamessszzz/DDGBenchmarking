@@ -5,6 +5,7 @@ sys.path.insert(0, "../ddglib")
 sys.path.insert(0, "../..")
 import analysis
 
+
 filetype = "pdf"
 
 prediction_set_for_analysis = 'RosettaCon2013_P16_talaris2013'
@@ -16,7 +17,8 @@ prediction_set_for_analysis = 'RosCon2013_P16_score12prime'
 prediction_set_for_analysis = 'RosCon2013_P16_talaris2013sc'
 
 import ddgdbapi
-ddGdb = ddgdbapi.ddGDatabase()
+if __name__ == '__main__':
+    ddGdb = ddgdbapi.ddGDatabase()
 
 results = ddGdb.execute("SELECT ID, ExperimentID, Status FROM Prediction WHERE PredictionSet=%s AND Status IN ('done','failed')", parameters=(prediction_set_for_analysis,))
 
@@ -120,10 +122,10 @@ if True:
 			analyzer.AddPublishedDDGsToAnalysisTables()
 			reporter = analysis.Reporter(analyzer)
 			reporter.CreateReport(description = analyzer.description, outfname = '%s_%s_%s.pdf' % (prediction_set_for_analysis, score_type, score_method), filetype = filetype)
-		
+
 #analysis.plot(analysis._R_correlation_coefficient, analysis._createAveragedInputFile, results, "my_plot2.pdf", average_fn = analysis._mean)
-		
-		
+
+
 #analysis_objects = analyzer.PlotAll(filetype = "pdf", createFiles = False)
 #for o in analysis_objects:
 #	print o
