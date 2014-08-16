@@ -126,6 +126,7 @@ def test_abacus_graph():
         write_file('results_cache.txt', json.dumps(results), 'w')
     results = json.loads(read_file('results_cache.txt'))
 
+    ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_8.png', cached_results = results, num_datapoints = 8)
     ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_10.png', cached_results = results, num_datapoints = 10)
     ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_50.png', cached_results = results, num_datapoints = 50)
     ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_127.png', cached_results = results, num_datapoints = 127)
