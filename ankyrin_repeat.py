@@ -91,9 +91,9 @@ if False:
     colortext.message('Retrieving results')
     ddG_connection.get_flattened_prediction_results('FPP biosensor: protocol 16')
 
-    # The analyze_results function will create a sorted graph of the results showing which sets of mutations are predicted to be more stable
+    # The create_abacus_graph_for_a_single_structure function will create a sorted graph of the results showing which sets of mutations are predicted to be more stable
     colortext.message('Analyzing results')
-    ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'L87Y_removed.png')
+    ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'L87Y_removed.png')
 
     # This is a simple test function which prints out the sequences of the monomer wildtype sequence and mutant sequence,
     # highlighting where they differ in case there was a mistake in the pipeline.
@@ -110,10 +110,10 @@ if False:
     colortext.message('Creating PyMOL session')
     ddG_connection.create_pymol_session('test.pse', 'random_output_data', 53858, 25)
 
-#analyze_results('FPP biosensor: protocol 16', 'noah_8,0A', 'positional', graph_filename = 'L87Y_removed_Noah.png')
-#analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'L87Y_removed.png')
+#create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'noah_8,0A', 'positional', graph_filename = 'L87Y_removed_Noah.png')
+#create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'L87Y_removed.png')
 #ddG_connection.add_predictions_by_pdb_id('S9G10_best', 'FPP biosensor: protocol 16', 'Protocol16 3.5.1 (talaris2013sc)', priority = 9)
-#ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'L87Y_removed_new.png')
+#ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'L87Y_removed_new.png')
 
 def test_abacus_graph():
     '''This function can be deleted. It was added to test the abacus graph with different numbers of datapoints.'''
@@ -126,9 +126,15 @@ def test_abacus_graph():
         write_file('results_cache.txt', json.dumps(results), 'w')
     results = json.loads(read_file('results_cache.txt'))
 
-    ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_10.png', cached_results = results, num_datapoints = 10)
-    ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_50.png', cached_results = results, num_datapoints = 50)
-    ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_127.png', cached_results = results, num_datapoints = 127)
-    ddG_connection.analyze_results('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_255.png', cached_results = results, num_datapoints = 255)
+    ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_10.png', cached_results = results, num_datapoints = 10)
+    ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_50.png', cached_results = results, num_datapoints = 50)
+    ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_127.png', cached_results = results, num_datapoints = 127)
+    ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_255.png', cached_results = results, num_datapoints = 255)
 
 test_abacus_graph()
+
+#p = PDB.from_filepath('/kortemmelab/home/oconchus/BiosensorDesign/S9G10_best.pdb')
+
+#print(p.lines)
+#b_seq = p.atom_sequences['B']
+#print(' '.join([res.get_residue_id().replace(' ', '') for id, res in b_seq]))
