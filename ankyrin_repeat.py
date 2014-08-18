@@ -126,8 +126,15 @@ def test_abacus_graph():
         write_file('results_cache.txt', json.dumps(results), 'w')
     results = json.loads(read_file('results_cache.txt'))
 
+    try:
+        ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_3.png', cached_results = results, num_datapoints = 3)
+    except:
+        pass
+    ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_5.png', cached_results = results, num_datapoints = 5)
     ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_8.png', cached_results = results, num_datapoints = 8)
     ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_10.png', cached_results = results, num_datapoints = 10)
+    ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_12.png', cached_results = results, num_datapoints = 12)
+    ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_20.png', cached_results = results, num_datapoints = 20)
     ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_50.png', cached_results = results, num_datapoints = 50)
     ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_127.png', cached_results = results, num_datapoints = 127)
     ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_255.png', cached_results = results, num_datapoints = 255)
