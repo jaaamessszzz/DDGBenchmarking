@@ -9,7 +9,8 @@ from ddglib.ddgfilters import *
 from string import join
 import pickle
 
-ddGdb = ddgdbapi.ddGDatabase()
+if __name__ == '__main__':
+    ddGdb = ddgdbapi.ddGDatabase()
 
 run1 = ("lin-3K0NA", "3K0NA_", "3K0NA_lin")
 run2 = ("lin-3K0On", "3K0On_", "3K0On_lin")

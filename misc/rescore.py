@@ -14,8 +14,9 @@ from tools.bio.pdb import PDB
 from tools.bio.basics import residue_type_3to1_map as aa1
 
 import ddgdbapi
-ddGdb = ddgdbapi.ddGDatabase()
-ddGPredictiondb = ddgdbapi.ddGPredictionDataDatabase()
+if __name__ == '__main__':
+    ddGdb = ddgdbapi.ddGDatabase()
+    ddGPredictiondb = ddgdbapi.ddGPredictionDataDatabase()
 
 current_score_revision = '0.23'
 class WrongScoreRevisionException(Exception): pass
