@@ -139,10 +139,12 @@ def test_abacus_graph():
     ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_127.png', cached_results = results, num_datapoints = 127)
     ddG_connection.create_abacus_graph_for_a_single_structure('FPP biosensor: protocol 16', 'kellogg', 'total', graph_filename = 'test_255.png', cached_results = results, num_datapoints = 255)
 
-test_abacus_graph()
+#test_abacus_graph()
 
 #p = PDB.from_filepath('/kortemmelab/home/oconchus/BiosensorDesign/S9G10_best.pdb')
 
 #print(p.lines)
 #b_seq = p.atom_sequences['B']
 #print(' '.join([res.get_residue_id().replace(' ', '') for id, res in b_seq]))
+
+#ddG_connection.add_predictions_by_pdb_id('S9G10_best', 'FPP biosensor: p16 (complex) full', 'Protocol16 3.5.1 (FPP complex) (talaris2013sc)', priority = 9, KeepHETATMLines = True, strip_other_chains = False, status = 'halted')

@@ -64,6 +64,7 @@ class NoahScore(object):
             '-s']
             + list_of_files
             + ['-score:fa_max_dis %0.1f' % radius]
+            # todo: use this line for the FPP rescoring + ['-in::file::extra_res_fa /home/oconchus/RosettaCon2013_rescoring/ddg/misc/FPP.fa.params']
             + ['-score_residue::residue', '%(resnum_list)s' % vars()])
 
         a = join(cmd, " ")
@@ -107,7 +108,6 @@ def convert_scores_to_json():
     for r in results:
         ddG_dict = pickle.loads(r['ddG'])
         ddGdb.execute('UPDATE Prediction SET Scores=%s WHERE ID=%s', parameters=(json.dumps(ddG_dict), r['ID'],))
-    results = ddGdb.execute_select('SELECT ID, ddG FROM Prediction WHERE Scores IS NULL AND ScoreVersion="0.23"')
 
 def delete_scores(results, score_type):
     '''e.g. delete_scores(results, 'noah_6,0A')'''
@@ -655,6 +655,8 @@ def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
 #main(FixedIDs = [38766, 39738, 40379, 40381] + range(40610, 40611))
 #main(FixedIDs = [39044])
 #main(FixedIDs = [48898,49870,50948,51058,51059,52247,53633,53711])
+
+convert_scores_to_json()
 main(radii = [8.0])
 
 #FixedIDs = [43830,44802,45880,45990,45991,47179,48643])
