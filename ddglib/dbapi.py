@@ -117,6 +117,11 @@ class ddG(object):
         if results:
             assert(len(results) == 1)
             return results[0]["Data"]
+        else:
+            prediction_data_path = self.ddGDB.execute('SELECT Value FROM _DBCONSTANTS WHERE VariableName="PredictionDataPath"')[0]['Value']
+            job_data_path = os.path.join(prediction_data_path, '%d.zip' % predictionID)
+            if os.path.exists(job_data_path):
+                return read_file(job_data_path, binary = True)
 
     def getPublications(self, result_set):
         if result_set:
