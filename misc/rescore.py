@@ -420,11 +420,16 @@ def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
 
             # Extract data
             t.add('Grab data')
+            archivefile = None
             data = ddGPredictiondb.execute('SELECT Data FROM PredictionData WHERE ID=%s', parameters=(r['ID'],))
             if len(data) == 0:
-                colortext.error('No data for id %d' % r['ID'])
-                continue
-            archivefile = data[0]['Data']
+                prediction_data_path = ddGdb.execute('SELECT Value FROM _DBCONSTANTS WHERE VariableName="PredictionDataPath"')[0]['Value']
+                job_data_path = os.path.join(prediction_data_path, '%d.zip' % r['ID'])
+                print(job_data_path)
+                assert(os.path.exists(job_data_path))
+                archivefile = readBinaryFile(job_data_path)
+            else:
+                archivefile = data[0]['Data']
             zipfilename = os.path.join(output_dir, "%d.zip" % r['ID'])
             F = open(zipfilename, "wb")
             F.write(archivefile)
@@ -554,8 +559,23 @@ def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
                     for fullresid in fullresids:
                         wtaa = None
                         for m in mutations:
+                            # Hack for ub_RPN13
+                            if prediction_PDB_ID == 'ub_RPN13' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 109):
+                                wtaa = m['WildTypeAA']
+                            # Hack for ub_OTU
+                            if prediction_PDB_ID == 'ub_OTU' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 172):
+                                wtaa = m['WildTypeAA']
+                            # Hack for ub_OTU_yeast
+                            if prediction_PDB_ID == 'uby_OTU' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 172):
+                                wtaa = m['WildTypeAA']
                             if m['Chain'] == fullresid[0] and m['ResidueID'] == fullresid[1:].strip():
                                 wtaa = m['WildTypeAA']
+                        if (wtaa == None):
+                            colortext.error(prediction_PDB_ID)
+                            colortext.error('wtaa != None')
+                            colortext.error('fullresid = %s' % str(fullresid))
+                            colortext.error(str(mutations))
+                            sys.exit(0)
                         assert(wtaa != None)
                         assert(PDB.from_filepath(repacked_files[0]).get_residue_id_to_type_map()[fullresid] == wtaa)
                     #assert(PDB(mutant_files[0]).get_residue_id_to_type_map()[fullresid] == mutantaa)
