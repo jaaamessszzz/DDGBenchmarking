@@ -26,8 +26,13 @@ ubiquitin_chains = [
     #('1ubq', 'A', 'Ubiquitin scan: 1UBQ p16'),
     #('ub_CUE', 'A', 'Ubiquitin scan: CUE p16'),
     #('ub_OTU', 'A', 'Ubiquitin scan: OTU p16'),
-    ('ub_RPN13', 'A', 'Ubiquitin scan: RPN13 p16'),
-    ('ub_UQcon', 'A', 'Ubiquitin scan: UQ_con p16'),
+    #('ub_RPN13', 'A', 'Ubiquitin scan: RPN13 p16'),
+    #('ub_UQcon', 'A', 'Ubiquitin scan: UQ_con p16'),
+    #('uby_1UBQ', 'A', 'Ubiquitin scan: 1UBQ_yeast p16'),
+    #('uby_OTU', 'A', 'Ubiquitin scan: OTU_yeast p16'),
+    ('uby_RPN13', 'A', 'Ubiquitin scan: RPN13_yeast p16'),
+    ('uby_SH3', 'A', 'Ubiquitin scan: SH3_yeast p16'),
+    ('uby_UQcon', 'A', 'Ubiquitin scan: UQ_con_yeast p16'),
 ]
 
 if False:
@@ -41,11 +46,17 @@ if False:
     ### Computational stage ###
 
     # Step 1: Add a new PDB
-    ddG_connection.add_pdb_file('/kortemmelab/home/oconchus/ubiquitin/CUE.pdb', 'ub_CUE')
-    ddG_connection.add_pdb_file('/kortemmelab/home/oconchus/ubiquitin/OTU.pdb', 'ub_OTU')
-    ddG_connection.add_pdb_file('/kortemmelab/home/oconchus/ubiquitin/RPN13.pdb', 'ub_RPN13')
-    ddG_connection.add_pdb_file('/kortemmelab/home/oconchus/ubiquitin/SH3.pdb', 'ub_SH3')
-    ddG_connection.add_pdb_file('/kortemmelab/home/oconchus/ubiquitin/UQ_con.pdb', 'ub_UQcon')
+    ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/CUE.pdb', 'ub_CUE', file_source = 'Biosensor project', techniques = 'Rosetta model')
+    ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/OTU.pdb', 'ub_OTU', file_source = 'Biosensor project', techniques = 'Rosetta model')
+    ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/RPN13.pdb', 'ub_RPN13', file_source = 'Biosensor project', techniques = 'Rosetta model')
+    ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/SH3.pdb', 'ub_SH3', file_source = 'Biosensor project', techniques = 'Rosetta model')
+    ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/UQ_con.pdb', 'ub_UQcon', file_source = 'Biosensor project', techniques = 'Rosetta model')
+
+    ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/1UBQ_yeast.pdb', 'uby_1UBQ', file_source = 'Biosensor project', techniques = 'Rosetta model')
+    ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/OTU_yeast.pdb', 'uby_OTU', file_source = 'Biosensor project', techniques = 'Rosetta model')
+    ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/RPN13_yeast.pdb', 'uby_RPN13', file_source = 'Biosensor project', techniques = 'Rosetta model')
+    ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/SH3_yeast.pdb', 'uby_SH3', file_source = 'Biosensor project', techniques = 'Rosetta model')
+    ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/UQ_con_yeast.pdb', 'uby_UQcon', file_source = 'Biosensor project', techniques = 'Rosetta model')
 
     # Step 2: Add a list of mutations for each PDB
     #
@@ -71,7 +82,7 @@ if False:
         sys.stdout.write('\n')
 
 
-if False:
+if True:
 
     import pickle
     results = ddG_connection.ddGDB.execute_select('SELECT ID, PredictionSet, InputFiles FROM Prediction WHERE PredictionSet LIKE "Ubiquitin scan%%"', parameters=())
@@ -80,8 +91,8 @@ if False:
         if mutfile.find('total 1') == -1:
             print(mutfile)
             print('DELETE FROM Prediction WHERE ID=%s' %(r['ID']))
-            results = ddG_connection.ddGDB.execute('DELETE FROM Prediction WHERE ID=%s', parameters=(r['ID']))
-    sys.exit(0)
+            #results = ddG_connection.ddGDB.execute('DELETE FROM Prediction WHERE ID=%s', parameters=(r['ID']))
+            sys.exit(0)
 
 if True:
     # Step 3:
@@ -97,8 +108,9 @@ if True:
         priority -= 1 # assign different priorities to the different prediction sets
         ddG_connection.add_predictions_by_pdb_id(uc[0], uc[2], 'Protocol16 3.5.1 (talaris2013sc)', status = 'halted', priority = priority, KeepHETATMLines = False, strip_other_chains = False)
         count += 1
-        if count == 2:
-            sys.exit(1)
+        #if count == 2:
+        #    sys.exit(1)
+
 if False:
     # Steps 2 and 3 can be repeated as often as you need however it is best to add as many mutations in step 2 first as this
     # will result in a better use of the cluster (larger array jobs).
