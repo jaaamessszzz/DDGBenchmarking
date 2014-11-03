@@ -553,6 +553,7 @@ def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
                 else:
                     resultst2 = ddGdb.execute_select("SELECT PDBFileID FROM Experiment WHERE ID=%s", parameters = (ExperimentIDt1,))
                 assert(len(resultst2) == 1)
+
                 prediction_PDB_ID = resultst2[0]['PDBFileID']
 
                 if prediction_PDB_ID != '1TEN':
@@ -562,11 +563,20 @@ def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
                             # Hack for ub_RPN13
                             if prediction_PDB_ID == 'ub_RPN13' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 109):
                                 wtaa = m['WildTypeAA']
+                            # Hack for ub_RPN13_yeast
+                            if prediction_PDB_ID == 'uby_RPN13' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 109):
+                                wtaa = m['WildTypeAA']
                             # Hack for ub_OTU
                             if prediction_PDB_ID == 'ub_OTU' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 172):
                                 wtaa = m['WildTypeAA']
                             # Hack for ub_OTU_yeast
                             if prediction_PDB_ID == 'uby_OTU' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 172):
+                                wtaa = m['WildTypeAA']
+                            # Hack for ub_UQcon
+                            if prediction_PDB_ID == 'ub_UQcon' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) + 213): # starts at 501
+                                wtaa = m['WildTypeAA']
+                            # Hack for uby_UQcon
+                            if prediction_PDB_ID == 'uby_UQcon' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 287):
                                 wtaa = m['WildTypeAA']
                             if m['Chain'] == fullresid[0] and m['ResidueID'] == fullresid[1:].strip():
                                 wtaa = m['WildTypeAA']

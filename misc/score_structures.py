@@ -43,6 +43,7 @@ def determine_structure_scores(DDG_api):
     ddGdb_utf = ddgdbapi.ddGDatabase(use_utf = True)
     # Get the list of completed prediction set
     completed_prediction_sets = get_completed_prediction_sets(DDG_api)
+    print(completed_prediction_sets)
 
     # Create the mapping from the old score types to the ScoreMethod record IDs
     ScoreMethodMap = {}
@@ -60,6 +61,9 @@ def determine_structure_scores(DDG_api):
 
     # For each completed prediction set, determine the structure scores
     for prediction_set in completed_prediction_sets:
+        if prediction_set not in ['Ubiquitin scan: UQ_con_yeast p16']:
+            continue
+
         predictions = ddGdb.execute('SELECT ID, ddG, Scores, status, ScoreVersion FROM Prediction WHERE PredictionSet=%s ORDER BY ID', parameters=(prediction_set,))
         num_predictions = len(predictions)
 
