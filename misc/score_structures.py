@@ -155,5 +155,4 @@ def determine_structure_scores(DDG_api):
 if __name__ == '__main__':
     DDG_api = ddGInterface()
     #ddGdb = ddgdbapi.ddGDatabase()
-    #ddGPredictiondb = ddgdbapi.ddGPredictionDataDatabase()
     determine_structure_scores(DDG_api)

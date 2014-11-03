@@ -13,10 +13,11 @@ from tools.deprecated.rosettahelper import readBinaryFile, makeTemp755Directory,
 from tools.bio.pdb import PDB
 from tools.bio.basics import residue_type_3to1_map as aa1
 
+import dbapi
 import ddgdbapi
 if __name__ == '__main__':
     ddGdb = ddgdbapi.ddGDatabase()
-    ddGPredictiondb = ddgdbapi.ddGPredictionDataDatabase()
+    DDG_interface = dbapi.ddG()
 
 current_score_revision = '0.23'
 class WrongScoreRevisionException(Exception): pass
@@ -420,16 +421,13 @@ def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
 
             # Extract data
             t.add('Grab data')
-            archivefile = None
-            data = ddGPredictiondb.execute('SELECT Data FROM PredictionData WHERE ID=%s', parameters=(r['ID'],))
-            if len(data) == 0:
-                prediction_data_path = ddGdb.execute('SELECT Value FROM _DBCONSTANTS WHERE VariableName="PredictionDataPath"')[0]['Value']
-                job_data_path = os.path.join(prediction_data_path, '%d.zip' % r['ID'])
-                print(job_data_path)
-                assert(os.path.exists(job_data_path))
-                archivefile = readBinaryFile(job_data_path)
-            else:
-                archivefile = data[0]['Data']
+            #archivefile = None
+            #prediction_data_path = ddGdb.execute('SELECT Value FROM _DBCONSTANTS WHERE VariableName="PredictionDataPath"')[0]['Value']
+            #job_data_path = os.path.join(prediction_data_path, '%d.zip' % r['ID'])
+            #print(job_data_path)
+            #assert(os.path.exists(job_data_path))
+            #archivefile = readBinaryFile(job_data_path)
+            archivefile = DDG_interface.getData(r['ID'])
             zipfilename = os.path.join(output_dir, "%d.zip" % r['ID'])
             F = open(zipfilename, "wb")
             F.write(archivefile)
