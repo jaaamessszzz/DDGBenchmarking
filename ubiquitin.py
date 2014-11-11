@@ -30,9 +30,10 @@ ubiquitin_chains = [
     #('ub_UQcon', 'A', 'Ubiquitin scan: UQ_con p16'),
     #('uby_1UBQ', 'A', 'Ubiquitin scan: 1UBQ_yeast p16'),
     #('uby_OTU', 'A', 'Ubiquitin scan: OTU_yeast p16'),
-    ('uby_RPN13', 'A', 'Ubiquitin scan: RPN13_yeast p16'),
-    ('uby_SH3', 'A', 'Ubiquitin scan: SH3_yeast p16'),
-    ('uby_UQcon', 'A', 'Ubiquitin scan: UQ_con_yeast p16'),
+    #('uby_RPN13', 'A', 'Ubiquitin scan: RPN13_yeast p16'),
+    #('uby_SH3', 'A', 'Ubiquitin scan: SH3_yeast p16'),
+    #('uby_UQcon', 'A', 'Ubiquitin scan: UQ_con_yeast p16'),
+    ('uby_CUE', 'A', 'Ubiquitin scan: CUE_yeast p16'),
 ]
 
 if False:
@@ -57,6 +58,7 @@ if False:
     ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/RPN13_yeast.pdb', 'uby_RPN13', file_source = 'Biosensor project', techniques = 'Rosetta model')
     ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/SH3_yeast.pdb', 'uby_SH3', file_source = 'Biosensor project', techniques = 'Rosetta model')
     ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/UQ_con_yeast.pdb', 'uby_UQcon', file_source = 'Biosensor project', techniques = 'Rosetta model')
+    ddG_connection.add_PDB_to_database('/kortemmelab/home/oconchus/ubiquitin/CUE_yeast.pdb', 'uby_CUE', file_source = 'Biosensor project', techniques = 'Rosetta model')
 
     # Step 2: Add a list of mutations for each PDB
     #
@@ -81,8 +83,7 @@ if False:
             count += 1
         sys.stdout.write('\n')
 
-
-if True:
+if False:
 
     import pickle
     results = ddG_connection.ddGDB.execute_select('SELECT ID, PredictionSet, InputFiles FROM Prediction WHERE PredictionSet LIKE "Ubiquitin scan%%"', parameters=())
