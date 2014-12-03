@@ -8,8 +8,8 @@ from tools.deprecated import rosettadb
 from tools.debug.profile import ProfileTimer
 from ddglib import dbapi, ddgdbapi
 from ddglib import help as ddg_help
-from ddglib.ddgfilters import *
-from tools import pdb
+#from ddglib.ddgfilters import *
+from tools.bio import pdb
 import tools.deprecated.rosettahelper
 
 ddG_connection = dbapi.ddG()
@@ -19,6 +19,11 @@ ddG_connection = dbapi.ddG()
 #Protocol16 3.5.0 (baseline)
 #Protocol16 3.5.0 (hbond_sp2_9g)
 #Protocol16 3.5.0 (score12_hack_elec)
+
+if True:
+    ddG_connection.create_PredictionSet("Protocol_16_r57471", halted = False, Priority = 5, BatchSize = 40)
+    ddG_connection.createPredictionsFromUserDataSet("AllValidPGPK", "Protocol_16_r57471", "Protocol16 r57471", False,
+            StoreOutput = True, Description = {}, InputFiles = {}, testonly = False,)
 
 if False:
 
