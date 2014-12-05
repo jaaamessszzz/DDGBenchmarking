@@ -21,7 +21,7 @@ ddG_connection = dbapi.ddG()
 #Protocol16 3.5.0 (score12_hack_elec)
 
 if True:
-    ddG_connection.create_PredictionSet("Protocol_16_r57471", halted = False, Priority = 5, BatchSize = 40)
+    #ddG_connection.create_PredictionSet("Protocol_16_r57471", halted = False, Priority = 5, BatchSize = 40)
     ddG_connection.createPredictionsFromUserDataSet("AllValidPGPK", "Protocol_16_r57471", "Protocol16 r57471", False,
             StoreOutput = True, Description = {}, InputFiles = {}, testonly = False,)
 
