@@ -1,5 +1,6 @@
 import sys
 import os
+import zipfile
 
 sys.path.insert(0, "../..")
 sys.path.insert(0, "..")
@@ -30,23 +31,24 @@ def ask_yes_no(question_text, default_value = None, max_tries = None):
 
 def check_failures(prediction_set):
     ddGdb = ddgdbapi.ddGDatabase()
-    results_root = '/var/cluster/temp/'
+    results_root = '/kortemmelab/shared/DDG/jobs'
 
     UserDataSetExperimentIDs = {}
     results = ddGdb.execute_select('''SELECT ID, ExperimentID FROM Prediction WHERE PredictionSet = %s AND STATUS = 'failed' ''', parameters=(prediction_set,))
     reported_failures = [r['ID'] for r in results]
     for r in results:
         UserDataSetExperimentIDs[r['ID']] = r['ExperimentID']
+    print(UserDataSetExperimentIDs)
+    print(len(UserDataSetExperimentIDs))
 
     affected_subsets = {}
     actually_failed = []
     did_not_fail = []
     for PredictionID in reported_failures:
         print(PredictionID)
-        results_dir = os.path.join(results_root, prediction_set, str(PredictionID))
-        print(results_dir)
-        file_list = os.listdir(results_dir)
-        print(file_list)
+        zipfile_path = os.path.join(results_root, '%d.zip' % PredictionID)
+        z = zipfile.ZipFile(zipfile_path, 'r')
+        file_list = z.namelist()
 
         found_stdout = 0
         found_stderr = 0
@@ -57,6 +59,7 @@ def check_failures(prediction_set):
                 found_stderr = 1
                 colortext.error(f)
         assert(found_stdout >= found_stderr)
+
         if found_stderr:
             assert(found_stderr == 1)
             colortext.error("Job #%d actually failed" % PredictionID)
@@ -75,6 +78,7 @@ def check_failures(prediction_set):
         else:
             colortext.warning("Job #%d had not failed by the time it was terminated." % PredictionID)
             did_not_fail.append(PredictionID)
+
 
     colortext.message("*** Report ***")
     print('%d jobs were marked as failed.' % len(reported_failures))
@@ -99,8 +103,9 @@ def check_failures(prediction_set):
         if see_errors:
             count = 1
             for j in v:
-                results_dir = os.path.join(results_root, prediction_set, str(j))
-                file_list = os.listdir(results_dir)
+                zipfile_path = os.path.join(results_root, '%d.zip' % j)
+                z = zipfile.ZipFile(zipfile_path, 'r')
+                file_list = z.namelist()
 
                 colortext.error("\n[%d/%d] Prediction ID: %d" % (count, len(v), j))
                 PDBFileID = ddGdb.execute_select("SELECT UserDataSetExperiment.PDBFileID AS PDBFileID FROM Prediction INNER JOIN UserDataSetExperiment ON UserDataSetExperimentID=UserDataSetExperiment.ID WHERE Prediction.ID=%s", parameters=(j,))
@@ -110,16 +115,16 @@ def check_failures(prediction_set):
                 for f in file_list:
                     if f.find('.cmd.e') != -1:
                         colortext.warning(f)
-                        print(read_file(os.path.join(results_dir, f)))
+                        print(z.open(f, 'r').read())
                         print("")
                 count += 1
 
-def fix_1TEN_InputFiles():
+def fix_1TEN_InputFiles(prediction_set):
     '''This is a once-off function which should only be run once as otherwise'''
     import pickle
     ddGdb = ddgdbapi.ddGDatabase()
 
-    BadPredictions = sorted(set([(r['PredictionID'], r['Status']) for r in ddGdb.execute_select("SELECT Prediction.ID AS PredictionID, Status FROM Prediction INNER JOIN Experiment ON Experiment.ID=Prediction.ExperimentID INNER JOIN ExperimentMutation ON Experiment.ID=ExperimentMutation.ExperimentID WHERE PredictionSet = 'RosCon2013_P16_talaris2013sc' AND PDBFileID='1TEN' ")]))
+    BadPredictions = sorted(set([(r['PredictionID'], r['Status']) for r in ddGdb.execute_select("SELECT Prediction.ID AS PredictionID, Status FROM Prediction INNER JOIN Experiment ON Experiment.ID=Prediction.ExperimentID INNER JOIN ExperimentMutation ON Experiment.ID=ExperimentMutation.ExperimentID WHERE PredictionSet=%s AND PDBFileID='1TEN' ", parameters=(prediction_set,))]))
     BadPredictionIDs = sorted(set([r[0] for r in BadPredictions]))
     num_active = len([r for r in BadPredictions if r[1] == 'active'])
     num_queued = len([r for r in BadPredictions if r[1] == 'queued'])
@@ -130,7 +135,7 @@ def fix_1TEN_InputFiles():
             print("%d active jobs: %s" % (num_active, ", ".join([str(r[0]) for r in BadPredictions if r[1] == 'active'])))
         if num_queued:
             print("%d queued jobs: %s" % (num_queued, ", ".join([str(r[0]) for r in BadPredictions if r[1] == 'queued'])))
-        #3return
+        return
 
     for PredictionID in BadPredictionIDs:
         r = ddGdb.execute_select("SELECT InputFiles FROM Prediction WHERE ID=%s", parameters=(PredictionID,))
@@ -200,9 +205,9 @@ def count_num_residues_in_active_jobs():
             print("%s\t  %s\t%s\t%s" % (k[0], k[1], str(v[0]).center(19), str(v[1]).center(14)))
 
 
-#check_failures('RosettaCon2013_P16_talaris2013')
-
+check_failures('Protocol_16_r57471')
+#fix_1TEN_InputFiles('Protocol_16_r57471')
 #check_failures('RosCon2013_P16_score12prime')
 #check_failures('RosCon2013_P16_talaris2013')
-fix_1TEN_InputFiles()
+#fix_1TEN_InputFiles()
 #count_num_residues_in_active_jobs()
