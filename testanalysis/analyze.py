@@ -15,6 +15,7 @@ prediction_set_for_analysis = 'RosCon2013_P16_score12prime'
 prediction_set_for_analysis = 'RosCon2013_P16_talaris2013'
 prediction_set_for_analysis = 'RosCon2013_P16_score12prime'
 prediction_set_for_analysis = 'RosCon2013_P16_talaris2013sc'
+prediction_set_for_analysis = 'Protocol_16_r57471'
 
 import ddgdbapi
 if __name__ == '__main__':
@@ -114,9 +115,12 @@ if True:
 	analyzer.AddPublishedDDGsToAnalysisTables()
 	reporter = analysis.Reporter(analyzer)
 	reporter.CreateReport(description = analyzer.description, outfname = '%s_kellogg.pdf' % prediction_set_for_analysis, filetype = filetype)
+
 if True:
-	for score_type in ['noah_6,0A', 'noah_7,0A', 'noah_8,0A', 'noah_9,0A']:
-		for score_method in ['total', 'positional', 'positional_twoscore']:
+#	for score_type in ['noah_6,0A', 'noah_7,0A', 'noah_8,0A', 'noah_9,0A']:
+	for score_type in ['noah_8,0A']:
+		#for score_method in ['total', 'positional', 'positional_twoscore']:
+		for score_method in ['positional']:
 			colortext.message("\n*** %s %s.%s ***" % (score_type, score_method, prediction_set_for_analysis))
 			analyzer = analysis.Analyzer(prediction_set_for_analysis, ddG_score_type = '%s.%s' % (score_type, score_method))
 			analyzer.AddPublishedDDGsToAnalysisTables()
