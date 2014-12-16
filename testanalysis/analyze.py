@@ -109,9 +109,11 @@ print('multiple_failed',multiple_failed)
 from tools import colortext
 colortext.message("*** %s ***" % prediction_set_for_analysis)
 
+score_cap = 10
+
 if True:
 	colortext.message("\n*** %s kellogg.total ***" % prediction_set_for_analysis)
-	analyzer = analysis.Analyzer(prediction_set_for_analysis, ddG_score_type = 'kellogg.total', quiet_level = 1)
+	analyzer = analysis.Analyzer(prediction_set_for_analysis, ddG_score_type = 'kellogg.total', quiet_level = 1, score_cap = score_cap)
 	analyzer.AddPublishedDDGsToAnalysisTables()
 	reporter = analysis.Reporter(analyzer)
 	reporter.CreateReport(description = analyzer.description, outfname = '%s_kellogg.pdf' % prediction_set_for_analysis, filetype = filetype)
@@ -122,7 +124,7 @@ if True:
 		#for score_method in ['total', 'positional', 'positional_twoscore']:
 		for score_method in ['positional']:
 			colortext.message("\n*** %s %s.%s ***" % (score_type, score_method, prediction_set_for_analysis))
-			analyzer = analysis.Analyzer(prediction_set_for_analysis, ddG_score_type = '%s.%s' % (score_type, score_method))
+			analyzer = analysis.Analyzer(prediction_set_for_analysis, ddG_score_type = '%s.%s' % (score_type, score_method), score_cap = score_cap)
 			analyzer.AddPublishedDDGsToAnalysisTables()
 			reporter = analysis.Reporter(analyzer)
 			reporter.CreateReport(description = analyzer.description, outfname = '%s_%s_%s.pdf' % (prediction_set_for_analysis, score_type, score_method), filetype = filetype)
