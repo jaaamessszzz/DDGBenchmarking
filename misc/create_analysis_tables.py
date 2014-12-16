@@ -15,6 +15,18 @@ prediction_set_for_analysis = 'RosCon2013_P16_score12prime'
 
 colortext.message("*** %s ***" % prediction_set_for_analysis)
 
+from ddglib import dbapi, ddgdbapi
+from tools.bio import pdb
+
+
+if __name__ == '__main__':
+    ddG_connection = dbapi.ddG()
+    ddGdb = ddgdbapi.ddGDatabase()
+
+    ddG_connection.get_predictionset_data_for_single_mutations('Protocol_16_r57471')
+
+sys.exit(0)
+
 analyzer = analysis.Analyzer(prediction_set_for_analysis, ddG_score_type = 'kellogg.total', quiet_level = 1)
 analyzer.AddPublishedDDGsToAnalysisTables()
 for table_name, analysis_table in analyzer.analysis_tables.iteritems():

@@ -60,8 +60,8 @@ class NoahScore(object):
         resnum_list = ','.join(['%s%s' % (rosetta_resid, rosetta_chain) for rosetta_resid in rosetta_resids])
 
         cmd = ([
-            '/home/oconchus/RosettaCon2013_rescoring/score_residue.static.linuxgccrelease',
-            '--database=/home/oconchus/RosettaCon2013_rescoring/database',
+            '/home/oconchus/dev/ddg/misc/score_residue.static.linuxgccrelease',
+            '--database=/home/oconchus/test_ddg/general_dev/database',
             '-s']
             + list_of_files
             + ['-score:fa_max_dis %0.1f' % radius]
@@ -366,11 +366,11 @@ def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
             num_to_score = len(remaining_unscored)
             num_for_this_to_score = num_to_score / num_processes
             IDs_to_score = remaining_unscored[(process_id-1) * num_for_this_to_score : (process_id) * num_for_this_to_score]
-            results = ddGdb.execute("SELECT ID, ExperimentID, Scores FROM Prediction WHERE ID IN (%s)" % (",".join(map(str, IDs_to_score))))
+            results = ddGdb.execute("SELECT ID, ExperimentID, Scores, UserDataSetExperimentID FROM Prediction WHERE ID IN (%s)" % (",".join(map(str, IDs_to_score))))
         elif FixedIDs:
-            results = ddGdb.execute("SELECT ID, ExperimentID, Scores FROM Prediction WHERE ID IN (%s) AND MOD(ID,%s)=%s" % (",".join(map(str, FixedIDs)), num_processes,process_id-1))
+            results = ddGdb.execute("SELECT ID, ExperimentID, Scores, UserDataSetExperimentID FROM Prediction WHERE ID IN (%s) AND MOD(ID,%s)=%s" % (",".join(map(str, FixedIDs)), num_processes,process_id-1))
         else:
-            results = ddGdb.execute("SELECT ID, ExperimentID, Scores FROM Prediction WHERE PredictionSet=%s AND Status='done' AND ScoreVersion=%s AND MOD(ID,%s)=%s", parameters=(prediction_set, float(current_score_revision),num_processes,process_id-1))
+            results = ddGdb.execute("SELECT ID, ExperimentID, Scores, UserDataSetExperimentID FROM Prediction WHERE PredictionSet=%s AND Status='done' AND ScoreVersion=%s AND MOD(ID,%s)=%s", parameters=(prediction_set, float(current_score_revision),num_processes,process_id-1))
 
     count = 0
     cases_computed = 0
@@ -384,13 +384,20 @@ def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
         t = Timer()
         t.add('Preamble')
         inner_count = 0
-        pdbID = ddGdb.execute('SELECT PDBFileID FROM Experiment WHERE ID=%s', parameters=(r['ExperimentID'],))[0]['PDBFileID']
+
         mutations = ddGdb.execute('SELECT * FROM ExperimentMutation WHERE ExperimentID=%s', parameters=(r['ExperimentID'],))
         mutation_str = ', '.join(['%s %s%s%s' % (m['Chain'], m['WildTypeAA'], m['ResidueID'], m['MutantAA']) for m in mutations])
         extracted_data = False
 
         details = ddGdb.execute_select('SELECT Prediction.ID, PDBFileID, Chain FROM Prediction INNER JOIN Experiment ON Prediction.ExperimentID=Experiment.ID INNER JOIN ExperimentChain ON Prediction.ExperimentID=ExperimentChain.ExperimentID WHERE Prediction.ID=%s', parameters=(r['ID'],))
-        colortext.message("Prediction: %d, %s chain %s. Mutations: %s" % (details[0]['ID'], details[0]['PDBFileID'], details[0]['Chain'], mutation_str))
+        details = ddGdb.execute_select('SELECT Prediction.ID, PDBFileID, Chain FROM Prediction INNER JOIN Experiment ON Prediction.ExperimentID=Experiment.ID INNER JOIN ExperimentChain ON Prediction.ExperimentID=ExperimentChain.ExperimentID WHERE Prediction.ID=%s', parameters=(r['ID'],))
+        colortext.message("Prediction: %d, %s chain %s. Mutations: %s. Experiment ID #%d. UserDataSetExperimentID #%d." % (details[0]['ID'], details[0]['PDBFileID'], details[0]['Chain'], mutation_str, r['ExperimentID'], r['UserDataSetExperimentID']))
+
+        experiment_pdbID = ddGdb.execute('SELECT PDBFileID FROM Experiment WHERE ID=%s', parameters=(r['ExperimentID'],))[0]['PDBFileID']
+        print('Experiment PDB file ID = %s' % experiment_pdbID)
+        pdbID = ddGdb.execute('SELECT UserDataSetExperiment.PDBFileID FROM Prediction INNER JOIN UserDataSetExperiment ON UserDataSetExperimentID=UserDataSetExperiment.ID WHERE Prediction.ID=%s', parameters=(r['ID'],))[0]['PDBFileID']
+        print('UserDataSetExperiment PDB file ID = %s' % pdbID)
+
         count += 1
         if True:#len(mutations) == 1:
             timestart = time.time()
@@ -470,7 +477,7 @@ def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
                                 repacked_files.append(newfilepath)
                         #elif fname.startswith("%s/%s-%s" % (r['ID'],r['ExperimentID'],pdbID)) or fname.startswith("%s/repacked_" % r['ID']):
                         #    writeFile(os.path.join(tmpdir, '%s.pdb' % pdbID), zipped_content.read(fname))
-                    if fname.startswith("%s/%s-%s.resfile" % (r['ID'],r['ExperimentID'],pdbID)):
+                    if fname.startswith("%s/%s-%s.resfile" % (r['ID'],r['ExperimentID'],experiment_pdbID)):
                         raise Exception('This case needs to be updated (see the mutfile section below). We mainly use mutfiles now so I did not update this section.')
                         foundResfile = True
                         lines = zipped_content.read(fname).split("\n")
@@ -486,7 +493,7 @@ def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
                         assert(dbchain == rosetta_chain)
                         assert(resfile_mutation[2] == 'PIKAA')
                         assert(len(rosetta_mutaa) == 1)
-                    if fname.startswith("%s/%s-%s.mutfile" % (r['ID'],r['ExperimentID'],pdbID)):
+                    if fname.startswith("%s/%s-%s.mutfile" % (r['ID'],r['ExperimentID'],experiment_pdbID)):
                         foundMutfile = True
                         lines = zipped_content.read(fname).split("\n")
                         assert(lines[0].startswith('total '))
@@ -554,7 +561,7 @@ def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
 
                 prediction_PDB_ID = resultst2[0]['PDBFileID']
 
-                if prediction_PDB_ID != '1TEN':
+                if False and prediction_PDB_ID not in ['1TEN', '1AYE', '1H7M'] + ['1A2P', '1BNI', '1STN']:
                     for fullresid in fullresids:
                         wtaa = None
                         for m in mutations:
@@ -562,28 +569,29 @@ def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
                             if prediction_PDB_ID == 'ub_RPN13' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 109):
                                 wtaa = m['WildTypeAA']
                             # Hack for ub_RPN13_yeast
-                            if prediction_PDB_ID == 'uby_RPN13' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 109):
+                            elif prediction_PDB_ID == 'uby_RPN13' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 109):
                                 wtaa = m['WildTypeAA']
                             # Hack for ub_OTU
-                            if prediction_PDB_ID == 'ub_OTU' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 172):
+                            elif prediction_PDB_ID == 'ub_OTU' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 172):
                                 wtaa = m['WildTypeAA']
                             # Hack for ub_OTU_yeast
-                            if prediction_PDB_ID == 'uby_OTU' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 172):
+                            elif prediction_PDB_ID == 'uby_OTU' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 172):
                                 wtaa = m['WildTypeAA']
                             # Hack for ub_UQcon
-                            if prediction_PDB_ID == 'ub_UQcon' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) + 213): # starts at 501
+                            elif prediction_PDB_ID == 'ub_UQcon' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) + 213): # starts at 501
                                 wtaa = m['WildTypeAA']
                             # Hack for uby_UQcon
-                            if prediction_PDB_ID == 'uby_UQcon' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 287):
+                            elif prediction_PDB_ID == 'uby_UQcon' and m['Chain'] == fullresid[0] and m['ResidueID'] == str(int(fullresid[1:].strip()) - 287):
                                 wtaa = m['WildTypeAA']
-                            if m['Chain'] == fullresid[0] and m['ResidueID'] == fullresid[1:].strip():
+                            elif m['Chain'] == fullresid[0] and m['ResidueID'] == fullresid[1:].strip():
                                 wtaa = m['WildTypeAA']
                         if (wtaa == None):
                             colortext.error(prediction_PDB_ID)
-                            colortext.error('wtaa != None')
+                            colortext.error('wtaa == None')
                             colortext.error('fullresid = %s' % str(fullresid))
                             colortext.error(str(mutations))
-                            sys.exit(0)
+                            colortext.warning([rosetta_resid.strip() for rosetta_resid in rosetta_resids])
+                            #sys.exit(0)
                         assert(wtaa != None)
                         assert(PDB.from_filepath(repacked_files[0]).get_residue_id_to_type_map()[fullresid] == wtaa)
                     #assert(PDB(mutant_files[0]).get_residue_id_to_type_map()[fullresid] == mutantaa)
@@ -685,9 +693,11 @@ def main(FixedIDs = [], radii = [6.0, 7.0, 8.0, 9.0]):
 #main(FixedIDs = [48898,49870,50948,51058,51059,52247,53633,53711])
 
 convert_scores_to_json()
-main(radii = [8.0])
+print('here')
+FixedIDs = [76633]
+FixedIDs = []
+main(FixedIDs = FixedIDs, radii = [8.0])
 
-#FixedIDs = [43830,44802,45880,45990,45991,47179,48643])
 
 
 
