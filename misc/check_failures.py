@@ -794,9 +794,9 @@ def add_job_costs(prediction_set):
 
 #remove_existing_zip_files('Protocol_16_r57471')
 
-#check_failures('Protocol_16_r57471')
+check_failures('Protocol_16_r57471')
 #add_job_costs('Protocol_16_r57471')
-classify_failures('Protocol_16_r57471')
+#classify_failures('Protocol_16_r57471')
 
 #fix_1H7M_InputFiles('Protocol_16_r57471')
 #fix_1AYE_InputFiles('Protocol_16_r57471')

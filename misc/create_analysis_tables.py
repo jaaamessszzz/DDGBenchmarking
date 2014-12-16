@@ -20,28 +20,31 @@ from tools.bio import pdb
 
 
 if __name__ == '__main__':
+    import json
+    cached_pdb_details = json.loads(read_file('cached_pdb_details.json'))
     ddG_connection = dbapi.ddG()
     ddGdb = ddgdbapi.ddGDatabase()
 
-    ddG_connection.get_predictionset_data_for_single_mutations('Protocol_16_r57471')
+    # Retrieve the data
+    subset = 'Guerois'
+    subset = 'AlaScan-GPK'
+    data = ddG_connection.get_predictionset_data('Protocol_16_r57471', cached_pdb_details = cached_pdb_details)
+    predictions = data['predictions']
+    analysis_dataset = data['analysis_datasets'][subset]
 
-sys.exit(0)
+    # Analyze the data
+    from tools.stats.misc import get_xy_dataset_correlations
+    xvalues = []
+    yvalues = []
+    for prediction_id, details in sorted(predictions.iteritems()):
+        if prediction_id in analysis_dataset:
+            ExperimentalDDG = analysis_dataset[prediction_id]['ExperimentalDDG']
+            predicted_score = details['Kellogg']
+            if predicted_score != None:
+                xvalues.append(ExperimentalDDG)
+                yvalues.append(predicted_score)
 
-analyzer = analysis.Analyzer(prediction_set_for_analysis, ddG_score_type = 'kellogg.total', quiet_level = 1)
-analyzer.AddPublishedDDGsToAnalysisTables()
-for table_name, analysis_table in analyzer.analysis_tables.iteritems():
-    if table_name not in []: # ProTherm, 'Potapov', 'Kellogg'
-        colortext.message('Creating CSV for %s.' % table_name)
-        csv_path = analyzer.CreateCSVFile(table_name, path = "/tmp")
-        print(csv_path)
-        #print(read_file(csv_path))
-        c = 1
-        record_numbers = []
-        for l in get_file_lines(csv_path):
-            print('%04d: %s' % (c, l))
-            record_numbers.append(l.split(',')[5])
-            c += 1
-        print('%d lines.' % len(get_file_lines(csv_path)))
-        print('%d lines, %d distinct record numbers.' % (len(record_numbers), len(set(record_numbers))))
-        os.remove(csv_path)
-        break
+    colortext.message('Analyzing %d values for dataset %s.' % (len(xvalues), subset))
+    print(get_xy_dataset_correlations(xvalues, yvalues))
+
+
