@@ -53,10 +53,19 @@ if __name__ == '__main__':
     analysis_breakdown = load_data()
 
     for analysis_subset in analysis_breakdown.analysis_datasets.keys():
-        if analysis_subset != 'Kellogg':
+        #if analysis_subset != 'Kellogg':
+        #    continue
+        if analysis_subset == 'ProTherm':
             continue
         for scoring_method in ['Kellogg', 'Noah']:
-            #analysis_breakdown.analyze_subset_all(analysis_subset, scoring_method)
-            analysis_breakdown.analyze_subset_by_specific_resolutions(analysis_subset, scoring_method)
-            analysis_breakdown.analyze_subset_by_binned_resolutions(analysis_subset, scoring_method)
-        break
+            #analysis_breakdown.analyze_subset_main(analysis_subset, scoring_method)
+            #analysis_breakdown.analyze_subset_GP(analysis_subset, scoring_method)
+            #analysis_breakdown.analyze_subset_by_mutation_size(analysis_subset, scoring_method)
+            #analysis_breakdown.analyze_subset_by_secondary_structure(analysis_subset, scoring_method)
+            analysis_breakdown.analyze_subset_by_binned_chain_length(analysis_subset, scoring_method, num_bins = 9)
+
+            #analysis_breakdown.analyze_subset_by_aromaticity(analysis_subset, scoring_method)
+            #analysis_breakdown.analyze_subset_by_exposure(analysis_subset, scoring_method, cut_off=0.4)
+            #analysis_breakdown.analyze_subset_by_specific_resolutions(analysis_subset, scoring_method)
+            #analysis_breakdown.analyze_subset_by_binned_resolutions(analysis_subset, scoring_method)
+        #break
