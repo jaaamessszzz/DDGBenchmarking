@@ -49,6 +49,7 @@ ddGdb = ddGDatabase(passwd = read_file('ddgdb.pw').strip(), use_utf = False)
 ddGdb_utf = ddGDatabase(passwd = read_file('ddgdb.pw').strip(), use_utf = True)
 ddG_interface = ddGInterface(passwd = read_file('ddgdb.pw').strip())
 
+
 JSON_datasets = {
     "AlaScan-GPK_2014/09/25" : dict(
         information = '''
@@ -171,6 +172,7 @@ def generate_JSON_dataset(dataset_ID, pdb_data, pub_data):
     failure_count = 0
     records = ddGdb.execute_select('SELECT * FROM DataSetDDG WHERE DataSetID=%s', parameters=(dataset_ID,))
     colortext.warning('Starting with %d records.' % (len(records)))
+    mutation_count = {1:0, 2:0, 3:0, 4:0, 5:0}
     for r in records:
 
         mutation_is_reversed = r['MutationIsReversed'] == 1
@@ -258,6 +260,7 @@ def generate_JSON_dataset(dataset_ID, pdb_data, pub_data):
 
         mutations = []
         failed_check = False
+        mutation_count[len(mutation_records)] += 1
         for mutation in mutation_records:
             mutation_d = {}
             #if ExperimentID == 109911:
@@ -301,19 +304,29 @@ def generate_JSON_dataset(dataset_ID, pdb_data, pub_data):
             mutation_d['DSSPExposure'] = mutated_residue['MonomericExposure']
             mutation_d['DSSPType'] = mutated_residue['MonomericDSSP']
             mutation_d['DSSPSimpleSSType'] = dssp_elision.get(mutation_d['DSSPType'])
+            assert(mutation_d['DSSPType'] != None)
+            assert(mutation_d['DSSPSimpleSSType'] != None)
             mutations.append(mutation_d)
 
         if failed_check:
+            print('FAILED CHECK')
             continue
         d['Mutations'] = mutations
 
-        key = '%s_%s' % (d['PDBFileID'], '+'.join(['%s:%s:%s' % (mutation_d['Chain'], mutation_d['ResidueID'].strip(), mutation_d['MutantAA']) for mutation_d in mutations]))
-        #if record_data.get(key):
-        #    colortext.warning('KEY EXISTS: %s' % key)
-        #    print('Existing record: %s' % pprint.pformat(record_data[key]))
-        #    print('New record: %s' % pprint.pformat(d))
-        #    failure_count += 1
+        if dataset_ID == "Potapov_10.1093/protein/gzp030_2009/09/01":
+            key = '%s_%s_%s' % (d['PDBFileID'], '+'.join(['%s:%s:%s' % (mutation_d['Chain'], mutation_d['ResidueID'].strip(), mutation_d['MutantAA']) for mutation_d in mutations]), d['RecordID'])
+        else:
+            key = '%s_%s' % (d['PDBFileID'], '+'.join(['%s:%s:%s' % (mutation_d['Chain'], mutation_d['ResidueID'].strip(), mutation_d['MutantAA']) for mutation_d in mutations]))
+
+        if record_data.get(key):
+            colortext.warning('KEY EXISTS: %s' % key)
+            print('Existing record: %s' % pprint.pformat(record_data[key]))
+            print('New record: %s' % pprint.pformat(d))
+            failure_count += 1
         record_data[key] = d
+
+    colortext.message('Mutation count')
+    colortext.warning(pprint.pformat(mutation_count))
 
     if failure_count > 0:
         colortext.error('Total length of dataset: %d. Failed on %d records.' % (len(record_data), failure_count))
@@ -378,9 +391,16 @@ def check_JSON_dataset(dataset_ID):
 
 def create_dataset_JSON_files():
 
+    todays_date = datetime.date.today().strftime('%Y-%m-%d')
     read_publications()
     pdb_data = {}
     pub_data = {}
+
+    # Add the publications for the datasets
+    for k, v in JSON_datasets.iteritems():
+        for _, ref in v['references'].iteritems():
+            pub_data[ref] = cached_publications[ref]
+
     #del JSON_datasets["CuratedProTherm_2014/12/04"]
     #del JSON_datasets["Guerois_10.1016/S0022-2836(02)00442-4_2002/07/05"]
     #del JSON_datasets["Potapov_10.1093/protein/gzp030_2009/09/01"]
@@ -391,13 +411,25 @@ def create_dataset_JSON_files():
         generate_JSON_dataset(dataset_ID, pdb_data, pub_data)
         check_JSON_dataset(dataset_ID)
 
+    max_res = 0
+    min_res = 10
+    techniques = set()
+    for p, v in pdb_data.iteritems():
+        techniques.add(v['MethodOfDetermination'])
+        if v['Resolution'] != 'N/A':
+            max_res = max(max_res, v['Resolution'])
+            min_res = min(min_res, v['Resolution'])
+    print('Resolutions', min_res, max_res)
+    print('Techniques', techniques)
+
     print(JSON_datasets.keys())
     for k, v in JSON_datasets.iteritems():
+        v['version'] = 'This dataset was last updated on %s.' % todays_date
         filename = k.split('_')[0].lower() + '.json'
-        x = json.dumps(v, indent=4)
+        x = json.dumps(v, indent=4, sort_keys=True)
         write_file('../rawdata/%s' % filename, x)
-    write_file('../rawdata/pdbs.json', json.dumps(pdb_data, indent=4))
-    write_file('../rawdata/references.json', json.dumps(pub_data, indent=4))
+    write_file('../rawdata/pdbs.json', json.dumps(pdb_data, indent=4, sort_keys=True))
+    write_file('../rawdata/references.json', json.dumps(pub_data, indent=4, sort_keys=True))
 
 def create_dataset_CSV_files():
 
@@ -435,6 +467,8 @@ def create_dataset_CSV_files():
             csv_lines.append('# %s' % line)
         for k, v in sorted(d['references'].iteritems()):
             csv_lines.append('# [%s] %s' % (k, v))
+        todays_date = datetime.date.today().strftime('%Y-%m-%d')
+        csv_lines.append('\n# This dataset was last updated on %s.' % todays_date)
         csv_lines.append('')
         csv_lines.append('# The RecordID below refers to the record ID in the original dataset. When no ID was specified, we added an ID based on the published order of the records.')
         csv_lines.append('# Mutations is an underscore-separated list of mutations. Each mutation takes the form "Chain Wildtype ResidueID Mutant".')
@@ -468,12 +502,31 @@ def create_dataset_CSV_files():
                 str(record['DDG']),
                 '_'.join(map(str, exposures)),
                 '_'.join(dssp),
+                '_'.join(ddgs_simple),
                 '_'.join(map(str, ddgs))
                 ]))
         write_file('../rawdata/%s' % filename.replace('.json', '.csv'), '\n'.join(csv_lines))
 
 
+        write_file('../rawdata/%s' % filename.replace('.json', '.csv'), '\n'.join(csv_lines))
+
+
+def dump_pdbs():
+    pdbs = json.loads(read_file('../rawdata/pdbs.json'))
+
+    # Sanity check
+    for pdb_id, v in sorted(pdbs.iteritems()):
+        records = ddGdb.execute_select('SELECT ID FROM PDBFile WHERE ID=%s', parameters=(pdb_id,))
+        assert(len(records) == 1)
+
+    # Dump
+    for pdb_id, v in sorted(pdbs.iteritems()):
+        content = ddGdb.execute_select('SELECT Content FROM PDBFile WHERE ID=%s', parameters=(pdb_id,))[0]['Content']
+        write_file('../rawdata/%s.pdb' % pdb_id, content)
+
+
 if __name__ == '__main__':
-    #create_dataset_JSON_files()
+    create_dataset_JSON_files()
     create_dataset_CSV_files()
+    #dump_pdbs()
     pass

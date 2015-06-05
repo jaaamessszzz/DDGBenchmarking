@@ -60,8 +60,10 @@ class NoahScore(object):
         resnum_list = ','.join(['%s%s' % (rosetta_resid, rosetta_chain) for rosetta_resid in rosetta_resids])
 
         cmd = ([
-            '/home/oconchus/dev/ddg/misc/score_residue.static.linuxgccrelease',
-            '--database=/home/oconchus/test_ddg/general_dev/database',
+            #'/home/oconchus/dev/ddg/misc/score_residue.static.linuxgccrelease',
+            #'--database=/home/oconchus/test_ddg/general_dev/database',
+            '/home/oconchus/RosettaCon2013_rescoring/score_residue.static.linuxgccrelease',
+            '--database=/home/oconchus/RosettaCon2013_rescoring/database/',
             '-s']
             + list_of_files
             + ['-score:fa_max_dis %0.1f' % radius]

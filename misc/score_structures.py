@@ -33,10 +33,11 @@ def get_completed_prediction_sets(DDG_api):
     for prediction_set, statuses in sorted(prediction_set_statuses.iteritems()):
         if len(statuses) == 1 and statuses.pop() == 'done':
             completed_prediction_sets.append(prediction_set)
+    return ['RosCon2013_P16_talaris2013sc']
     return completed_prediction_sets
 
 
-def determine_structure_scores(DDG_api):
+def determine_structure_scores(DDG_api, skip_if_we_have_pairs = 50):
     pp = pprint.PrettyPrinter(indent=4)
 
     ddGdb = DDG_api.ddGDB
@@ -61,8 +62,8 @@ def determine_structure_scores(DDG_api):
 
     # For each completed prediction set, determine the structure scores
     for prediction_set in completed_prediction_sets:
-        if prediction_set not in ['Ubiquitin scan: UQ_con_yeast p16']:
-            continue
+        #if prediction_set not in ['Ubiquitin scan: UQ_con_yeast p16']:
+        #    continue
 
         predictions = ddGdb.execute('SELECT ID, ddG, Scores, status, ScoreVersion FROM Prediction WHERE PredictionSet=%s ORDER BY ID', parameters=(prediction_set,))
         num_predictions = len(predictions)
@@ -71,9 +72,10 @@ def determine_structure_scores(DDG_api):
         colortext.message('Prediction set: %s' % prediction_set)
         colortext.warning('Checking that all data exists...')
         for prediction in predictions:
-            assert(prediction['status'] == 'done')
+            #assert(prediction['status'] == 'done')
             PredictionID = prediction['ID']
-
+            if PredictionID != 72856:
+                continue
             global_scores = pickle.loads(prediction['ddG'])
             assert(global_scores)
             assert(prediction['ScoreVersion'] == 0.23)
@@ -94,8 +96,23 @@ def determine_structure_scores(DDG_api):
             PredictionID = prediction['ID']
             colortext.message('%s: %d of %d (Prediction #%d)' % (prediction_set, count, num_predictions, PredictionID))
 
+            #if PredictionID != 72856:
+            #if PredictionID < 73045: continue
+            if prediction['status'] == 'failed':
+                colortext.error('Skipping failed prediction %d.' % PredictionID)
+                continue
+            if prediction['status'] == 'queued':
+                colortext.warning('Skipping queued prediction %d.' % PredictionID)
+                continue
+            if prediction['status'] == 'postponed':
+                colortext.printf('Skipping postponed prediction %d.' % PredictionID, 'cyan')
+                continue
+
             # Store the ensemble scores
-            global_scores = json.loads(prediction['Scores'])['data']
+            try:
+                global_scores = json.loads(prediction['Scores'])['data']
+            except:
+                raise colortext.Exception("Failed reading the Scores field's JSON object. The Prediction Status is %(status)s. The Scores field is: '%(Scores)s'." % prediction)
             for score_type, inner_data in global_scores.iteritems():
                 for inner_score_type, data in inner_data.iteritems():
                     components = {}
@@ -110,6 +127,7 @@ def determine_structure_scores(DDG_api):
                     elif score_type == 'noah_8,0A' and inner_score_type == 'total':
                         ddG = data['ddG']
                     else:
+                        continue
                         raise Exception('Unhandled score types: "%s", "%s".' % (score_type, inner_score_type))
 
                     ScoreMethodID = ScoreMethodMap[(score_type, inner_score_type)]
@@ -124,6 +142,14 @@ def determine_structure_scores(DDG_api):
                     new_record.update(components)
                     ddGdb.insertDictIfNew('PredictionStructureScore', new_record, ['PredictionID', 'ScoreMethodID', 'ScoreType', 'StructureID'])
 
+            if skip_if_we_have_pairs != None:
+                # Skip this case if we have a certain number of existing records (much quicker since we do not have to extract the binary)
+                num_wt = ddGdb.execute_select("SELECT COUNT(ID) AS NumRecords FROM PredictionStructureScore WHERE PredictionID=%s AND ScoreType='WildType'", parameters=(PredictionID,))[0]['NumRecords']
+                num_mut = ddGdb.execute_select("SELECT COUNT(ID) AS NumRecords FROM PredictionStructureScore WHERE PredictionID=%s AND ScoreType='Mutant'", parameters=(PredictionID,))[0]['NumRecords']
+                print(num_wt, num_mut)
+                if num_wt == num_mut and num_mut == skip_if_we_have_pairs:
+                    continue
+
             # Store the ddg_monomer scores for each structure
             grouped_scores = DDG_api.get_ddg_monomer_scores_per_structure(PredictionID)
             for structure_id, wt_scores in sorted(grouped_scores['WildType'].iteritems()):
@@ -131,7 +157,7 @@ def determine_structure_scores(DDG_api):
                     PredictionID = PredictionID,
                     ScoreMethodID = ScoreMethodMap[("kellogg", "total")],
                     ScoreType = 'WildType',
-                    StructureID = structure_id, # This score is for the Prediction rather than a structure
+                    StructureID = structure_id,
                     DDG = None,
                 )
                 new_record.update(wt_scores)
@@ -141,7 +167,7 @@ def determine_structure_scores(DDG_api):
                     PredictionID = PredictionID,
                     ScoreMethodID = ScoreMethodMap[("kellogg", "total")],
                     ScoreType = 'Mutant',
-                    StructureID = structure_id, # This score is for the Prediction rather than a structure
+                    StructureID = structure_id,
                     DDG = None,
                 )
                 new_record.update(wt_scores)

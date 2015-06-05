@@ -12,7 +12,7 @@ import datetime
 sys.path.insert(0, "../..")
 sys.path.insert(0, "..")
 from tools import colortext
-from tools.fs.io import read_file, write_file
+from tools.fs.fsio import read_file, write_file
 from tools.bio.pdb import PDB
 from ddglib import ddgdbapi
 
@@ -20,6 +20,7 @@ def extract_data():
     ddGdb = ddgdbapi.ddGDatabase()
     #jobs = [r for r in ddGdb.execute_select('SELECT ID, maxvmem, DDGTime FROM Prediction WHERE Status="done" ORDER BY ID DESC')]
     jobs = [r for r in ddGdb.execute_select('SELECT ID, maxvmem, DDGTime FROM Prediction WHERE Status="done" ORDER BY ID DESC')]
+
     num_ids = len(jobs)
     count = 1
     results_root = '/kortemmelab/shared/DDG/jobs'
@@ -62,6 +63,7 @@ def extract_data():
                     maxvmem_in_GB = max(maxvmem_in_GBs)
                     ddGdb.execute('UPDATE Prediction SET maxvmem=%s WHERE ID=%s', parameters=(maxvmem_in_GB, id,))
             else:
+                print('Missing maxvmem')
                 ddGdb.execute('UPDATE Prediction SET maxvmem=-1.0 WHERE ID=%s', parameters=(id,))
 
             if stdout.find('<startdate>') != -1 and stdout.find('<enddate>') != -1:
