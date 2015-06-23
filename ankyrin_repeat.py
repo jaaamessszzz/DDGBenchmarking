@@ -8,11 +8,11 @@ from tools.bio.basics import Mutation, ChainMutation, generate_all_combinations_
 from tools.bio.alignment import ScaffoldModelChainMapper
 from tools.fs.fsio import read_file, write_file
 
-from ddglib import ddgdbapi, dbapi
+from ddglib import ddgdbapi, db_api
 
 if __name__ == '__main__':
     DDGdb = ddgdbapi.ddGDatabase()
-    ddG_connection = dbapi.ddG()
+    ddG_connection = db_api.ddG()
 
 all_wildtype_mutations = '''
 # All mutations are on chain A

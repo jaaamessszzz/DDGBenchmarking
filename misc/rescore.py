@@ -13,11 +13,11 @@ from tools.deprecated.rosettahelper import readBinaryFile, makeTemp755Directory,
 from tools.bio.pdb import PDB
 from tools.bio.basics import residue_type_3to1_map as aa1
 
-import dbapi
+import db_api
 import ddgdbapi
 if __name__ == '__main__':
     ddGdb = ddgdbapi.ddGDatabase()
-    DDG_interface = dbapi.ddG()
+    DDG_interface = db_api.ddG()
 
 current_score_revision = '0.23'
 class WrongScoreRevisionException(Exception): pass

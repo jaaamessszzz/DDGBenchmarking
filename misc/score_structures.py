@@ -20,7 +20,7 @@ from tools.bio.pdb import PDB
 from tools.bio.basics import residue_type_3to1_map as aa1
 
 import ddgdbapi
-from dbapi import ddG as ddGInterface
+from db_api import ddG as ddGInterface
 
 def get_completed_prediction_sets(DDG_api):
     ddGdb = DDG_api.ddGDB

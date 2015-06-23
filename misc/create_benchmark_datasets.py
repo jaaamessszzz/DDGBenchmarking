@@ -32,7 +32,7 @@ from ddgadmin.updatedb.DatasetReferences import Publications, DataSetHomologs
 from tools.deprecated.rosettahelper import NUMBER_KJ_IN_KCAL
 from ddg.ddglib.ddgdbapi import ddGDatabase, Publicationv2
 from ddg.ddglib.ddgobjects import DatasetParser
-from ddg.ddglib.dbapi import ddG as ddGInterface
+from ddg.ddglib.db_api import ddG as ddGInterface
 import ddg.ddglib.ddgdbapi as ddgdbapi
 import ddg.ddglib.ddgobjects as ddgobjects
 from tools.biblio.ris import RISEntry

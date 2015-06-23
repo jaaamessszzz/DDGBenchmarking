@@ -14,13 +14,13 @@ import json
 
 filetype = "pdf"
 
-from ddglib import dbapi, ddgdbapi
+from ddglib import db_api, ddgdbapi, monomer_api
 from tools.bio import pdb
 
 
 
 def dump_data(prediction_set, outfile):
-    ddG_connection = dbapi.ddG()
+    ddG_connection = db_api.ddG()
     ddGdb = ddgdbapi.ddGDatabase()
 
     userdata_set = 'AllValidPGPK'
@@ -42,12 +42,12 @@ def dump_data(prediction_set, outfile):
 
 def load_data(infile):
     d = json.loads(read_file(infile))
-    return dbapi.AnalysisBreakdown(d['amino_acids'], d['pdb_details'], d['predictions'], d['analysis_datasets'])
+    return monomer_api.AnalysisBreakdown(d['amino_acids'], d['pdb_details'], d['predictions'], d['analysis_datasets'])
 
 def get_data_for_small_large_diagram_for_website():
     d = json.loads(read_file('r57471_analysis_input.json'))
 
-    ddG_connection = dbapi.ddG()
+    ddG_connection = db_api.ddG()
     amino_acids = ddG_connection.get_amino_acids_for_analysis()
 
     amino_acid_volumes = {}
@@ -232,7 +232,7 @@ if __name__ == '__main__':
 
     if False:
         # code used to create the benchmark capture
-        ddG_connection = dbapi.ddG()
+        ddG_connection = db_api.ddG()
         ddGdb = ddgdbapi.ddGDatabase()
 
         print(ddG_connection.determine_best_pair(72856, ScoreMethodID = 1))

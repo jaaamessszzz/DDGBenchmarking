@@ -6,13 +6,13 @@ sys.path.insert(0, "..")
 from tools import colortext
 from tools.deprecated import rosettadb
 from tools.debug.profile import ProfileTimer
-from ddglib import dbapi, ddgdbapi
+from ddglib import db_api, ddgdbapi
 from ddglib import help as ddg_help
 #from ddglib.ddgfilters import *
 from tools.bio import pdb
 import tools.deprecated.rosettahelper
 
-ddG_connection = dbapi.ddG()
+ddG_connection = db_api.ddG()
 
 #Protocol16 3.5.0 (score12prime)
 #Protocol16 3.5.0 (talaris2013)
