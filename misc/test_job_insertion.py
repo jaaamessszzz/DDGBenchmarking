@@ -21,6 +21,10 @@ from ddglib.monomer_api import MonomericStabilityDDGInterface
 from ddglib.monomer_api import get_interface as get_protein_stability_interface
 
 if __name__ == '__main__':
+    from ddglib.monomer_api import get_interface as get_protein_stability_interface
+    stability_api = get_protein_stability_interface(read_file('ddgdb.pw'))
+    stability_api.help()
+    sys.exit(0)
     from ddglib.ppi_api import get_interface as get_ppi_interface
     ppi_api = get_ppi_interface(read_file('ddgdb.pw'))
     ppi_api.help()
