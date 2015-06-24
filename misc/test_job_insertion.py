@@ -15,30 +15,61 @@ if __name__ == "__main__":
 
 import tools.colortext as colortext
 from tools.fs.fsio import read_file
-from ddglib.ppi_api import BindingAffinityDDGInterface
 from ddglib.ppi_api import get_interface as get_ppi_interface
-from ddglib.monomer_api import MonomericStabilityDDGInterface
 from ddglib.monomer_api import get_interface as get_protein_stability_interface
 
+
 if __name__ == '__main__':
-    #from ddglib.monomer_api import get_interface as get_protein_stability_interface
-    #stability_api = get_protein_stability_interface(read_file('ddgdb.pw'))
-    #stability_api.help()
-    #sys.exit(0)
-    from ddglib.ppi_api import get_interface as get_ppi_interface
-    ppi_api = get_ppi_interface(read_file('ddgdb.pw'))
-    ppi_api.help()
-    sys.exit(0)
+
+    # Set up the stability API
     stability_api = get_protein_stability_interface(read_file('ddgdb.pw'))
-    pprint.pprint(ppi_api.get_prediction_set_details('RosCon2013_P16_score12prime'))
-    print(stability_api.get_prediction_ids('RosCon2013_P16_score12prime'))
 
-    #from ddglib.monomer_api import get_interface as get_protein_stability_interface
-    #stability_api = get_protein_stability_interface(read_file('ddgdb.pw'))
-    #stability_api.help()
+    # Set up the PPI API and get direct access to the database interface objects
+    ppi_api = get_ppi_interface(read_file('ddgdb.pw'))
+    ddg_db = ppi_api.DDG_db
+    ddg_db_utf = ppi_api.DDG_db_utf
 
-    #ddg_db = ddg_api.DDG_db
-    #ddg_db_utf = ddg_api.DDG_db_utf
+    # Informational_job tests
+    ppi_api.get_prediction_set_details('RosCon2013_P16_score12prime')
+    stability_api.get_prediction_ids('RosCon2013_P16_score12prime')
+
+    # Print API help
+    ppi_api.help()
+
+    # Create the prediction set
+    prediction_set_id = 'PPI test run'
+    ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, batch_size = 41, allow_existing_prediction_set = True)
+    ppi_api.alter_prediction_set_batch_size(prediction_set_id, 40)
+    ppi_api.alter_prediction_set_priority(prediction_set_id, 5)
+
+    pprint.pprint(stability_api.get_defined_user_datasets())
+    pprint.pprint(ppi_api.get_defined_user_datasets())
+    sys.exit(0)
+
+    # Populate the prediction set with jobs
+    ppi_api.add_prediction_run(prediction_set_id, 'AllBindingAffinityData', tagged_subset = 'ZEMu')
+
+    for prediction_id in ppi_api.get_prediction_ids(prediction_set_id):
+        print(prediction_id)
+        # ... get job details, create command lines
+        # ppi_api.add_job_command_lines(prediction_id, cmd_lines)
+
+    sys.exit(0)
+    a='''
+    ppi_api.start_prediction_set(prediction_set_id)
+
+    # Run the jobs
+    while True:
+        j = ppi_api.get_job(prediction_set)
+        if j:
+            ...create the jobs files on disk, group into an array job
+        else:
+            break
+    #submit the job to the cluster, calling start_job(prediction_id) when the jobs have been submitted to SGE
+
+    Inserting a job
+
+    '''
 
     a='''
     1.
