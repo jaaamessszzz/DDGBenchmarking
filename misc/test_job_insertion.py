@@ -42,13 +42,13 @@ if __name__ == '__main__':
     ppi_api.alter_prediction_set_batch_size(prediction_set_id, 40)
     ppi_api.alter_prediction_set_priority(prediction_set_id, 5)
 
-    pprint.pprint(stability_api.get_defined_user_datasets())
+    # Print the available user datasets
     pprint.pprint(ppi_api.get_defined_user_datasets())
+
+    # Populate the prediction set with jobs from a (tagged subset of a) user dataset
+    ppi_api.add_prediction_run(prediction_set_id, 'AllBindingAffinity', tagged_subset = 'ZEMu')
+
     sys.exit(0)
-
-    # Populate the prediction set with jobs
-    ppi_api.add_prediction_run(prediction_set_id, 'AllBindingAffinityData', tagged_subset = 'ZEMu')
-
     for prediction_id in ppi_api.get_prediction_ids(prediction_set_id):
         print(prediction_id)
         # ... get job details, create command lines
