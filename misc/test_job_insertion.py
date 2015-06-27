@@ -25,7 +25,9 @@ if __name__ == '__main__':
     stability_api = get_protein_stability_interface(read_file('ddgdb.pw'))
 
     # Set up the PPI API and get direct access to the database interface objects
-    ppi_api = get_ppi_interface(read_file('ddgdb.pw'))
+    ppi_api = get_ppi_interface(read_file('ddgdb.pw'),
+                                rosetta_scripts_path =  '/home/oconchus/t14benchmarking/r57934/main/source/bin/rosetta_scripts.linuxgccrelease',
+                                rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
     ddg_db = ppi_api.DDG_db
     ddg_db_utf = ppi_api.DDG_db_utf
 
