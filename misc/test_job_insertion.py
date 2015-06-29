@@ -39,22 +39,36 @@ if __name__ == '__main__':
     #ppi_api.help()
 
     # Create the prediction set
-    prediction_set_id = 'PPI test run'
+    prediction_set_id = 'ZEMu run 1'
     ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, batch_size = 41, allow_existing_prediction_set = True)
     ppi_api.alter_prediction_set_batch_size(prediction_set_id, 40)
     ppi_api.alter_prediction_set_priority(prediction_set_id, 5)
+
+    # Set up the job specific details
+    # This needs to be done since there are no associated protocols yet; Kyle is in charge of this part.
+    #for prediction_id in ppi_api.get_prediction_ids(prediction_set_id):
+    while True:
+        job_details = ppi_api.get_job(prediction_set_id)
+
+    #    print(prediction_id)
+    #    #... get job details, create command lines
+    #    #ppi_api.add_job_command_lines(prediction_id, cmd_lines)
+
+    sys.exit(0)
 
     # Print the available user datasets
     #pprint.pprint(ppi_api.get_defined_user_datasets())
 
     # Populate the prediction set with jobs from a (tagged subset of a) user dataset
-    ppi_api.add_prediction_run(prediction_set_id, 'AllBindingAffinity', tagged_subset = 'ZEMu')
+    ppi_api.add_prediction_run(prediction_set_id, 'AllBindingAffinity', tagged_subset = 'ZEMu', extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', test_run_first = True, show_full_errors = True)
 
-    sys.exit(0)
+    # Set up the job specific details
+    # This needs to be done since there are no associated protocols yet; Kyle is in charge of this part.
     for prediction_id in ppi_api.get_prediction_ids(prediction_set_id):
         print(prediction_id)
-        # ... get job details, create command lines
-        # ppi_api.add_job_command_lines(prediction_id, cmd_lines)
+        #... get job details, create command lines
+        #ppi_api.add_job_command_lines(prediction_id, cmd_lines)
+
 
     sys.exit(0)
     a='''
@@ -70,39 +84,5 @@ if __name__ == '__main__':
     #submit the job to the cluster, calling start_job(prediction_id) when the jobs have been submitted to SGE
 
     Inserting a job
-
-    '''
-
-    a='''
-    1.
-    ppi_api.create_prediction_set("Shane's test prediction set")
-
-    2.
-    ppi_api.create_predictions_from_userdataset("Shane's test prediction set", 'AllBindingAffinity', tagged_subset = 'ZEMu')
-
-    # Create a list of PredictionPPI records with:
-    - PDB file with stripped chains
-       - PPMutagenesis.ID
-       - UserPPDataSetExperimentID (specifies PPMutagenesisID and PDB complex definition (PDB ID, PPComplexID, SetNumber))
-       - ProtocolID none at present
-       - Cost (num residues in stripped PDB)
-       - KeptHETATMLines?
-       - ResidueMapping (JSON from Rosetta numbering to PDB numbering)
-       - InputFiles - mutfile/resfile?
-       - Description
-       - ScoreVersion
-       - ddG (NULL from 23505 to 76632) - 1860 records
-       - Scores (NULL from 23505 to 76632)
-       - StructureScores (only non-NULL on records 55808, 55809 )
-
-       Each prediction has a set of PredictionStructureScores
-         - per prediction, score method (Global p16, Local 8A Noah, ...), score type (DDG, Mutant, Wildtype), run number e.g. 1-50, we store:
-           - score components
-           - DDG
-
-    3.
-    Kyle's runner populates these records with command lines?
-    Kyle's runner runs the jobs and saves the results back into the database
-
 
     '''
