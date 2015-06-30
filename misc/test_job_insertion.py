@@ -49,8 +49,13 @@ if __name__ == '__main__':
     # This needs to be done since there are no associated protocols yet; Kyle is in charge of this part.
     #for prediction_id in ppi_api.get_prediction_ids(prediction_set_id):
 
-    for prediction_record in ppi_api.get_queued_jobs(prediction_set_id, order_by = 'Cost', order_order_asc = False, include_files = True, truncate_content = 30):
-        pprint.pprint(prediction_record['Cost'])
+    x = 0
+    printers = [colortext.pgreen, colortext.pyellow]
+    for job_details in ppi_api.get_queued_jobs(prediction_set_id, order_by = 'Cost', order_order_asc = False, include_files = True, truncate_content = 30):
+        if x >= 3:
+            break
+        printers[x % 2](pprint.pformat(job_details))
+        x += 1
 
     sys.exit(0)
     while True:
