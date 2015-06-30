@@ -43,12 +43,20 @@ if __name__ == '__main__':
     ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, batch_size = 41, allow_existing_prediction_set = True)
     ppi_api.alter_prediction_set_batch_size(prediction_set_id, 40)
     ppi_api.alter_prediction_set_priority(prediction_set_id, 5)
+    ppi_api.start_prediction_set(prediction_set_id)
 
     # Set up the job specific details
     # This needs to be done since there are no associated protocols yet; Kyle is in charge of this part.
     #for prediction_id in ppi_api.get_prediction_ids(prediction_set_id):
+
+    for prediction_record in ppi_api.get_queued_jobs(prediction_set_id, order_by = 'Cost', order_order_asc = False, include_files = True, truncate_content = 30):
+        pprint.pprint(prediction_record['Cost'])
+
+    sys.exit(0)
     while True:
-        job_details = ppi_api.get_job(prediction_set_id)
+        job_details = ppi_api.get_job(prediction_set_id, order_by = 'Cost', order_order_asc = False, include_files = True)
+        colortext.pyellow(pprint.pformat(job_details))
+        break
 
     #    print(prediction_id)
     #    #... get job details, create command lines
