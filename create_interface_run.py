@@ -14,16 +14,17 @@ job_output_directory = 'job_output'
 
 if __name__ == '__main__':
     # Change these for each run
-    prediction_set_id = '5-alascan-protocol'
-
+    prediction_set_id = 'pack_unbound-1'
+    script_file = 'pack_unbound.xml'
+    
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
 
     ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path)
-    # ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, allow_existing_prediction_set = True)
+    ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, allow_existing_prediction_set = True)
 
     # Populate the prediction set with jobs from a (tagged subset of a) user dataset
-    # ppi_api.add_prediction_run(prediction_set_id, 'AllBindingAffinity', tagged_subset = 'ZEMu', extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True)
+    ppi_api.add_prediction_run(prediction_set_id, 'AllBindingAffinity', tagged_subset = 'ZEMu', extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True)
 
     prediction_ids = ppi_api.get_prediction_ids(prediction_set_id)
     
@@ -38,11 +39,11 @@ if __name__ == '__main__':
     #         print x['FileRole'], x['Filetype'], x['Filename']
     #     sys.exit(0)
 
-    # ppi_api.add_development_protocol_command_lines(
-    #     prediction_set_id, 'alascan_protocol-5', 'rosetta_scripts',
-    #     '-parser:protocol alanine_scanning.xml -in:file:s %%input_pdb%% -parser:script_vars chainstomove=%%chainstomove%% pathtoresfile=%%pathtoresfile%% -parser:view -inout:dbms:mode sqlite3 -inout:dbms:database_name rosetta_output.db3',
-    #     rosetta_script_file = 'interface/alanine_scanning.xml',
-    # )
+    ppi_api.add_development_protocol_command_lines(
+        prediction_set_id, prediction_set_id, 'rosetta_scripts',
+        '-parser:protocol %s -in:file:s %%input_pdb%% -parser:script_vars chainstomove=%%chainstomove%% pathtoresfile=%%pathtoresfile%% -parser:view -inout:dbms:mode sqlite3 -inout:dbms:database_name rosetta_output.db3' % script_file,
+        rosetta_script_file = 'interface/' + script_file,
+    )
 
     job_name = '%s-%s_%s' % (time.strftime("%y%m%d"), getpass.getuser(), prediction_set_id)
     output_dir = os.path.join(job_output_directory, job_name )
