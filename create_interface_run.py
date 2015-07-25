@@ -14,7 +14,7 @@ job_output_directory = 'job_output'
 
 if __name__ == '__main__':
     # Change these for each run
-    prediction_set_id = 'minimize_pack_bound_and_unbound_3cycles-1'
+    prediction_set_id = 'minimize_pack_bound_and_unbound_3cycles-2'
     script_file = 'minimize_pack_bound_and_unbound_3cycles.xml'
     
     settings = parse_settings.get_dict()
@@ -42,6 +42,12 @@ if __name__ == '__main__':
     ppi_api.add_development_protocol_command_lines(
         prediction_set_id, prediction_set_id, 'rosetta_scripts',
         '-parser:protocol %s -in:file:s %%input_pdb%% -parser:script_vars chainstomove=%%chainstomove%% pathtoresfile=%%pathtoresfile%% -parser:view -inout:dbms:mode sqlite3 -inout:dbms:database_name rosetta_output.db3' % script_file,
+        rosetta_script_file = 'interface/' + script_file,
+    )
+    # 2x because bugs
+    ppi_api.add_development_protocol_command_lines(
+        prediction_set_id, prediction_set_id, 'rosetta_scripts',
+        '-parser:protocol ' + str(script_file) +' -in:file:s %%input_pdb%% -parser:script_vars chainstomove=%%chainstomove%% pathtoresfile=%%pathtoresfile%% -parser:view -inout:dbms:mode sqlite3 -inout:dbms:database_name rosetta_output.db3',
         rosetta_script_file = 'interface/' + script_file,
     )
 
