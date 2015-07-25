@@ -14,8 +14,8 @@ job_output_directory = 'job_output'
 
 if __name__ == '__main__':
     # Change these for each run
-    prediction_set_id = 'pack_bound_and_unbound-1'
-    script_file = 'pack_bound_and_unbound.xml'
+    prediction_set_id = 'relax_pack_bound_and_unbound_3cycles-1'
+    script_file = 'relax_pack_bound_and_unbound_3cycles.xml'
     
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
