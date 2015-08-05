@@ -182,6 +182,7 @@ def generate_JSON_dataset(dataset_ID, pdb_data, pub_data):
             AggregateType = r['AggregateType'],
             DDG = r['PublishedValue'],
             PDBFileID = r['PDBFileID'],
+            DerivedMutation = mutation_is_reversed,
         )
 
         # Parse PDB
@@ -473,14 +474,15 @@ def create_dataset_CSV_files():
         csv_lines.append('# The RecordID below refers to the record ID in the original dataset. When no ID was specified, we added an ID based on the published order of the records.')
         csv_lines.append('# Mutations is an underscore-separated list of mutations. Each mutation takes the form "Chain Wildtype ResidueID Mutant".')
         csv_lines.append('# DDG is the aggregated (mean) DDG value used for analysis.')
-        csv_lines.append('# IndividualDDGs lists the individual DDG values which can be used to filter out records with high variance.')
         csv_lines.append('# ResidueExposures is an underscore-separated list of exposure values, each one corresponding to its respective mutated position. Each exposure value is based on the solvent accessibility reported by DSSP divided by a maximum solvent accessibility for that residue type and represents whether the residue is buried (0.0) or exposed (1.0).')
         csv_lines.append("# DSSPTypes is an underscore-separated list of DSSP secondary structure assignments, each one corresponding to its respective mutated position.")
         csv_lines.append("# DSSPSimpleTypes is an underscore-separated list of DSSPSimpleType secondary structure assignments, each one corresponding to its respective mutated position.")
+        csv_lines.append('# IndividualDDGs lists the individual DDG values which can be used to filter out records with high variance.')
+        csv_lines.append('# DerivedMutation is 0 if the record represents an actual set of experiments and 1 if it was derived e.g. if the mutant structure is taken as wildtype and the DDG value is negated. Typically the original records also exist in the dataset so the derived records can introduce a bias.')
         csv_lines.append('# Note: The .json file accompanying this CSV file contains more information, including a list of publications from where the DDG values were taken.')
         csv_lines.append('')
 
-        csv_lines.append('#' + ','.join(['RecordID', 'PDBFileID', 'Mutations', 'DDG', 'ResidueExposures', 'DSSPTypes', 'DSSPSimpleTypes', 'IndividualDDGs']))
+        csv_lines.append('#' + ','.join(['RecordID', 'PDBFileID', 'Mutations', 'DDG', 'ResidueExposures', 'DSSPTypes', 'DSSPSimpleTypes', 'IndividualDDGs', 'DerivedMutation']))
         for record in d['data']:
             mutations = []
             exposures = []
@@ -503,11 +505,9 @@ def create_dataset_CSV_files():
                 '_'.join(map(str, exposures)),
                 '_'.join(dssp),
                 '_'.join(ddgs_simple),
-                '_'.join(map(str, ddgs))
+                '_'.join(map(str, ddgs)),
+                str(int(record['DerivedMutation'])),
                 ]))
-        write_file('../rawdata/%s' % filename.replace('.json', '.csv'), '\n'.join(csv_lines))
-
-
         write_file('../rawdata/%s' % filename.replace('.json', '.csv'), '\n'.join(csv_lines))
 
 
@@ -525,8 +525,27 @@ def dump_pdbs():
         write_file('../rawdata/%s.pdb' % pdb_id, content)
 
 
+def update_public_datasets():
+    dsets = ['alascan-gpk.json', 'curatedprotherm.json', 'guerois.json', 'kellogg.json', 'potapov.json']
+    source_path = '../rawdata/'
+    dest_path = '/home/oconchus/t14benchmarking/ddg/input/json/'
+    for dset in dsets:
+        assert(os.path.exists(os.path.join(source_path, dset)))
+        assert(os.path.exists(os.path.join(dest_path, dset)))
+    for dset in dsets:
+        print(dset)
+        source_set = json.loads(read_file(os.path.join(source_path, dset)))
+        dest_set = json.loads(read_file(os.path.join(dest_path, dset)))
+        assert(len(source_set['data']) == len(dest_set['data']))
+        for x in range(len(source_set['data'])):
+            assert(dest_set['data'][x]['RecordID'] == source_set['data'][x]['RecordID'])
+            dest_set['data'][x]['DerivedMutation'] = source_set['data'][x]['DerivedMutation']
+        write_file(os.path.join(dest_path, dset) + '.new', json.dumps(dest_set, indent=4, sort_keys=True))
+
+
 if __name__ == '__main__':
-    create_dataset_JSON_files()
-    create_dataset_CSV_files()
+    #create_dataset_JSON_files()
+    #create_dataset_CSV_files()
+    update_public_datasets()
     #dump_pdbs()
     pass
