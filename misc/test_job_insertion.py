@@ -23,6 +23,18 @@ if __name__ == '__main__':
     ppi_api = get_ppi_interface(read_file('ddgdb.pw'),
                                 rosetta_scripts_path =  '/home/oconchus/t14benchmarking/r57934/main/source/bin/rosetta_scripts.linuxgccrelease',
                                 rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
+    dataset_set_ids = ['ZEMu_10.1002/prot.24634', 'SKEMPI_2012/10/03', 'BeAtMuSiC_10.1093/nar/gkt450']
+    for dataset_set_id in dataset_set_ids:
+        dataset_set_json = ppi_api.export_dataset_to_json(dataset_set_id)
+        pprint.pprint(dataset_set_json)
+        print('here')
+        sys.exit(0)
+
+
+if __name__ == '__main__':
+    ppi_api = get_ppi_interface(read_file('ddgdb.pw'),
+                                rosetta_scripts_path =  '/home/oconchus/t14benchmarking/r57934/main/source/bin/rosetta_scripts.linuxgccrelease',
+                                rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
     prediction_set_id = 'ZEMu run multiprocessing test'
     ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, batch_size = 41, allow_existing_prediction_set = True)
     ppi_api.alter_prediction_set_batch_size(prediction_set_id, 40)
