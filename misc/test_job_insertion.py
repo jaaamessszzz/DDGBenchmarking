@@ -14,22 +14,25 @@ if __name__ == "__main__":
     sys.path.insert(0, "../updatedb")
 
 import tools.colortext as colortext
-from tools.fs.fsio import read_file
+from tools.fs.fsio import read_file, write_file
 from ddglib.ppi_api import get_interface as get_ppi_interface
 from ddglib.monomer_api import get_interface as get_protein_stability_interface
 
-
-if __name__ == '__main__':
+def export_datasets():
     ppi_api = get_ppi_interface(read_file('ddgdb.pw'),
                                 rosetta_scripts_path =  '/home/oconchus/t14benchmarking/r57934/main/source/bin/rosetta_scripts.linuxgccrelease',
                                 rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
     dataset_set_ids = ['ZEMu_10.1002/prot.24634', 'SKEMPI_2012/10/03', 'BeAtMuSiC_10.1093/nar/gkt450']
     for dataset_set_id in dataset_set_ids:
+        dataset_set_short_name = dataset_set_id.split('_')[0]
+        colortext.warning(dataset_set_short_name)
         dataset_set_json = ppi_api.export_dataset_to_json(dataset_set_id)
-        pprint.pprint(dataset_set_json)
-        print('here')
-        sys.exit(0)
+        dataset_set_tsv = ppi_api.export_dataset_to_csv(dataset_set_id)
+        write_file('%s.export.tsv' % dataset_set_short_name, dataset_set_tsv)
+        write_file('%s.export.json' % dataset_set_short_name, dataset_set_json)
 
+
+sys.exit(0)
 
 if __name__ == '__main__':
     ppi_api = get_ppi_interface(read_file('ddgdb.pw'),
