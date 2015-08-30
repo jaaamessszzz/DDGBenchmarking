@@ -11,6 +11,7 @@ import getpass
 from tools.cluster_template.write_run_file import process as write_run_file
 
 job_output_directory = 'job_output'
+run_from_database = False # Controls if each cluster node attempts to get its info directly from the DB
 
 if __name__ == '__main__':
     # Change these for each run
@@ -53,10 +54,6 @@ if __name__ == '__main__':
 
     job_name = '%s-%s_%s' % (time.strftime("%y%m%d"), getpass.getuser(), prediction_set_id)
     output_dir = os.path.join(job_output_directory, job_name )
-    output_data_dir = os.path.join(output_dir, 'data')
-    
-    if not os.path.isdir(output_data_dir):
-        os.makedirs(output_data_dir)
 
     settings['scriptname'] = prediction_set_id + '_run'
     settings['tasks_per_process'] = 1
@@ -64,9 +61,85 @@ if __name__ == '__main__':
     settings['mem_free'] = '1.2G'
     settings['output_dir'] = output_dir
     settings['db_id'] = prediction_set_id
-    settings['run_from_database'] = True
+    settings['run_from_database'] = run_from_database
 
-    write_run_file(settings, database_run = True)
+    if run_from_database:
+        # Now get run settings from database and save to pickle file
+        job_dict = {}
+        output_data_dir = os.path.join(settings['output_dir'], 'data')
+
+        if not os.path.isdir(output_data_dir):
+            os.makedirs(output_data_dir)
+
+        prediction_ids = sorted( ppi_api.get_prediction_ids(prediction_set_id) )
+
+        for task_id in xrange(0, int(settings['numjobs'])):
+            prediction_id = prediction_ids[task_id]
+            job_details = ppi_api.get_job_details(prediction_id)
+            if not job_details['DevelopmentProtocolID']:
+                raise Exception("Missing DevelopmentProtocolID")
+            development_protocol = ppi_api.get_development_protocol(job_details['DevelopmentProtocolID'])
+            app_name = development_protocol['Application']
+            flags_list = development_protocol['TemplateCommandLine'].strip().split()
+            file_tuples = [] # List of names, contents
+            for file_info in job_details['Files']['Input']:
+                file_tuples.append( (file_info['Filename'], file_info['Content']) )
+            substitution_parameters = json.loads(job_details['JSONParameters'])
+            extra_parameters = job_details['ExtraParameters']
+            job_data_dir = os.path.join(output_data_dir, str(prediction_id))
+
+            # Add extra parameters to flags_list
+            for extra_parameter in extra_parameters.strip().split():
+                flags_list.append(extra_parameter)    
+
+            files_dict = {} # Maps name to filepath position
+            for file_name, file_contents in file_tuples:
+                new_file_location = os.path.join(job_data_dir, file_name)
+                with open(new_file_location, 'w') as f:
+                    f.write(file_contents)
+                files_dict[file_name] = new_file_location
+
+            arglist = []
+            argdict = {}
+            parsing_scriptvars = False
+            scriptvar_list = []
+            for flag in flags_list:
+                matches = re.findall('%%.+%%', flag)
+                for match_str in matches:
+                    if match_str in substitution_parameters:
+                        if substitution_parameters[match_str] in files_dict:
+                            flag = flag.replace(match_str, files_dict[substitution_parameters[match_str]])
+                        else:
+                            flag = flag.replace(match_str, substitution_parameters[match_str])
+
+                if parsing_scriptvars:
+                    if '=' in flag:
+                        scriptvar_list.append(flag)
+                    else:
+                        parsing_scriptvars = False
+
+                if flag == '-parser:script_vars':
+                    parsing_scriptvars = True            
+
+                # Check if argument is a file
+                if flag in files_dict:
+                    last_arg = arglist.pop()
+                    file_flag = files_dict[flag]
+                    argdict[last_arg] = files_dict[flag]
+                else:
+                    args.append(flag)
+
+            if len(scriptvar_list) > 0:
+                argdict['-parser:script_vars'] = scriptvar_list
+
+            if len(arglist) > 0:
+                argdict['FLAGLIST'] = arglist
+
+            job_dict[prediction_id] = argdict
+    else:
+         job_dict = None       
+            
+    write_run_file(settings, database_run = True, job_dict = job_dict)
 
     print 'Job files written to directory:', os.path.abspath(output_dir)
     
