@@ -13,7 +13,7 @@
   </MOVERS>
 
   <FILTERS>
-    <DdGScan name=alascan task_operations=rrf repeats=1 scorefxn=fa_interface report_diffs=1 write2pdb=0 ddG_mover=ddgmover />
+    <DdGScan name=alascan task_operations=rrf repeats=3 scorefxn=fa_interface report_diffs=1 write2pdb=0 ddG_mover=ddgmover />
   </FILTERS>
 
   <MOVERS>
