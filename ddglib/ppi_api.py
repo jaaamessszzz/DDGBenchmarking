@@ -170,10 +170,117 @@ class BindingAffinityDDGInterface(ddG):
 
     @informational_job
     def get_complex_details(self, complex_id):
-        results = self.DDG_db.execute_select('SELECT * FROM PPComplex WHERE ID=%s', parameters=(complex_id, ))
+        results = self.DDG_db_utf.execute_select('SELECT * FROM PPComplex WHERE ID=%s', parameters=(complex_id, ))
         if len(results) == 1:
             return results[0]
         return None
+
+
+    def _get_dataset_record_with_checks(self, dataset_experiment_id, dataset_id = None):
+        if dataset_id:
+            de = self.DDG_db_utf.execute_select('SELECT * FROM PPIDataSetDDG WHERE ID=%s AND DataSetID=%s', parameters=(dataset_experiment_id, dataset_id))
+            if len(de) != 1:
+                raise colortext.Exception('Dataset record #%d does not exist for/correspond to the dataset %s.' % (dataset_experiment_id, dataset_id))
+        else:
+            de = self.DDG_db_utf.execute_select('SELECT * FROM PPIDataSetDDG WHERE ID=%s', parameters=(dataset_experiment_id,))
+            if len(de) != 1:
+                raise colortext.Exception('Dataset record #%d does not exist.' % (dataset_experiment_id, ))
+        return de[0]
+
+
+    @informational_job
+    def get_dataset_experiment_details(self, dataset_experiment_id, dataset_id = None):
+        de = self._get_dataset_record_with_checks(dataset_experiment_id, dataset_id = dataset_id)
+        PDBFileID = de['PDBFileID']
+        PPMutagenesisID = de['PPMutagenesisID']
+        ComplexID = self.DDG_db.execute_select('SELECT PPComplexID FROM PPMutagenesis WHERE ID=%s', parameters=(PPMutagenesisID,))[0]['PPComplexID']
+        SetNumber = None
+
+        # todo: this is a nasty hack due to the fact that we do not currently store the SetNumber and PPComplexID in the PPIDataSetDDG table
+        pdb_sets = self.DDG_db.execute_select('SELECT * FROM PPIPDBSet WHERE PPComplexID=%s AND IsComplex=1', parameters=(ComplexID,))
+        if len(pdb_sets) > 1:
+            probable_sets = self.DDG_db.execute_select('SELECT DatabaseKey FROM PPIDatabaseComplex WHERE DatabaseName LIKE "%%SKEMPI%%" AND DatabaseKey LIKE "%%%s%%" AND PPComplexID=%s' % (PDBFileID, ComplexID))
+            assert(len(probable_sets) == 1)
+            match_pdb_chains = sorted(list(''.join(probable_sets[0]['DatabaseKey'].split('_')[1:])))
+
+            pdb_sets = {}
+            for set_record in self.DDG_db.execute_select('SELECT * FROM PPIPDBPartnerChain WHERE PPComplexID=%s AND PDBFileID=%s', parameters=(ComplexID, PDBFileID)):
+                pdb_sets[set_record['SetNumber']] = pdb_sets.get(set_record['SetNumber'], [])
+                pdb_sets[set_record['SetNumber']].append(set_record['Chain'])
+                pdb_sets[set_record['SetNumber']] = sorted(pdb_sets[set_record['SetNumber']])
+
+            hits = []
+            for k, v in pdb_sets.iteritems():
+                if v == match_pdb_chains:
+                    hits.append(k)
+            if not len(hits) == 1:
+                raise Exception('Error: multiple possible PDB sets for dataset record #%d and PPMutagenesisID=%s.' % (dataset_experiment_id, PPMutagenesisID))
+            SetNumber = hits[0]
+        elif len(pdb_sets) == 0:
+            raise Exception('Error: no possible PDB sets for dataset record #%d and PPMutagenesisID=%s.' % (dataset_experiment_id, PPMutagenesisID))
+        else:
+            SetNumber = pdb_sets[0]['SetNumber']
+
+        pdb_mutations = self.get_pdb_mutations_for_mutagenesis(PPMutagenesisID, PDBFileID, SetNumber, complex_id = ComplexID)
+
+        d = dict(
+            _DataSetID = de['ID'],
+            RecordID = de['RecordNumber'],
+            PublishedDDG = de['PublishedDDG'],
+            PDBFileID = PDBFileID,
+            DerivedMutation = de['RecordIsDerivative'] == 1,
+            PossiblyBadRecord = de['PossibleError'] == 1,
+            Notes = [de['Remark'], de['CorrectionRemark']],
+            Mutagenesis = dict(
+                PPMutagenesisID = PPMutagenesisID,
+            ),
+            Complex = self.get_complex_details(ComplexID),
+            Structure = dict(
+                PDBFileID = PDBFileID,
+                SetNumber = SetNumber,
+                Partners = self.get_chains_for_mutatagenesis(PPMutagenesisID, PDBFileID, SetNumber, complex_id = ComplexID),
+            ),
+            PDBMutations = pdb_mutations,
+        )
+        if de['PublishedPDBFileID'] != PDBFileID:
+            d['Notes'].append("The PDB ID was changed by Shane O'Connor from %s to %s." % (de['PublishedPDBFileID'], PDBFileID))
+        d['Notes'] = '. '.join([x for x in d['Notes'] if x])
+        d['ExperimentalDDGs'] = self.get_ddg_values_for_dataset_record(dataset_experiment_id, dataset_id = dataset_id)
+        d['DDG'] = sum([((e.get('Positive') or {}).get('DDG', 0) - (e.get('Negative') or {}).get('DDG', 0)) for e in d['ExperimentalDDGs']])
+        # todo: add SCOPe class, Pfam domain
+        pprint.pprint(d)
+        import sys
+        sys.exit(0)
+        return d
+
+
+    def get_ddg_values_for_dataset_record(self, dataset_experiment_id, dataset_id = None):
+        de = self._get_dataset_record_with_checks(dataset_experiment_id, dataset_id = dataset_id)
+        ddg_pairs = self.DDG_db.execute_select('SELECT PositiveDependentPPIDDGID, NegativeDependentPPIDDGID FROM PPIDataSetDDGSource WHERE PPIDataSetDDGID=%s', parameters=(dataset_experiment_id,))
+        assert(ddg_pairs)
+        ddgs = []
+        for ddg_pair in ddg_pairs:
+            paired_record = {'Positive' : None, 'Negative' : None}
+            if ddg_pair['PositiveDependentPPIDDGID']:
+                positive_record = self.DDG_db.execute_select('SELECT * FROM PPIDDG WHERE ID=%s', parameters=(ddg_pair['PositiveDependentPPIDDGID'],))[0]
+                paired_record['Positive'] = dict(
+                    DDG = positive_record['DDG'],
+                    LocationOfValueInPublication = positive_record['LocationOfValueInPublication'],
+                    Publication = positive_record['Publication'],
+                    Temperature = positive_record['Temperature'],
+                    pH = positive_record['pH'],
+                )
+            if ddg_pair['NegativeDependentPPIDDGID']:
+                negative_record = self.DDG_db.execute_select('SELECT * FROM PPIDDG WHERE ID=%s', parameters=(ddg_pair['NegativeDependentPPIDDGID'],))[0]
+                paired_record['Negative'] = dict(
+                    DDG = negative_record['DDG'],
+                    LocationOfValueInPublication = negative_record['LocationOfValueInPublication'],
+                    Publication = negative_record['Publication'],
+                    Temperature = negative_record['Temperature'],
+                    pH = negative_record['pH'],
+                )
+            ddgs.append(paired_record)
+        return ddgs
 
 
     @informational_job
@@ -203,6 +310,58 @@ class BindingAffinityDDGInterface(ddG):
             ),
             PDBMutations = pdb_mutations,
         )
+
+
+    def _export_dataset(self, dataset_id):
+        '''Returns a dict containing the dataset information.'''
+        dataset_record = self.DDG_db.execute_select('SELECT * FROM DataSet WHERE ID=%s', parameters=(dataset_id,))
+        if not dataset_record:
+            raise Exception('Dataset %s does not exist in the database.' % dataset_id)
+        dataset_record = dataset_record[0]
+        if dataset_record['DatasetType'] != 'Binding affinity' and dataset_record['DatasetType'] != 'Protein stability and binding affinity':
+            raise Exception('The dataset %s does not contain any binding affinity data..' % dataset_id)
+
+        # Read the UserPPDataSetExperiment details
+        data = []
+        ref_ids = set()
+        for dataset_ddg in self.DDG_db.execute_select('SELECT * FROM PPIDataSetDDG WHERE DataSetID=%s ORDER BY Section, RecordNumber', parameters=(dataset_id,)):
+            de_details = self.get_dataset_experiment_details(dataset_ddg['ID'], dataset_id)
+            for ddg_pair in de_details['ExperimentalDDGs']:
+                if ddg_pair['Positive']: ref_ids.add(ddg_pair['Positive']['Publication'])
+                if ddg_pair['Negative']: ref_ids.add(ddg_pair['Negative']['Publication'])
+            data.append(de_details)
+
+        references = {}
+        for ref_id in sorted(ref_ids):
+            references[ref_id] = self.get_publication(ref_id)
+
+        return dict(
+            Data = data,
+            References = references
+            )
+
+
+    @informational_job
+    def export_dataset_to_csv(self, dataset_id):
+        '''Returns the dataset information in CSV format.'''
+        dataset_set = self._export_dataset(dataset_id)['Data']
+        lines = ['\t'.join(['Record #', 'Mutagenesis #', 'Partner 1', 'Partner 2', 'PDB ID', 'Partner 1 chains', 'Partner 2 chains', 'Mutations', 'DDG', 'PublishedDDG', 'IsDerivedMutation'])]
+        for record in dataset_set:
+            line = '\t'.join([
+                str(record['RecordID']),
+                str(record['Mutagenesis']['PPMutagenesisID']),
+                record['Complex']['LShortName'],
+                record['Complex']['RShortName'],
+                record['PDBFileID'],
+                ','.join(sorted(record['Structure']['Partners']['L'])),
+                ','.join(sorted(record['Structure']['Partners']['R'])),
+                ','.join(['%s:%s%s%s' % (m['Chain'], m['WildTypeAA'], m['ResidueID'], m['MutantAA']) for m in record['PDBMutations']]),
+                str(record['DDG']),
+                str(record['PublishedDDG']),
+                str(int(record['DerivedMutation'])),
+            ])
+            lines.append(line)
+        return ('\n'.join(lines)).encode('utf8', 'replace')
 
 
     ##### Public API: Rosetta-related functions
@@ -353,7 +512,6 @@ class BindingAffinityDDGInterface(ddG):
                 if len(existing_results) > 0: continue
 
                 # Test the prediction setup
-                # print('%d/%d' % (count, len(user_dataset_experiments)))
                 prediction_id = self.add_job_by_user_dataset_record(prediction_set_id, user_dataset_name, ude['ID'], protocol_id, extra_rosetta_command_flags = extra_rosetta_command_flags, keep_hetatm_lines = keep_hetatm_lines, input_files = input_files, test_only = True, pdb_residues_to_rosetta_cache = pdb_residues_to_rosetta_cache)
                 # Progress counter
                 count += 1
@@ -400,6 +558,114 @@ class BindingAffinityDDGInterface(ddG):
             # Progress counter
             count += 1
             if showprogress and count % records_per_dot == 0: colortext.write(".", "green", flush = True)
+            if short_run and count > 4: break
+
+        if failed_jobs:
+            colortext.error('Some jobs failed to run:\n%s' % pprint.pformat(failed_jobs))
+        if not quiet: print('')
+        return True
+
+
+
+    def _create_pdb_residues_to_rosetta_cache_mp(self, pdb_residues_to_rosetta_cache, pdb_file_id, pdb_chains_to_keep, extra_rosetta_command_flags, keep_hetatm_lines):
+        # Retrieve the PDB file content, strip out the unused chains, and create a PDB object
+        raise Exception('Shane should finish this')
+        assert(type(pdb_residues_to_rosetta_cache) == None)# use the manager dictproxy)
+        pdb_file = self.DDG_db.execute_select("SELECT * FROM PDBFile WHERE ID=%s", parameters = (pdb_file_id,))
+        p = PDB(pdb_file[0]['Content'])
+        p.strip_to_chains(list(pdb_chains_to_keep))
+        if not keep_hetatm_lines:
+            p.strip_HETATMs()
+        stripped_p = PDB('\n'.join(p.lines))
+
+        stripped_p.construct_pdb_to_rosetta_residue_map(self.rosetta_scripts_path, self.rosetta_database_path, extra_command_flags = extra_rosetta_command_flags)
+        atom_to_rosetta_residue_map = stripped_p.get_atom_sequence_to_rosetta_json_map()
+        rosetta_to_atom_residue_map = stripped_p.get_rosetta_sequence_to_atom_json_map()
+        cache_key = (pdb_file_id, ''.join(sorted(pdb_chains_to_keep)), self.rosetta_scripts_path, self.rosetta_database_path, extra_rosetta_command_flags)
+        pdb_residues_to_rosetta_cache[cache_key] = dict(
+            stripped_p = stripped_p,
+            atom_to_rosetta_residue_map = atom_to_rosetta_residue_map,
+            rosetta_to_atom_residue_map = rosetta_to_atom_residue_map)
+
+
+    @job_creator
+    def add_prediction_run_mp(self, prediction_set_id, user_dataset_name, extra_rosetta_command_flags = None, protocol_id = None, tagged_subset = None, keep_hetatm_lines = False, input_files = {}, quiet = False, only_single_mutations = False, short_run = False, show_full_errors = False):
+        '''This is a multiprocessing version of add_prediction_run and should be used in favor of that function as it runs faster.
+
+           It takes advantage of parallelism at two points - creating the stripped PDB files and mutfiles for input and
+           inserting the jobs (MD5 is run multiple times for each job).
+           It was simple/quicker to write this as a 2-step method with a bottleneck in the middle i.e. it waits until all
+           stripped PDB files are generated before adding the jobs.
+           This could be made even more parallel by removing the bottleneck i.e. the process which strips the PDBs could
+           then call _add_job immediately rather than waiting for the other calls to _create_pdb_residues_to_rosetta_cache_mp
+           to complete.
+           '''
+
+        # Check preconditions
+        assert(not(input_files)) # todo: do something with input_files when we use that here - call self._add_file_content, associate the filenames with the FileContent IDs, and pass that dict to add_job which will create PredictionPPIFile records
+        assert(only_single_mutations == False) # todo: support this later? it may make more sense to just define new UserDataSets
+        self._add_prediction_run_preconditions(prediction_set_id, user_dataset_name, tagged_subset)
+
+        # Get the list of user dataset experiment records
+        user_dataset_experiments = self.get_user_dataset_experiment_ids(user_dataset_name, tagged_subset = tagged_subset)
+        assert(set([u['IsComplex'] for u in user_dataset_experiments]) == set([1,]))
+        if not user_dataset_experiments:
+            return False
+
+        # Count the number of individual PDB files
+        pdb_file_ids = set([u['PDBFileID'] for u in user_dataset_experiments])
+        tagged_subset_str = ''
+        if not quiet:
+            if tagged_subset:
+                tagged_subset_str = 'subset "%s" of ' % tagged_subset
+
+        # Create a cache to speed up job insertion
+        #todo: start back here  pdb_residues_to_rosetta_cache = manager dictproxy
+
+        # Create the stripped PDBs and residue maps in parallel using the multiprocessing module
+    #todo: write this function on Monday - get_user_dataset_pdb_partner_chains should return a set (<list of {'id' : pdb_file_id, 'L' : <list of chain ids>, , 'R' : <list of chain ids>} dicts>)
+        pdb_partner_chains = self.get_user_dataset_pdb_partner_chains(user_dataset_name, tagged_subset = tagged_subset)
+        #todo: start back here for ppc in pdb_partner_chains:
+
+        #todo: start back here    apply_async self._create_pdb_residues_to_rosetta_cache_mp(pdb_residues_to_rosetta_cache, ppc['id'], set(ppc['L'] + ppc['R']), extra_rosetta_command_flags, keep_hetatm_lines)
+        #todo: start back here .join()
+
+        # Progress counter setup
+        failed_jobs = {}
+        if not quiet:
+            colortext.message('Adding %d predictions spanning %d PDB files for %suser dataset "%s" using protocol %s.' % (len(user_dataset_experiments), len(pdb_file_ids), tagged_subset_str, user_dataset_name, str(protocol_id or 'N/A')))
+        count, records_per_dot = 0, 50
+        showprogress = not(quiet) and len(user_dataset_experiments) > 300
+        if showprogress: print("|" + ("*" * (int(len(user_dataset_experiments)/records_per_dot)-2)) + "|")
+
+        # Add the individual predictions
+        for ude in user_dataset_experiments:
+
+            # If the mutagenesis already exists in the prediction set, do not add it again
+            if protocol_id:
+                existing_results = self.DDG_db.execute_select("SELECT * FROM PredictionPPI WHERE PredictionSet=%s AND UserPPDataSetExperimentID=%s AND ProtocolID=%s", parameters=(prediction_set_id, ude['ID'], protocol_id))
+            else:
+                existing_results = self.DDG_db.execute_select("SELECT * FROM PredictionPPI WHERE PredictionSet=%s AND UserPPDataSetExperimentID=%s AND ProtocolID IS NULL", parameters=(prediction_set_id, ude['ID']))
+            if len(existing_results) == 0:
+                # Add the prediction
+                try:
+                    user_dataset_id = self.get_defined_user_datasets()[user_dataset_name]['ID']
+                    prediction_id = self.add_job_by_user_dataset_record(prediction_set_id, user_dataset_name, ude['ID'], protocol_id, extra_rosetta_command_flags = extra_rosetta_command_flags,  keep_hetatm_lines = keep_hetatm_lines, input_files = input_files, test_only = False, pdb_residues_to_rosetta_cache = pdb_residues_to_rosetta_cache)
+                except Exception, e:
+                    user_dataset_id = self.get_defined_user_datasets()[user_dataset_name]['ID']
+                    ude_record = self.DDG_db.execute_select('SELECT * FROM UserPPDataSetExperiment WHERE ID=%s AND UserDataSetID=%s', parameters=(ude['ID'], user_dataset_id))
+                    ude_record = ude_record[0]
+                    assert(ude_record['ID'] == ude['ID'])
+                    colortext.error('Adding the prediction for UserPPDataSetExperimentID %(ID)d failed (%(PDBFileID)s).' % ude_record)
+                    failed_jobs[ude_record['PDBFileID']] = failed_jobs.get(ude_record['PDBFileID'], 0)
+                    failed_jobs[ude_record['PDBFileID']] += 1
+                    if show_full_errors:
+                        print(e)
+                        print(traceback.format_exc())
+
+            # Progress counter
+            count += 1
+            if showprogress and count % records_per_dot == 0: colortext.write(".", "cyan", flush = True)
             if short_run and count > 4: break
 
         if failed_jobs:
@@ -462,14 +728,8 @@ class BindingAffinityDDGInterface(ddG):
             stripped_p = PDB('\n'.join(p.lines))
 
         # Determine PDB chains to move
-        pdb_chains_to_move = set(pdb_chains['R'])
-        pdb_chains_to_move_str = ''
-        pdb_chains_to_move = sorted(list(pdb_chains_to_move))
-        for i, chain in enumerate(pdb_chains_to_move):
-            pdb_chains_to_move_str += chain
-            if i + 1 < len(pdb_chains_to_move):
-                pdb_chains_to_move_str += ','
-        
+        pdb_chains_to_move_str = ','.join(sorted(set(pdb_chains['R'])))
+
         # Check for CSE and MSE
         try:
             if 'CSE' in stripped_p.residue_types:
@@ -623,6 +883,9 @@ class BindingAffinityDDGInterface(ddG):
         if include_files:
             prediction_record['Files'] = self.get_job_files(prediction_id, truncate_content = truncate_content)
 
+        mutfile_content = self.create_mutfile(prediction_id)
+
+
         # Read the UserPPDataSetExperiment details
         user_dataset_experiment_id = prediction_record['UserPPDataSetExperimentID']
         ude_details = self.get_user_dataset_experiment_details(user_dataset_experiment_id)
@@ -706,11 +969,14 @@ class BindingAffinityDDGInterface(ddG):
 
     #== Information API =======================================================================
 
+
+    @informational_job
     def get_development_protocol(self, development_protocol_id):
         results = self.DDG_db.execute_select('SELECT * FROM DevelopmentProtocol WHERE ID = %s', parameters=(development_protocol_id) )
         assert( len(results) == 1 )
         return results[0]
-    
+
+
     @informational_pdb
     def _get_pdb_chains_used_for_prediction_set(self, prediction_set):
         raise Exception('not implemented yet')
@@ -764,6 +1030,7 @@ class BindingAffinityDDGInterface(ddG):
 
             predictions = DDG_db.execute("UPDATE Prediction SET Cost=%s WHERE ID=%s", parameters=(num_residues, prediction['ID'],))
 
+
     def _get_dev_protocol_id(self, name):
         dev_protocol_ids = self.DDG_db.execute_select("SELECT ID FROM DevelopmentProtocol WHERE Name=%s", parameters = (name))
         if len(dev_protocol_ids) == 0:
@@ -772,7 +1039,8 @@ class BindingAffinityDDGInterface(ddG):
             return int(dev_protocol_ids[0]['ID'])
         else:
             raise Exception("DevelopmentProtocol table was originally set up so that names are unique; this has obviously changed")
-        
+
+
     def _create_dev_protocol(self, name, application, template_command_line):
         dev_prot_record = {
             'Name' : name,
