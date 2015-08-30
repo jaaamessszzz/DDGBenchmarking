@@ -15,7 +15,7 @@ run_from_database = False # Controls if each cluster node attempts to get its in
 
 if __name__ == '__main__':
     # Change these for each run
-    prediction_set_id = 'pack_bound_and_unbound_3cycles-3'
+    prediction_set_id = 'pack_bound_and_unbound_3cycles-4'
     script_file = 'pack_bound_and_unbound.xml'
 
     settings = parse_settings.get_dict()
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     settings['db_id'] = prediction_set_id
     settings['run_from_database'] = run_from_database
 
-    if run_from_database:
+    if not run_from_database:
         # Now get run settings from database and save to pickle file
         job_dict = {}
         output_data_dir = os.path.join(settings['output_dir'], 'data')
