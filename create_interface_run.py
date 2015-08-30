@@ -17,7 +17,7 @@ if __name__ == '__main__':
     # Change these for each run
     prediction_set_id = 'pack_bound_and_unbound_3cycles-3'
     script_file = 'pack_bound_and_unbound.xml'
-    
+
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
 
@@ -28,7 +28,7 @@ if __name__ == '__main__':
     ppi_api.add_prediction_run(prediction_set_id, 'AllBindingAffinity', tagged_subset = 'ZEMu', extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True)
 
     prediction_ids = ppi_api.get_prediction_ids(prediction_set_id)
-    
+
     # for prediction_id in prediction_ids:
     #     details = ppi_api.get_job_details(prediction_id)
     #     # ppi_api.get_chains_for_mutatagenesis(details['PPMutagenesisID'], pdb_file_id, pdb_set_number, complex_id = None)
@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
             # Add extra parameters to flags_list
             for extra_parameter in extra_parameters.strip().split():
-                flags_list.append(extra_parameter)    
+                flags_list.append(extra_parameter)
 
             files_dict = {} # Maps name to filepath position
             for file_name, file_contents in file_tuples:
@@ -119,7 +119,7 @@ if __name__ == '__main__':
                         parsing_scriptvars = False
 
                 if flag == '-parser:script_vars':
-                    parsing_scriptvars = True            
+                    parsing_scriptvars = True
 
                 # Check if argument is a file
                 if flag in files_dict:
@@ -137,12 +137,12 @@ if __name__ == '__main__':
 
             job_dict[prediction_id] = argdict
     else:
-         job_dict = None       
-            
+         job_dict = None
+
     write_run_file(settings, database_run = True, job_dict = job_dict)
 
     print 'Job files written to directory:', os.path.abspath(output_dir)
-    
+
 # Unnecessary but here is how to change the values of batch_size, priority
 # ppi_api.alter_prediction_set_batch_size(prediction_set_id, 40)
 # ppi_api.alter_prediction_set_priority(prediction_set_id, 5)
