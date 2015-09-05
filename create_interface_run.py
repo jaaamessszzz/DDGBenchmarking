@@ -131,7 +131,7 @@ if __name__ == '__main__':
                     file_flag = files_dict[flag]
                     argdict[last_arg] = files_dict[flag]
                 else:
-                    args.append(flag)
+                    arglist.append(flag)
 
             if len(scriptvar_list) > 0:
                 argdict['-parser:script_vars'] = scriptvar_list
