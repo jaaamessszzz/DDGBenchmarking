@@ -9,6 +9,7 @@ import tools.cluster_template.parse_settings as parse_settings
 import time
 import getpass
 import json
+import re
 from tools.cluster_template.write_run_file import process as write_run_file
 
 job_output_directory = 'job_output'
