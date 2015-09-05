@@ -88,6 +88,8 @@ if __name__ == '__main__':
             substitution_parameters = json.loads(job_details['JSONParameters'])
             extra_parameters = job_details['ExtraParameters']
             job_data_dir = os.path.join(output_data_dir, str(prediction_id))
+            if not os.path.isdir(job_data_dir):
+                os.makedirs(job_data_dir)
 
             # Add extra parameters to flags_list
             for extra_parameter in extra_parameters.strip().split():
