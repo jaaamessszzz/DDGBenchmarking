@@ -64,6 +64,7 @@ if __name__ == '__main__':
     settings['output_dir'] = output_dir
     if run_from_database:
         settings['db_id'] = prediction_set_id
+        job_dict = None
     else:
         settings['rosetta_args_list'] = ''
 
@@ -146,8 +147,6 @@ if __name__ == '__main__':
                 argdict['FLAGLIST'] = arglist
 
             job_dict[prediction_id] = argdict
-    else:
-         job_dict = None
 
     write_run_file(settings, database_run = run_from_database, job_dict = job_dict)
 
