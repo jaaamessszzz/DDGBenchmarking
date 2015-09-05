@@ -66,7 +66,7 @@ if __name__ == '__main__':
         settings['db_id'] = prediction_set_id
     else:
         settings['rosetta_args_list'] = ''
-        
+
         # Now get run settings from database and save to pickle file
         job_dict = {}
         output_data_dir = os.path.join(settings['output_dir'], 'data')
