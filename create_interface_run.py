@@ -62,9 +62,11 @@ if __name__ == '__main__':
     settings['numjobs'] = '%d' % len(prediction_ids)
     settings['mem_free'] = '1.2G'
     settings['output_dir'] = output_dir
-    settings['db_id'] = prediction_set_id
-
-    if not run_from_database:
+    if run_from_database:
+        settings['db_id'] = prediction_set_id
+    else:
+        settings['rosetta_args_list'] = ''
+        
         # Now get run settings from database and save to pickle file
         job_dict = {}
         output_data_dir = os.path.join(settings['output_dir'], 'data')
