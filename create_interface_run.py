@@ -17,8 +17,8 @@ run_from_database = False # Controls if each cluster node attempts to get its in
 
 if __name__ == '__main__':
     # Change these for each run
-    prediction_set_id = 'pack_bound_and_unbound_3cycles-4'
-    script_file = 'pack_bound_and_unbound.xml'
+    prediction_set_id = 'relax_pack_bound_and_unbound_3cycles-sqlite'
+    script_file = 'relax_pack_bound_and_unbound_3cycles.xml'
 
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
@@ -31,29 +31,28 @@ if __name__ == '__main__':
 
     prediction_ids = ppi_api.get_prediction_ids(prediction_set_id)
 
-    # REMOVE these comment blocks
-    # for prediction_id in prediction_ids:
-    #     details = ppi_api.get_job_details(prediction_id)
-    #     # ppi_api.get_chains_for_mutatagenesis(details['PPMutagenesisID'], pdb_file_id, pdb_set_number, complex_id = None)
-    #     print details.keys()
-    #     print details['PDBMutations']
-    #     for x in details['Files']['Input']:
-    #         for key in x.keys():
-    #             print '', key, x[key]
-    #         print x['FileRole'], x['Filetype'], x['Filename']
-    #     sys.exit(0)
+    for prediction_id in prediction_ids:
+        details = ppi_api.get_job_details(prediction_id)
+        # ppi_api.get_chains_for_mutatagenesis(details['PPMutagenesisID'], pdb_file_id, pdb_set_number, complex_id = None)
+        print details.keys()
+        print details['PDBMutations']
+        for x in details['Files']['Input']:
+            for key in x.keys():
+                print '', key, x[key]
+            print x['FileRole'], x['Filetype'], x['Filename']
+        sys.exit(0)
 
-    # ppi_api.add_development_protocol_command_lines(
-    #     prediction_set_id, prediction_set_id, 'rosetta_scripts',
-    #     '-parser:protocol ' + str(script_file) + ' -in:file:s %%input_pdb%% -parser:script_vars chainstomove=%%chainstomove%% pathtoresfile=%%pathtoresfile%% -parser:view -inout:dbms:mode sqlite3 -inout:dbms:database_name rosetta_output.db3',
-    #     rosetta_script_file = 'interface/' + script_file,
-    # )
-    # # 2x because bugs
-    # ppi_api.add_development_protocol_command_lines(
-    #     prediction_set_id, prediction_set_id, 'rosetta_scripts',
-    #     '-parser:protocol ' + str(script_file) + ' -in:file:s %%input_pdb%% -parser:script_vars chainstomove=%%chainstomove%% pathtoresfile=%%pathtoresfile%% -parser:view -inout:dbms:mode sqlite3 -inout:dbms:database_name rosetta_output.db3',
-    #     rosetta_script_file = 'interface/' + script_file,
-    # )
+    ppi_api.add_development_protocol_command_lines(
+        prediction_set_id, prediction_set_id, 'rosetta_scripts',
+        '-parser:protocol ' + str(script_file) + ' -in:file:s %%input_pdb%% -parser:script_vars chainstomove=%%chainstomove%% pathtoresfile=%%pathtoresfile%% -parser:view -inout:dbms:mode sqlite3 -inout:dbms:database_name rosetta_output.db3',
+        rosetta_script_file = 'interface/' + script_file,
+    )
+    # 2x because bugs
+    ppi_api.add_development_protocol_command_lines(
+        prediction_set_id, prediction_set_id, 'rosetta_scripts',
+        '-parser:protocol ' + str(script_file) + ' -in:file:s %%input_pdb%% -parser:script_vars chainstomove=%%chainstomove%% pathtoresfile=%%pathtoresfile%% -parser:view -inout:dbms:mode sqlite3 -inout:dbms:database_name rosetta_output.db3',
+        rosetta_script_file = 'interface/' + script_file,
+    )
 
     job_name = '%s-%s_%s' % (time.strftime("%y%m%d"), getpass.getuser(), prediction_set_id)
     output_dir = os.path.join(job_output_directory, job_name )
