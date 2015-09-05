@@ -101,7 +101,7 @@ if __name__ == '__main__':
                 new_file_location = os.path.join(job_data_dir, file_name)
                 with open(new_file_location, 'w') as f:
                     f.write(file_contents)
-                files_dict[file_name] = new_file_location
+                files_dict[file_name] = os.path.relpath(new_file_location, settings['output_dir'])
 
             arglist = []
             argdict = {}
