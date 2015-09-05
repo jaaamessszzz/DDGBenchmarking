@@ -63,7 +63,6 @@ if __name__ == '__main__':
     settings['mem_free'] = '1.2G'
     settings['output_dir'] = output_dir
     settings['db_id'] = prediction_set_id
-    settings['run_from_database'] = run_from_database
 
     if not run_from_database:
         # Now get run settings from database and save to pickle file
@@ -148,7 +147,7 @@ if __name__ == '__main__':
     else:
          job_dict = None
 
-    write_run_file(settings, database_run = True, job_dict = job_dict)
+    write_run_file(settings, database_run = run_from_database, job_dict = job_dict)
 
     print 'Job files written to directory:', os.path.abspath(output_dir)
 
