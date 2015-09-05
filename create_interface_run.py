@@ -82,6 +82,10 @@ if __name__ == '__main__':
                 raise Exception("Missing DevelopmentProtocolID")
             development_protocol = ppi_api.get_development_protocol(job_details['DevelopmentProtocolID'])
             app_name = development_protocol['Application']
+            if not settings['appname']:
+                settings['appname'] = app_name
+            else:
+                assert( settings['appname'] == app_name )
             flags_list = development_protocol['TemplateCommandLine'].strip().split()
             file_tuples = [] # List of names, contents
             for file_info in job_details['Files']['Input']:
@@ -125,13 +129,14 @@ if __name__ == '__main__':
                 if flag == '-parser:script_vars':
                     parsing_scriptvars = True
 
-                # Check if argument is a file
-                if flag in files_dict:
-                    last_arg = arglist.pop()
-                    file_flag = files_dict[flag]
-                    argdict[last_arg] = files_dict[flag]
-                else:
-                    arglist.append(flag)
+                if not parsing_scriptvars:
+                    # Check if argument is a file
+                    if flag in files_dict:
+                        last_arg = arglist.pop()
+                        file_flag = files_dict[flag]
+                        argdict[last_arg] = files_dict[flag]
+                    else:
+                        arglist.append(flag)
 
             if len(scriptvar_list) > 0:
                 argdict['-parser:script_vars'] = scriptvar_list
