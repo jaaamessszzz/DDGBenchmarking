@@ -82,7 +82,7 @@ if __name__ == '__main__':
                 raise Exception("Missing DevelopmentProtocolID")
             development_protocol = ppi_api.get_development_protocol(job_details['DevelopmentProtocolID'])
             app_name = development_protocol['Application']
-            if not settings['appname']:
+            if 'appname' not in settings:
                 settings['appname'] = app_name
             else:
                 assert( settings['appname'] == app_name )
