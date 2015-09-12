@@ -31,16 +31,18 @@ if __name__ == '__main__':
 
     prediction_ids = ppi_api.get_prediction_ids(prediction_set_id)
 
-    for prediction_id in prediction_ids:
-        details = ppi_api.get_job_details(prediction_id)
-        # ppi_api.get_chains_for_mutatagenesis(details['PPMutagenesisID'], pdb_file_id, pdb_set_number, complex_id = None)
-        print details.keys()
-        print details['PDBMutations']
-        for x in details['Files']['Input']:
-            for key in x.keys():
-                print '', key, x[key]
-            print x['FileRole'], x['Filetype'], x['Filename']
-        sys.exit(0)
+    # debugging lines
+    # for prediction_id in prediction_ids:
+    #     details = ppi_api.get_job_details(prediction_id)
+
+    #     ppi_api.get_chains_for_mutatagenesis(details['PPMutagenesisID'], pdb_file_id, pdb_set_number, complex_id = None)
+    #     print details.keys()
+    #     print details['PDBMutations']
+    #     for x in details['Files']['Input']:
+    #         for key in x.keys():
+    #             print '', key, x[key]
+    #         print x['FileRole'], x['Filetype'], x['Filename']
+    #     sys.exit(0)
 
     ppi_api.add_development_protocol_command_lines(
         prediction_set_id, prediction_set_id, 'rosetta_scripts',
