@@ -17,8 +17,8 @@ run_from_database = False # Controls if each cluster node attempts to get its in
 
 if __name__ == '__main__':
     # Change these for each run
-    prediction_set_id = 'relax_pack_bound_and_unbound_3cycles-sqlite'
-    script_file = 'relax_pack_bound_and_unbound_3cycles.xml'
+    prediction_set_id = 'minimize_pack_bound_and_unbound_3cycles_001-sql'
+    script_file = 'minimize_pack_bound_and_unbound_3cycles.xml'
 
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
