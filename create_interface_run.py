@@ -1,4 +1,5 @@
 import os, sys
+import shutil
 
 # Add parent directory to path
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -44,27 +45,28 @@ if __name__ == '__main__':
     #         print x['FileRole'], x['Filetype'], x['Filename']
     #     sys.exit(0)
 
-    ppi_api.add_development_protocol_command_lines(
-        prediction_set_id, prediction_set_id, 'rosetta_scripts',
-        '-parser:protocol ' + str(script_file) + ' -in:file:s %%input_pdb%% -parser:script_vars chainstomove=%%chainstomove%% pathtoresfile=%%pathtoresfile%% -parser:view -inout:dbms:mode sqlite3 -inout:dbms:database_name rosetta_output.db3',
-        rosetta_script_file = 'interface/' + script_file,
-    )
-    # 2x because bugs
-    ppi_api.add_development_protocol_command_lines(
-        prediction_set_id, prediction_set_id, 'rosetta_scripts',
-        '-parser:protocol ' + str(script_file) + ' -in:file:s %%input_pdb%% -parser:script_vars chainstomove=%%chainstomove%% pathtoresfile=%%pathtoresfile%% -parser:view -inout:dbms:mode sqlite3 -inout:dbms:database_name rosetta_output.db3',
-        rosetta_script_file = 'interface/' + script_file,
-    )
-
     existing_job = False
     end_job_name  = '%s_%s' % (getpass.getuser(), prediction_set_id)
     for d in os.listdir(job_output_directory):
-        if os.path.isdir(d) and end_job_name in d:
+        if os.path.isdir(os.path.join(job_output_directory, d)) and end_job_name in d:
             print 'Found existing job:', d
             job_name = d
             existing_job = True
     if not existing_job:
         job_name = '%s-%s' % (time.strftime("%y%m%d"), end_job_name)
+    
+        ppi_api.add_development_protocol_command_lines(
+            prediction_set_id, prediction_set_id, 'rosetta_scripts',
+            '-parser:protocol ' + str(script_file) + ' -in:file:s %%input_pdb%% -parser:script_vars chainstomove=%%chainstomove%% pathtoresfile=%%pathtoresfile%% -parser:view -inout:dbms:mode sqlite3 -inout:dbms:database_name rosetta_output.db3',
+            rosetta_script_file = 'interface/' + script_file,
+        )
+        # 2x because bugs
+        ppi_api.add_development_protocol_command_lines(
+            prediction_set_id, prediction_set_id, 'rosetta_scripts',
+            '-parser:protocol ' + str(script_file) + ' -in:file:s %%input_pdb%% -parser:script_vars chainstomove=%%chainstomove%% pathtoresfile=%%pathtoresfile%% -parser:view -inout:dbms:mode sqlite3 -inout:dbms:database_name rosetta_output.db3',
+            rosetta_script_file = 'interface/' + script_file,
+        )
+
     output_dir = os.path.join(job_output_directory, job_name )
 
     settings['scriptname'] = prediction_set_id + '_run'
@@ -89,12 +91,18 @@ if __name__ == '__main__':
 
         for prediction_id in prediction_ids:
             # Check if job already ran
+            prediction_id_dir = os.path.join(output_dir, str(prediction_id))
             if existing_job:
-                rosetta_db3_file = os.path.join( os.path.join(output_dir, prediction_id), 'rosetta_output.db3' )
+                rosetta_db3_file = os.path.join( prediction_id_dir, 'rosetta_output.db3' )
                 if os.path.isfile(rosetta_db3_file):
                     print 'Skipping', prediction_id
                     settings['numjobs'] = settings['numjobs'] - 1
                     continue
+                if os.path.isdir(prediction_id_dir):
+                    print 'Job directory %s already exists, deleting' % prediction_id_dir
+                    shutil.rmtree(prediction_id_dir)
+                else:
+                    print 'Creating new job directory %s' % prediction_id_dir
 
             job_details = ppi_api.get_job_details(prediction_id)
             if not job_details['DevelopmentProtocolID']:
