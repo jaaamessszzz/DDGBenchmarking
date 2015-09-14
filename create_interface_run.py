@@ -56,12 +56,20 @@ if __name__ == '__main__':
         rosetta_script_file = 'interface/' + script_file,
     )
 
-    job_name = '%s-%s_%s' % (time.strftime("%y%m%d"), getpass.getuser(), prediction_set_id)
+    existing_job = False
+    end_job_name  = '%s_%s' % (getpass.getuser(), prediction_set_id)
+    for d in os.listdir(job_output_directory):
+        if os.path.isdir(d) and end_job_name in d:
+            print 'Found existing job:', d
+            job_name = d
+            existing_job = True
+    if not existing_job:
+        job_name = '%s-%s' % (time.strftime("%y%m%d"), end_job_name)
     output_dir = os.path.join(job_output_directory, job_name )
 
     settings['scriptname'] = prediction_set_id + '_run'
     settings['tasks_per_process'] = 1
-    settings['numjobs'] = '%d' % len(prediction_ids)
+    settings['numjobs'] = len(prediction_ids)
     settings['mem_free'] = '1.2G'
     settings['output_dir'] = output_dir
     if run_from_database:
@@ -79,8 +87,15 @@ if __name__ == '__main__':
 
         prediction_ids = sorted( ppi_api.get_prediction_ids(prediction_set_id) )
 
-        for task_id in xrange(0, int(settings['numjobs'])):
-            prediction_id = prediction_ids[task_id]
+        for prediction_id in prediction_ids:
+            # Check if job already ran
+            if existing_job:
+                rosetta_db3_file = os.path.join( os.path.join(output_dir, prediction_id), 'rosetta_output.db3' )
+                if os.path.isfile(rosetta_db3_file):
+                    print 'Skipping', prediction_id
+                    settings['numjobs'] = settings['numjobs'] - 1
+                    continue
+
             job_details = ppi_api.get_job_details(prediction_id)
             if not job_details['DevelopmentProtocolID']:
                 raise Exception("Missing DevelopmentProtocolID")
