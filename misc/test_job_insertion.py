@@ -32,6 +32,29 @@ def export_datasets():
         write_file('%s.export.json' % dataset_set_short_name, dataset_set_json)
 
 
+if __name__ == '__main__':
+    ppi_api = get_ppi_interface(read_file('ddgdb.pw'),
+                                rosetta_scripts_path =  '/home/oconchus/t14benchmarking/r57934/main/source/bin/rosetta_scripts.linuxgccrelease',
+                                rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
+
+    #method_id = ppi_api.get_score_method_id('interface', method_authors = 'kyle')
+    #pprint.pprint(ppi_api.get_score_method_details())
+
+    s1 = ppi_api.get_score_dict(prediction_id = 1265, score_method_id = '4', score_type = 'WildTypeLPartner', structure_id = '23')
+    s2 = ppi_api.get_score_dict(prediction_id = 1265, score_method_id = '4', score_type = 'WildTypeRPartner', structure_id = '23')
+    s3 = ppi_api.get_score_dict(prediction_id = 1265, score_method_id = '4', score_type = 'WildTypeComplex', structure_id = '24')
+
+    ppi_api.store_scores('ZEMu run 1', 1265, [s1, s2, s3])
+
+    #print(ppi_api.DDG_db.FieldNames.__dict__('PredictionPPIStructureScore'))#ppi_api.])
+
+
+    #ScoreMethodID - 1,2,3,4
+    #ScoreType - 'DDG', 'WildType', 'Mutant', 'WildTypeLPartner', 'WildTypeRPartner', 'WildTypeComplex', 'MutantLPartner', 'MutantRPartner', 'MutantComplex' VARCHAR(32)
+    #StructureID -  nstruct 1-50
+    #DDG - score term
+
+
 sys.exit(0)
 
 if __name__ == '__main__':
