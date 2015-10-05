@@ -39,12 +39,13 @@ if __name__ == '__main__':
 
     #method_id = ppi_api.get_score_method_id('interface', method_authors = 'kyle')
     #pprint.pprint(ppi_api.get_score_method_details())
-
+    sys.exit(0)
     s1 = ppi_api.get_score_dict(prediction_id = 1265, score_method_id = '4', score_type = 'WildTypeLPartner', structure_id = '23')
     s2 = ppi_api.get_score_dict(prediction_id = 1265, score_method_id = '4', score_type = 'WildTypeRPartner', structure_id = '23')
     s3 = ppi_api.get_score_dict(prediction_id = 1265, score_method_id = '4', score_type = 'WildTypeComplex', structure_id = '24')
-
+    print('r')
     ppi_api.store_scores('ZEMu run 1', 1265, [s1, s2, s3])
+    print('s')
 
     #print(ppi_api.DDG_db.FieldNames.__dict__('PredictionPPIStructureScore'))#ppi_api.])
 
