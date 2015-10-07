@@ -26,6 +26,7 @@ from tools.bio.basics import ChainMutation
 from tools.fs.fsio import read_file
 from tools.rosetta.input_files import Mutfile, Resfile
 
+
 def get_interface_with_config_file(host_config_name = 'kortemmelab', rosetta_scripts_path = None, rosetta_database_path = None):
     # Uses ~/.my.cnf to get authentication information
     ### Example .my.cnf (host_config_name will equal guybrush2):
@@ -63,9 +64,9 @@ def get_interface_with_config_file(host_config_name = 'kortemmelab', rosetta_scr
     if not user or not password or not host:
         raise Exception("Couldn't find host(%s), username(%s), or password in section %s in %s" % (host, user, host_config_name, my_cnf_path) )
 
-    return get_interface(password, username=user, hostname=host, rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = rosetta_database_path)
+    return get_interface(password, username = user, hostname = host, rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = rosetta_database_path)
 
-def get_interface(passwd, username = 'kortemmelab', hostname='kortemmelab.ucsf.edu', rosetta_scripts_path = None, rosetta_database_path = None):
+def get_interface(passwd, username = 'kortemmelab', hostname = 'kortemmelab.ucsf.edu', rosetta_scripts_path = None, rosetta_database_path = None):
     '''This is the function that should be used to get a BindingAffinityDDGInterface object. It hides the private methods
        from the user so that a more traditional object-oriented API is created.'''
     return GenericUserInterface.generate(BindingAffinityDDGInterface, passwd = passwd, username = username, hostname = hostname, rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = rosetta_database_path)
@@ -155,8 +156,9 @@ class BindingAffinityDDGInterface(ddG):
         '''Returns the PDB mutations for a mutagenesis experiment as well as the PDB residue information.'''
         pdb_mutations = []
         for pdb_mutation in self.DDG_db.execute_select('''
-            SELECT PPMutagenesisPDBMutation.*, PDBResidue.ResidueType, PDBResidue.BFactorMean,
-            PDBResidue.BFactorDeviation, PDBResidue.SecondaryStructurePosition, PDBResidue.AccessibleSurfaceArea, ComplexExposure, ComplexDSSP
+            SELECT PPMutagenesisPDBMutation.*, PDBResidue.ResidueType,
+            PDBResidue.BFactorMean, PDBResidue.BFactorDeviation,
+            PDBResidue.ComplexExposure, PDBResidue.ComplexDSSP, PDBResidue.MonomericExposure, PDBResidue.MonomericDSSP
             FROM
             PPMutagenesisPDBMutation
             INNER JOIN
@@ -218,7 +220,7 @@ class BindingAffinityDDGInterface(ddG):
         ComplexID = self.DDG_db.execute_select('SELECT PPComplexID FROM PPMutagenesis WHERE ID=%s', parameters=(PPMutagenesisID,))[0]['PPComplexID']
         SetNumber = None
 
-        # todo: this is a nasty hack due to the fact that we do not currently store the SetNumber and PPComplexID in the PPIDataSetDDG table
+        # todo: this is a nasty hack due to the fact that we do not currently store the SetNumber and PPComplexID in the PPIDataSetDDG table. See ticket:1457.
         pdb_sets = self.DDG_db.execute_select('SELECT * FROM PPIPDBSet WHERE PPComplexID=%s AND IsComplex=1', parameters=(ComplexID,))
         if len(pdb_sets) > 1:
             probable_sets = self.DDG_db.execute_select('SELECT DatabaseKey FROM PPIDatabaseComplex WHERE DatabaseName LIKE "%%SKEMPI%%" AND DatabaseKey LIKE "%%%s%%" AND PPComplexID=%s' % (PDBFileID, ComplexID))
@@ -270,13 +272,10 @@ class BindingAffinityDDGInterface(ddG):
         d['ExperimentalDDGs'] = self.get_ddg_values_for_dataset_record(dataset_experiment_id, dataset_id = dataset_id)
         d['DDG'] = sum([((e.get('Positive') or {}).get('DDG', 0) - (e.get('Negative') or {}).get('DDG', 0)) for e in d['ExperimentalDDGs']])
         # todo: add SCOPe class, Pfam domain
-        pprint.pprint(d)
-        import sys
-        sys.exit(0)
         return d
 
 
-    def get_ddg_values_for_dataset_record(self, dataset_experiment_id, dataset_id = None):
+    def _get_ddg_values_for_dataset_record(self, dataset_experiment_id, dataset_id = None):
         de = self._get_dataset_record_with_checks(dataset_experiment_id, dataset_id = dataset_id)
         ddg_pairs = self.DDG_db.execute_select('SELECT PositiveDependentPPIDDGID, NegativeDependentPPIDDGID FROM PPIDataSetDDGSource WHERE PPIDataSetDDGID=%s', parameters=(dataset_experiment_id,))
         assert(ddg_pairs)
@@ -384,6 +383,140 @@ class BindingAffinityDDGInterface(ddG):
             ])
             lines.append(line)
         return ('\n'.join(lines)).encode('utf8', 'replace')
+
+
+    @informational_job
+    def get_predictions_experimental_details(self, prediction_id, userdatset_experiment_ids_to_subset_ddgs = None, include_files = False, reference_ids = set()):
+
+        details = self.get_job_details(prediction_id, include_files = include_files)
+
+        # Sanity checks and redundancy removal
+        PPMutagenesisID = details['PPMutagenesisID']
+        ComplexID = details['Complex']['ID']
+        chains = set([item for sublist in [v for k, v in details['Structure']['Partners'].iteritems()] for item in sublist])
+        PDBFileID = details['Structure']['PDBFileID']
+        SetNumber = details['Structure']['SetNumber']
+        for m in details['PDBMutations']:
+            assert(m['PPMutagenesisID'] == PPMutagenesisID)
+            del m['PPMutagenesisID']
+            assert(ComplexID == m['PPComplexID'])
+            del m['PPComplexID']
+            assert(PDBFileID == m['PDBFileID'])
+            del m['PDBFileID']
+            assert(SetNumber == m['SetNumber'])
+            del m['SetNumber']
+            assert(m['Chain'] in chains)
+        assert(details['Mutagenesis']['PPMutagenesisID'] == PPMutagenesisID)
+        del details['Mutagenesis']
+
+        # Add the DDG values for the related analysis sets
+        user_dataset_experiment_id = details['UserPPDataSetExperimentID']
+        userdatset_experiment_ids_to_subset_ddgs = userdatset_experiment_ids_to_subset_ddgs or self.get_experimental_ddgs_by_analysis_set(user_dataset_experiment_id, reference_ids = reference_ids)
+        assert('DDG' not in details)
+        details['DDG'] = userdatset_experiment_ids_to_subset_ddgs[user_dataset_experiment_id]
+
+        return details
+
+
+    @informational_job
+    def get_experimental_ddgs_by_analysis_set(self, user_dataset_experiment_id = None, reference_ids = set()):
+
+        # Determine the set of analysis sets
+        userdatset_experiment_ids_to_subset_ddgs = {}
+        analysis_sets = [r['Subset'] for r in self.DDG_db.execute_select('SELECT DISTINCT Subset FROM UserPPAnalysisSet')]
+
+        # Query the database, restricting to one user_dataset_experiment_id if passed
+        parameters = None
+        qry = '''
+            SELECT UserPPAnalysisSet.*,
+            (IFNULL(PositiveDDG.DDG, 0) - IFNULL(NegativeDDG.DDG, 0)) AS ExperimentalDDG,
+            IF(ISNULL(NegativeDDG.DDG), 0, 1) AS DerivedMutation,
+            PositiveDDG.PPMutagenesisID, PositiveDDG.Publication AS PositiveDDGPublication, PositiveDDG.DDG as PositiveDDGValue,
+            NegativeDDG.PPMutagenesisID, NegativeDDG.Publication AS NegativeDDGPublication, NegativeDDG.DDG as NegativeDDGValue
+            FROM UserPPAnalysisSet
+            LEFT JOIN PPIDDG AS PositiveDDG ON PositiveDependentPPIDDGID=PositiveDDG.ID
+            LEFT JOIN PPIDDG AS NegativeDDG ON NegativeDependentPPIDDGID=NegativeDDG.ID'''
+        if user_dataset_experiment_id != None:
+            qry += ' WHERE UserPPAnalysisSet.UserPPDataSetExperimentID=%s'
+            parameters = (user_dataset_experiment_id,)
+        results = self.DDG_db.execute_select(qry, parameters)
+
+        # Return the mapping
+        for r in results:
+            if not userdatset_experiment_ids_to_subset_ddgs.get(r['UserPPDataSetExperimentID']):
+                d = dict.fromkeys(analysis_sets, None)
+                for analysis_set in analysis_sets:
+                    d[analysis_set] = {}
+                userdatset_experiment_ids_to_subset_ddgs[r['UserPPDataSetExperimentID']] = d
+
+            userdatset_experiment_ids_to_subset_ddgs[r['UserPPDataSetExperimentID']][r['Subset']] = userdatset_experiment_ids_to_subset_ddgs[r['UserPPDataSetExperimentID']][r['Subset']] or dict(
+                Cases = set(),
+                DDGs = [],
+                IsDerivedValue = False,
+                MeanDDG = None
+            )
+
+            # Store the references IDs
+            reference = None
+            if r['PositiveDDGPublication'] and r['NegativeDDGPublication']:
+                reference = r['PositiveDDGPublication'] + ', ' + r['NegativeDDGPublication']
+                reference_ids.add(r['PositiveDDGPublication'])
+                reference_ids.add(r['NegativeDDGPublication'])
+            elif r['PositiveDDGPublication']:
+                reference = r['PositiveDDGPublication']
+                reference_ids.add(r['PositiveDDGPublication'])
+            elif r['NegativeDDGPublication']:
+                reference = r['NegativeDDGPublication']
+                reference_ids.add(r['NegativeDDGPublication'])
+
+            record_d = userdatset_experiment_ids_to_subset_ddgs[r['UserPPDataSetExperimentID']][r['Subset']]
+            record_d['Cases'].add((r['Subset'], r['Section'], r['RecordNumber']))
+            record_d['DDGs'].append({'Value' : r['ExperimentalDDG'], 'IsDerivedValue' : r['DerivedMutation'], 'Reference' : reference})
+            record_d['IsDerivedValue'] = record_d['IsDerivedValue'] or r['DerivedMutation']
+
+        # Calculate the mean of the DDG values
+        # Note: Based on experience, summing in Python over small lists can be faster than creating temporary numpy arrays due to the array creation overhead
+        for k, v in userdatset_experiment_ids_to_subset_ddgs.iteritems():
+            for subset, subset_ddgs in v.iteritems():
+                if subset_ddgs:
+                    num_points = len(subset_ddgs['DDGs'])
+                    if num_points > 1:
+                        subset_ddgs['MeanDDG'] = sum([float(ddg['Value'])for ddg in subset_ddgs['DDGs']]) / float(num_points)
+                    else:
+                        # Avoid unnecessary garbage creation and division
+                        subset_ddgs['MeanDDG'] = subset_ddgs['DDGs'][0]['Value']
+
+        return userdatset_experiment_ids_to_subset_ddgs
+
+
+    @informational_job
+    def get_prediction_set_case_details(self, prediction_set_id, retrieve_references = True):
+
+        # Read the Prediction details
+        reference_ids = set()
+        prediction_ids = self.get_prediction_ids(prediction_set_id)
+        userdatset_experiment_ids_to_subset_ddgs = self.get_experimental_ddgs_by_analysis_set(reference_ids = reference_ids)
+
+        prediction_cases = {}
+        for prediction_id in prediction_ids:
+            prediction_cases[prediction_id] = self.get_predictions_experimental_details(prediction_id, userdatset_experiment_ids_to_subset_ddgs)
+
+        references = {}
+        if retrieve_references:
+            for reference_id in sorted(reference_ids):
+                references[reference_id] = self.get_publication(reference_id)
+
+        return dict(
+            Data = prediction_cases,
+            References = references,
+            PredictionSet = self.get_prediction_set_details(prediction_set_id)
+            )
+
+
+    @informational_job
+    def export_prediction_cases_to_json(self, prediction_set_id, retrieve_references = True):
+        print('This will probably break - I need to dump datetime.datetime objects to ISO strings.')
+        return json.dumps(self.get_prediction_set_case_details(prediction_set_id, retrieve_references = retrieve_references))
 
 
     ##### Public API: Rosetta-related functions
@@ -586,7 +719,6 @@ class BindingAffinityDDGInterface(ddG):
             colortext.error('Some jobs failed to run:\n%s' % pprint.pformat(failed_jobs))
         if not quiet: print('')
         return True
-
 
 
     def _create_pdb_residues_to_rosetta_cache_mp(self, pdb_residues_to_rosetta_cache, pdb_file_id, pdb_chains_to_keep, extra_rosetta_command_flags, keep_hetatm_lines):
@@ -946,6 +1078,144 @@ class BindingAffinityDDGInterface(ddG):
         '''Sets a job to 'completed' and stores scores. prediction_set must be passed and is used as a sanity check.'''
 
         raise Exception('This function needs to be implemented by subclasses of the API.')
+
+
+    ###########################################################################################
+    ## Analysis layer
+    ##
+    ## This part of the API is responsible for running analysis on completed predictions
+    ###########################################################################################
+
+
+    @analysis_api
+    def get_top_x_ddg(self, prediction_id, top_x = 3, score_method_id = None):
+        '''Returns the TopX value for the prediction. Typically, this is the mean value of the top X predictions for a
+           case computed using the associated Score records in the database.'''
+
+        if not score_method_id:
+            score_method_id = self.get_score_method_id('interface', method_authors = 'kyle')
+
+        scores = self.get_prediction_scores(prediction_id)[score_method_id]
+        # scores is a mapping from nstruct -> ScoreType -> score record where ScoreType is one of 'DDG', 'WildTypeLPartner', 'WildTypeRPartner', 'WildTypeComplex', 'MutantLPartner', 'MutantRPartner', 'MutantComplex'
+
+        # do some calculation on scores to determine the TopX
+        # we can implement different variations on TopX and pass the function pointers as an argument to the main analysis function
+
+        raise Exception('Kyle will implement this.')
+
+
+    @analysis_api
+    def get_analysis_dataframe(self, prediction_set_id,
+            prediction_set_series_name = None, prediction_set_description = None, prediction_set_credit = None,
+            use_existing_benchmark_data = True, recreate_graphs = False,
+            include_derived_mutations = False,
+            use_single_reported_value = False,
+            take_lowest = 3,
+            burial_cutoff = 0.25,
+            stability_classication_experimental_cutoff = 1.0,
+            stability_classication_predicted_cutoff = 1.0,
+            report_analysis = True,
+            silent = False,
+            root_directory = None
+            ):
+        '''This function uses experimental data from the database and prediction data from the Prediction*StructureScore
+           table to build a pandas dataframe and store it in the database. See .analyze for an explanation of the
+           parameters.
+
+           The dataframes mostly contain redundant data so their storage could be seen to break a key database design
+           principal. However, we store the dataframe in the database as it can take a while to build it from scratch and
+           pre-built dataframes can be used to run quick analysis, for rapid development of the analysis methods, or to
+           plug into webservers where responsiveness is important.
+
+           If use_existing_benchmark_data is True and the dataframe already exists then it is returned as a BenchmarkRun object.
+           Otherwise, it is built from the Prediction*StructureScore records.
+           If the Prediction*StructureScore records do not exist, this function falls back into extract_data_for_case
+           to generate them in which case root_directory needs to be specified (this is the only use for the root_directory
+           parameter).
+        '''
+        raise Exception('Abstract method. This needs to be overridden by a subclass.')
+
+        # if use_existing_benchmark_data and dataframe exists: return dataframe
+        # else retrieve all of the Score records from the database
+        #    if a record does not exist:
+        #        if root_directory then call extract_data_for_case to create an analysis dataframe and store it in the database
+        #    store the number of complete Score records as a column in the dataframe (to indicate whether analysis is being performed on a full set of data)
+        #
+        # For Shane: this extracts the dataset_description and dataset_cases data that DDGBenchmarkManager currently takes care of in the capture.
+        # The analysis_data variable of DDGBenchmarkManager should be compiled via queries calls to the Prediction*StructureScore table.
+        self.get_prediction_set_case_details(prediction_set_id, retrieve_references = True)
+
+
+    @analysis_api
+    def analyze(self, prediction_set_ids,
+            prediction_set_series_names = {}, prediction_set_descriptions = {}, prediction_set_credits = {}, prediction_set_colors = {}, prediction_set_alphas = {},
+            use_published_data = False,
+            use_existing_benchmark_data = True, recreate_graphs = False,
+            include_derived_mutations = False,
+            expectn = 50,
+            use_single_reported_value = False,
+            take_lowest = 3,
+            burial_cutoff = 0.25,
+            stability_classication_experimental_cutoff = 1.0,
+            stability_classication_predicted_cutoff = 1.0,
+            output_directory = None,
+            generate_plots = True,
+            report_analysis = True,
+            silent = False,
+            root_directory = None
+            ):
+        '''Runs the analyses for the specified PredictionSets and cross-analyzes the sets against each other if appropriate.
+
+           * Analysis setup arguments *
+
+           PredictionSets is a list of PredictionSet IDs. Each PredictionSet will be analyzed separately and appropriate
+           pairs will be cross-analyzed.
+           PredictionSetSeriesNames, PredictionSetDescriptions, and PredictionSetCredits are mappings from PredictionSet IDs
+           to series names (in plots), descriptions, and credits respectively. The details are stored in PredictionSet so
+           they are not necessary. The mappings can be used to override the database values to customize the analysis
+           reports. Likewise, PredictionSetColors and PredictionSetAlphas are mappings to series colors and transparency values
+           for use in the plots.
+           use_published_data. todo: implement later. This should include any published data e.g. the Kellogg et al. data for protein stability.
+           use_existing_benchmark_data and recreate_graphs are data creation arguments i.e. "should we use existing data or create it from scratch?"
+           include_derived_mutations is used to filter out dataset cases with derived mutations.
+           expectn declares how many predictions we expect to see per dataset case. If the actual number is less than expectn
+           then a warning will be included in the analysis.
+
+           * Dataframe arguments *
+
+           use_single_reported_value is specific to ddg_monomer. If this is True then the DDG value reported by the application is used and take_lowest is ignored. This is inadvisable - take_lowest = 3 is a better default.
+           take_lowest AKA Top_X. Specifies how many of the best-scoring groups of structures to consider when calculating the predicted DDG value.
+           burial_cutoff defines what should be considered buried (DSSPExposure field). Values around 1.0 are fully exposed, values of 0.0 are fully buried. For technical reasons, the DSSP value can exceed 1.0 but usually not by much.
+           stability_classication_experimental_cutoff AKA x_cutoff. This defines the neutral mutation range for experimental values in kcal/mol i.e. values between -1.0 and 1.0 kcal/mol are considered neutral by default.
+           stability_classication_predicted_cutoff AKA y_cutoff. This defines the neutral mutation range for predicted values in energy units.
+
+           * Reporting arguments *
+
+           output_directory : The directory in which to save plots and reports.
+           generate_plots   : if plots are not needed, setting this to False can shorten the analysis time.
+           report_analysis  : Whether or not to print analysis to stdout.
+           silent = False   : Whether or not anything should be printed to stdout (True is useful for webserver interaction).
+        '''
+
+        raise Exception('Abstract method. This needs to be overridden by a subclass.')
+
+        # colors, alpha, and default series name and descriptions are taken from PredictionSet records
+        # The order (if p1 before p2 then p1 will be on the X-axis in comparative plots) in comparative analysis plots is determined by the order in PredictionSets
+        assert(take_lowest > 0 and (int(take_lowest) == take_lowest))
+        assert(0 <= burial_cutoff <= 2.0)
+        assert(stability_classication_experimental_cutoff > 0)
+        assert(stability_classication_predicted_cutoff > 0)
+        # assert PredictionSet for PredictionSet in PredictionSets is in the database
+
+        # calls get_analysis_dataframe(options) over all PredictionSets
+        # if output_directory is set, save files
+        # think about how to handle this in-memory. Maybe return a dict like:
+            #"run_analyis" -> benchmark_name -> {analysis_type -> object}
+            #"comparative_analysis" -> (benchmark_name_1, benchmark_name_2) -> {analysis_type -> object}
+        # comparative analysis
+        #   only compare dataframes with the exact same points
+        #   allow cutoffs, take_lowest to differ but report if they do so
+
 
 
     ################################################################################################

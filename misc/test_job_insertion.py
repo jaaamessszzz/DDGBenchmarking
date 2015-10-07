@@ -39,6 +39,14 @@ if __name__ == '__main__':
 
     #method_id = ppi_api.get_score_method_id('interface', method_authors = 'kyle')
     #pprint.pprint(ppi_api.get_score_method_details())
+
+    #details = ppi_api.get_prediction_set_case_details('ZEMu run 1')
+    #print(len(details['Data']))
+
+
+    stability_api = get_protein_stability_interface(read_file('ddgdb.pw'))
+    pprint.pprint(stability_api.get_prediction_scores(55808))
+
     sys.exit(0)
     s1 = ppi_api.get_score_dict(prediction_id = 1265, score_method_id = '4', score_type = 'WildTypeLPartner', structure_id = '23')
     s2 = ppi_api.get_score_dict(prediction_id = 1265, score_method_id = '4', score_type = 'WildTypeRPartner', structure_id = '23')

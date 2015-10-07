@@ -590,6 +590,7 @@ ORDER BY Prediction.ExperimentID''', parameters=(PredictionSet,))
 
     @informational_misc
     def get_publication(self, ID):
+        '''Returns the information (title, publication, authors etc.) for a publication.'''
         r = self.DDG_db_utf.execute_select('SELECT * FROM Publication WHERE ID=%s', parameters=(ID,))
         if not r:
             raise Exception('No publication exists with ID %s.' % str(ID))
@@ -624,6 +625,7 @@ ORDER BY Prediction.ExperimentID''', parameters=(PredictionSet,))
 
     @informational_misc
     def get_publications(self):
+        '''Returns the information (title, publication, authors etc.) for all publications.'''
         publications = {}
         for r in self.DDG_db.execute_select('SELECT ID FROM Publication'):
             publications[r['ID']] = self.get_publication(r['ID'])
@@ -784,6 +786,12 @@ ORDER BY Prediction.ExperimentID''', parameters=(PredictionSet,))
 
 
     @informational_job
+    def get_development_protocol(self, development_protocol_id):
+        '''Possibly temporary function which returns a DevelopmentProtocol record from the database.'''
+        raise Exception('Abstract method. This needs to be overridden by a subclass.')
+
+
+    @informational_job
     def get_complex_details(self, complex_id):
         '''Returns the database record for the given complex.'''
         raise Exception('Abstract method. This needs to be overridden by a subclass.')
@@ -881,6 +889,12 @@ ORDER BY Prediction.ExperimentID''', parameters=(PredictionSet,))
 
 
     @informational_job
+    def get_dataset_experiment_details(self, dataset_experiment_id, dataset_id = None):
+        '''Returns the experimental data relating to a dataset experiment.'''
+        raise Exception('Abstract method. This needs to be overridden by a subclass.')
+
+
+    @informational_job
     def export_dataset_to_json(self, dataset_id):
         '''Returns the dataset information in JSON format.'''
         return json.dumps(self._export_dataset(dataset_id))
@@ -889,6 +903,56 @@ ORDER BY Prediction.ExperimentID''', parameters=(PredictionSet,))
     @informational_job
     def export_dataset_to_csv(self, dataset_id):
         '''Returns the dataset information in CSV format.'''
+        raise Exception('Abstract method. This needs to be overridden by a subclass.')
+
+
+    @informational_job
+    def get_predictions_experimental_details(self, prediction_id, userdatset_experiment_ids_to_subset_ddgs = None, include_files = False, reference_ids = set()):
+        '''Returns a dict containing the experimental details for the Prediction. This is what is used by export_prediction_cases_to_json etc.'''
+        raise Exception('Abstract method. This needs to be overridden by a subclass.')
+
+
+    @informational_job
+    def get_experimental_ddgs_by_analysis_set(self):
+        '''Returns a mapping from UserPPDataSetExperimentIDs to dicts mapping analysis Subsets to a dicts containing the
+           record identifier triple (subset, section, record number), the experimental DDG values, the mean of those values,
+           and whether the values / one of the values are derived from other measurements e.g.
+
+          23 : {
+            'BeAtMuSiC' : {'Cases'           : set([('BeAtMuSiC', 'Main', 1408L)]),
+                           'DDGs'            : [{'IsDerivedValue': 0L,
+                                                 'Value': 2.9802478611},
+                                                {'IsDerivedValue': 0L,
+                                                 'Value': 2.1978328374}],
+                           'IsDerivedValue'  : 0L,
+                           'MeanDDG'         : 2.5890403492500003},
+            'SKEMPI'    : {'Cases'           : set([('SKEMPI', 'Non-derivative', 1L)]),
+                           'DDGs'            : [{'IsDerivedValue': 0L, 'Value': 2.9802478611},
+                                              {'IsDerivedValue': 0L, 'Value': 2.1978328374}],
+                           'IsDerivedValue'  : 0L,
+                           'MeanDDG'         : 2.5890403492500003},
+            'ZEMu'      : {'Cases'           : set([('ZEMu', 'Main', 1144L)]),
+                           'DDGs'            : [{'IsDerivedValue': 0L, 'Value': 2.1978328374}],
+                           'IsDerivedValue'  : 0L,
+                           'MeanDDG'         : 2.1978328374}}
+           ...
+
+           This can be used to: i) generate histograms showing the spread of experimental values for a dataset; or
+           ii) to add columns to an analysis dataframe so that, once created, it can be analyzed over multiple analysis sets.
+        '''
+        raise Exception('Abstract method. This needs to be overridden by a subclass.')
+
+
+    @informational_job
+    def get_prediction_set_case_details(self, prediction_set_id, retrieve_references = True):
+        '''Returns a dict containing the case information for prediction cases in the prediction set with a structure
+           expected by the analysis class.'''
+        raise Exception('Abstract method. This needs to be overridden by a subclass.')
+
+
+    @informational_job
+    def export_prediction_cases_to_json(self, prediction_set_id, retrieve_references = True):
+        '''A JSON wrapper to get_prediction_set_case_details.'''
         raise Exception('Abstract method. This needs to be overridden by a subclass.')
 
 
@@ -1057,6 +1121,12 @@ ORDER BY Prediction.ExperimentID''', parameters=(PredictionSet,))
         raise Exception('not implemented yet')
 
 
+    @job_creator
+    def add_development_protocol_command_lines(self, development_protocol_id):
+        '''Possibly temporary function used to add protocol command lines for methods in development.'''
+        raise Exception('Abstract method. This needs to be overridden by a subclass.')
+
+
     #== Input file generation API ===========================================================
     #
     # This part of the API is responsible for creating input files for predictions
@@ -1167,6 +1237,12 @@ ORDER BY Prediction.ExperimentID''', parameters=(PredictionSet,))
         assert(batch_size > 0)
         self._assert_prediction_set_exists(prediction_set_id)
         self.DDG_db.execute_select('UPDATE PredictionSet SET BatchSize=%s WHERE ID=%s', parameters=(batch_size, prediction_set_id,))
+
+
+    @job_execution
+    def set_job_temporary_protocol_field(self, prediction_id, prediction_set_id, temporary_protocol_field):
+        '''Possibly temporary function which sets fields in the temporary protocol field.'''
+        raise Exception('not implemented yet')
 
 
     @job_completion
@@ -1382,8 +1458,38 @@ ORDER BY Prediction.ExperimentID''', parameters=(PredictionSet,))
 
 
     @analysis_api
-    def get_analysis_dataframe(self, PredictionSet,
-            PredictionSetSeriesName = None, PredictionSetDescription = None, PredictionSetCredit = None,
+    def get_prediction_scores(self, prediction_id):
+        '''Returns the scores for the prediction using nested dicts with the structure:
+                ScoreMethodID -> StructureID -> ScoreType -> database record
+        '''
+        scores = {}
+        for r in self.DDG_db.execute_select('SELECT * FROM {0} WHERE {1}=%s'.format(self._get_prediction_structure_scores_table(), self._get_prediction_id_field()), parameters=(prediction_id,)):
+            ScoreMethodID = r['ScoreMethodID']
+            StructureID = r['StructureID']
+            if StructureID == -1:
+                StructureID = 'None' # usually this indicates an overall or aggregate value
+            ScoreType = r['ScoreType']
+            scores[ScoreMethodID] = scores.get(ScoreMethodID, {})
+            scores[ScoreMethodID][StructureID] = scores[ScoreMethodID].get(StructureID, {})
+            scores[ScoreMethodID][StructureID][ScoreType] = r
+            del scores[ScoreMethodID][StructureID][ScoreType]['ScoreMethodID']
+            del scores[ScoreMethodID][StructureID][ScoreType]['StructureID']
+            del scores[ScoreMethodID][StructureID][ScoreType]['ScoreType']
+            del scores[ScoreMethodID][StructureID][ScoreType]['PredictionID']
+            del scores[ScoreMethodID][StructureID][ScoreType]['ID']
+        return scores
+
+
+    @analysis_api
+    def get_top_x_ddg(self, prediction_id, top_x = 3, score_method_id = None):
+        '''Returns the TopX value for the prediction. Typically, this is the mean value of the top X predictions for a
+           case computed using the associated Score records in the database.'''
+        raise Exception('This function needs to be implemented by subclasses of the API.')
+
+
+    @analysis_api
+    def get_analysis_dataframe(self, prediction_set_id,
+            prediction_set_series_name = None, prediction_set_description = None, prediction_set_credit = None,
             use_existing_benchmark_data = True, recreate_graphs = False,
             include_derived_mutations = False,
             use_single_reported_value = False,
@@ -1423,8 +1529,8 @@ ORDER BY Prediction.ExperimentID''', parameters=(PredictionSet,))
 
 
     @analysis_api
-    def analyze(self, PredictionSets,
-            PredictionSetSeriesNames = {}, PredictionSetDescriptions = {}, PredictionSetCredits = {}, PredictionSetColors = {}, PredictionSetAlphas = {},
+    def analyze(self, prediction_set_ids,
+            prediction_set_series_names = {}, prediction_set_descriptions = {}, prediction_set_credits = {}, prediction_set_colors = {}, prediction_set_alphas = {},
             use_published_data = False,
             use_existing_benchmark_data = True, recreate_graphs = False,
             include_derived_mutations = False,
@@ -1444,13 +1550,14 @@ ORDER BY Prediction.ExperimentID''', parameters=(PredictionSet,))
 
            * Analysis setup arguments *
 
-           PredictionSets is a list of PredictionSet IDs. Each PredictionSet will be analyzed separately and appropriate
+           prediction_set_ids is a list of PredictionSet IDs. Each PredictionSet will be analyzed separately and appropriate
            pairs will be cross-analyzed.
-           PredictionSetSeriesNames, PredictionSetDescriptions, and PredictionSetCredits are mappings from PredictionSet IDs
-           to series names (in plots), descriptions, and credits respectively. The details are stored in PredictionSet so
-           they are not necessary. The mappings can be used to override the database values to customize the analysis
-           reports. Likewise, PredictionSetColors and PredictionSetAlphas are mappings to series colors and transparency values
-           for use in the plots.
+           prediction_set_series_names, prediction_set_descriptions, and prediction_set_credits are mappings from PredictionSet IDs
+           to series names (in plots), descriptions, and credits respectively. These details are stored in PredictionSet so
+           they are optional arguments. If passed, these mappings will override the PredictionSet values in the database
+           which allows the user to customize the analysis reports. Likewise, prediction_set_colors and prediction_set_alphas
+           are mappings to series colors and transparency values for use in the plots.
+
            use_published_data. todo: implement later. This should include any published data e.g. the Kellogg et al. data for protein stability.
            use_existing_benchmark_data and recreate_graphs are data creation arguments i.e. "should we use existing data or create it from scratch?"
            include_derived_mutations is used to filter out dataset cases with derived mutations.
@@ -1613,6 +1720,7 @@ ORDER BY Prediction.ExperimentID''', parameters=(PredictionSet,))
 
 
     def _get_prediction_table(self): return None
+    def _get_prediction_structure_scores_table(self): return None
     def _get_prediction_id_field(self): return self._get_prediction_table() + 'ID'
     def _get_prediction_type(self): return None
     def _get_prediction_dataset_type(self): return None
@@ -1620,6 +1728,7 @@ ORDER BY Prediction.ExperimentID''', parameters=(PredictionSet,))
     def _get_user_dataset_experiment_table(self): return None
     def _get_user_dataset_experiment_tag_table(self): return None
     def _get_allowed_score_types(self): return None
+
 
     ###########################################################################################
     ## Assertion layer
