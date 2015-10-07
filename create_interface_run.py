@@ -16,6 +16,14 @@ from tools.cluster_template.write_run_file import process as write_run_file
 job_output_directory = 'job_output'
 run_from_database = False # Controls if each cluster node attempts to get its info directly from the DB
 
+def write_stripped_pdb_file(new_file_location, file_contents):
+    if isinstance(file_contents, basestring):
+        file_contents = file_contents.split('\n')
+    with open(new_file_location 'w') as f:
+        for line in file_contents:
+            if line.startswith('ATOM'):
+                f.write(line + '\n')
+    
 if __name__ == '__main__':
     # Change these for each run
     prediction_set_id = 'minimize_pack_bound_and_unbound_3cycles_001-sql'
@@ -130,8 +138,11 @@ if __name__ == '__main__':
             files_dict = {} # Maps name to filepath position
             for file_name, file_contents in file_tuples:
                 new_file_location = os.path.join(job_data_dir, file_name)
-                with open(new_file_location, 'w') as f:
-                    f.write(file_contents)
+                if file_name.endswith('.pdb'):
+                    write_stripped_pdb_file(new_file_location, file_contents)
+                else:
+                    with open(new_file_location, 'w') as f:
+                        f.write(file_contents)
                 files_dict[file_name] = os.path.relpath(new_file_location, settings['output_dir'])
 
             arglist = []
