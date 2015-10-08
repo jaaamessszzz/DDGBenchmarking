@@ -12,6 +12,7 @@ if __name__ == "__main__":
     sys.path.insert(0, "..")
     sys.path.insert(0, "../..")
     sys.path.insert(0, "../updatedb")
+    sys.path.insert(0, '/home/oconchus/dev/')
 
 import tools.colortext as colortext
 from tools.fs.fsio import read_file, write_file
@@ -37,7 +38,6 @@ if __name__ == '__main__':
                                 rosetta_scripts_path =  '/home/oconchus/t14benchmarking/r57934/main/source/bin/rosetta_scripts.linuxgccrelease',
                                 rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
 
-    #method_id = ppi_api.get_score_method_id('interface', method_authors = 'kyle')
     #pprint.pprint(ppi_api.get_score_method_details())
 
     #details = ppi_api.get_prediction_set_case_details('ZEMu run 1')
@@ -45,7 +45,10 @@ if __name__ == '__main__':
 
 
     stability_api = get_protein_stability_interface(read_file('ddgdb.pw'))
-    pprint.pprint(stability_api.get_prediction_scores(55808))
+    #pprint.pprint(stability_api.get_prediction_scores(55808))
+
+    score_method_id = ppi_api.get_score_method_id('global', method_authors = 'kellogg')
+    print(stability_api.get_top_x_ddg(55808, score_method_id, expectn = 49))
 
     sys.exit(0)
     s1 = ppi_api.get_score_dict(prediction_id = 1265, score_method_id = '4', score_type = 'WildTypeLPartner', structure_id = '23')
@@ -53,6 +56,37 @@ if __name__ == '__main__':
     s3 = ppi_api.get_score_dict(prediction_id = 1265, score_method_id = '4', score_type = 'WildTypeComplex', structure_id = '24')
     print('r')
     ppi_api.store_scores('ZEMu run 1', 1265, [s1, s2, s3])
+    a='''
+    {1L: {1L: {'Mutant': {'DDG': None,
+                      'dslf_ca_dih': None,
+                      'dslf_cs_ang': None,
+                      'dslf_fa13': 0.0,
+                      ...
+     4L: {'None': {'DDG': {'DDG': 0.887,
+                       'dslf_ca_dih': None,
+                       'dslf_cs_ang': None,
+                       'dslf_fa13': None,
+
+    '''
+
+
+    ppi_api.get_analysis_dataframe('ZEMu run 1',
+            prediction_set_series_name = 'My test', prediction_set_description = 'My test description', prediction_set_credit = 'Shane',
+            use_existing_benchmark_data = False, # todo
+            include_derived_mutations = False,
+            use_single_reported_value = False,
+            take_lowest = 3,
+            burial_cutoff = 0.25,
+            stability_classication_experimental_cutoff = 1.0,
+            stability_classication_predicted_cutoff = 1.0,
+            report_analysis = True,
+            silent = False,
+            root_directory = None,
+            score_method_id = score_method_id,
+            expectn = None,
+            allow_failures = False,
+            )
+
     print('s')
 
     #print(ppi_api.DDG_db.FieldNames.__dict__('PredictionPPIStructureScore'))#ppi_api.])
