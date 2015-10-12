@@ -70,7 +70,7 @@ if __name__ == '__main__':
     #details = ppi_api.get_prediction_set_case_details('ZEMu run 1')
     #print(len(details['Data']))
 
-    score_method_id = ppi_api.get_score_method_id('interface', method_authors = 'kyle')
+    score_method_id = ppi_api.get_score_method_id('interface', method_authors = 'kyle', method_type = 'global')
 
     import time
     t1 = time.time()
@@ -90,7 +90,29 @@ if __name__ == '__main__':
             expectn = None,
             allow_failures = False,
             )
+
+
+    ppi_api.analyze(['ZEMu run 1'], score_method_id,
+            analysis_set_ids = [],
+            prediction_set_series_names = {}, prediction_set_descriptions = {}, prediction_set_credits = {}, prediction_set_colors = {}, prediction_set_alphas = {},
+            use_existing_benchmark_data = True, recreate_graphs = False,
+            include_derived_mutations = False,
+            use_single_reported_value = False,
+            expectn = 50,
+            take_lowest = 3,
+            burial_cutoff = 0.25,
+            stability_classication_experimental_cutoff = 1.0,
+            stability_classication_predicted_cutoff = 1.0,
+            output_directory = '/tmp/analysis',
+            generate_plots = True,
+            report_analysis = True,
+            silent = False,
+            root_directory = None, # where to find the prediction data on disk
+            )
     print('Time', time.time() - t1)
+
+    #benchmark_run.calculate_metrics('ZEMu')
+
 
     sys.exit(0)
     s1 = ppi_api.get_score_dict(prediction_id = 1265, score_method_id = '4', score_type = 'WildTypeLPartner', structure_id = '23')
