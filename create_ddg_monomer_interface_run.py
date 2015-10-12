@@ -15,6 +15,14 @@ from tools.cluster_template.write_run_file import process as write_run_file
 
 job_output_directory = 'job_output'
 
+def write_stripped_pdb(new_file_location, file_contents):
+    if isinstance(file_contents, basestring):
+        file_contents = file_contents.split('\n')
+    with open(new_file_location, 'w') as f:
+        for line in file_contents:
+            if line.startswith('ATOM'):
+                f.write(line + '\n')
+    
 if __name__ == '__main__':
     # Change these for each run
     prediction_set_id = 'ddg_monomer_16_002'
@@ -92,8 +100,11 @@ if __name__ == '__main__':
         # Check if job already ran
         prediction_id_dir = os.path.join(output_dir, str(prediction_id))
         if existing_job:
-            rosetta_output_file = os.path.join( prediction_id_dir, 'rosetta.out.gz' )
-            if os.path.isfile(rosetta_output_file):
+            if os.path.isdir( prediction_id_dir ):
+                pdb_output_files = [x for x in os.listdir( prediction_id_dir ) if '.pdb' in x]
+            else:
+                pdb_output_files = []
+            if len(pdb_output_files) >= 1:
                 print 'Skipping', prediction_id
                 settings['numjobs'] = settings['numjobs'] - 1
                 continue
@@ -122,8 +133,11 @@ if __name__ == '__main__':
         files_dict = {} # Maps name to filepath position
         for file_name, file_contents in file_tuples:
             new_file_location = os.path.join(job_data_dir, file_name)
-            with open(new_file_location, 'w') as f:
-                f.write(file_contents)
+            if '.pdb' in file_name:
+                write_stripped_pdb(new_file_location, file_contents)
+            else:
+                with open(new_file_location, 'w') as f:
+                    f.write(file_contents)
             files_dict[file_name] = os.path.relpath(new_file_location, settings['output_dir'])
 
         # Figure out input fi
