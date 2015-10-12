@@ -1,13 +1,14 @@
 import os, sys
 import shutil
 
-from ddglib.ppi_api import get_interface_with_config_file
 import tools.cluster_template.parse_settings as parse_settings
 import time
 import getpass
 import json
 import re
 from tools.cluster_template.write_run_file import process as write_run_file
+from ddglib.ppi_api import get_interface_with_config_file
+from ddglib.ddg_monomer_ppi_api import get_interface as get_interface_factory
 
 def process_ddg_monomer_directory( job_dir ):
     settings = parse_settings.get_dict()
@@ -18,8 +19,8 @@ def process_ddg_monomer_directory( job_dir ):
     if getpass.getuser() in prediction_set_name:
         prediction_set_name = prediction_set_name.strip( getpass.getuser() + '_' )
     
-    ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database')
-    ppi_api.parse_ddg_monomer_prediction_set(prediction_set_name, job_dir)
+    ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database', get_interface_factory = get_interface_factory )
+    ppi_api.extract_data(prediction_set_name, root_directory = job_dir)
     
 if __name__ == '__main__':
     job_dir = sys.argv[1]
