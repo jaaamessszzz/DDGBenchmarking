@@ -33,22 +33,64 @@ def export_datasets():
         write_file('%s.export.json' % dataset_set_short_name, dataset_set_json)
 
 
+def add_dummy_data(ppi_api):
+    '''A function to add random data to the database to test the analysis API.'''
+
+    import random
+    score_method_id = ppi_api.get_score_method_id('interface', method_authors = 'kyle')
+    prediction_records = ppi_api.DDG_db.execute_select('SELECT * FROM PredictionPPI WHERE PredictionSet="ZEMu run 1"')
+    for prediction_record in prediction_records:
+        UserPPDataSetExperimentID = prediction_record['UserPPDataSetExperimentID']
+        analysis_records = ppi_api.get_experimental_ddgs_by_analysis_set(user_dataset_experiment_id = UserPPDataSetExperimentID)
+
+        experimental_value = analysis_records[UserPPDataSetExperimentID]['ZEMu']['MeanDDG']
+
+        # Create 50 random predicted values
+        jitter = random.uniform(-1, 1)
+        adj_experimental_value = experimental_value + jitter
+        for i in range(1, 51):
+            predicted_mutant_value = adj_experimental_value + random.uniform(-0.3, 0.3)
+
+            ppi_api.DDG_db.insertDictIfNew('PredictionPPIStructureScore', dict(
+                PredictionPPIID = prediction_record['ID'],
+                ScoreMethodID = score_method_id,
+                ScoreType = 'DDG',
+                StructureID = i,
+                total = predicted_mutant_value
+            ), ['PredictionPPIID', 'ScoreMethodID', 'ScoreType', 'StructureID'])
+        sys.stdout.write('.'); sys.stdout.flush()
+
+
 if __name__ == '__main__':
     ppi_api = get_ppi_interface(read_file('ddgdb.pw'),
                                 rosetta_scripts_path =  '/home/oconchus/t14benchmarking/r57934/main/source/bin/rosetta_scripts.linuxgccrelease',
                                 rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
 
     #pprint.pprint(ppi_api.get_score_method_details())
-
     #details = ppi_api.get_prediction_set_case_details('ZEMu run 1')
     #print(len(details['Data']))
 
+    score_method_id = ppi_api.get_score_method_id('interface', method_authors = 'kyle')
 
-    stability_api = get_protein_stability_interface(read_file('ddgdb.pw'))
-    #pprint.pprint(stability_api.get_prediction_scores(55808))
-
-    score_method_id = ppi_api.get_score_method_id('global', method_authors = 'kellogg')
-    print(stability_api.get_top_x_ddg(55808, score_method_id, expectn = 49))
+    import time
+    t1 = time.time()
+    ppi_api.get_analysis_dataframe('ZEMu run 1',
+            prediction_set_series_name = 'My test', prediction_set_description = 'My test description', prediction_set_credit = 'Shane',
+            use_existing_benchmark_data = True,
+            include_derived_mutations = False,
+            use_single_reported_value = False,
+            take_lowest = 3,
+            burial_cutoff = 0.25,
+            stability_classication_experimental_cutoff = 1.0,
+            stability_classication_predicted_cutoff = 1.0,
+            report_analysis = True,
+            silent = False,
+            root_directory = None,
+            score_method_id = score_method_id,
+            expectn = None,
+            allow_failures = False,
+            )
+    print('Time', time.time() - t1)
 
     sys.exit(0)
     s1 = ppi_api.get_score_dict(prediction_id = 1265, score_method_id = '4', score_type = 'WildTypeLPartner', structure_id = '23')
