@@ -71,12 +71,12 @@ if __name__ == '__main__':
     #print(len(details['Data']))
 
     score_method_id = ppi_api.get_score_method_id('interface', method_authors = 'kyle')
-    print(ppi_api.get_top_x_ddg(1265, score_method_id, expectn = 50))
-    sys.exit(0)
 
-    ppi_api.get_analysis_dataframe('Protocol_16_r57471',
+    import time
+    t1 = time.time()
+    ppi_api.get_analysis_dataframe('ZEMu run 1',
             prediction_set_series_name = 'My test', prediction_set_description = 'My test description', prediction_set_credit = 'Shane',
-            use_existing_benchmark_data = False, # todo
+            use_existing_benchmark_data = True,
             include_derived_mutations = False,
             use_single_reported_value = False,
             take_lowest = 3,
@@ -90,6 +90,7 @@ if __name__ == '__main__':
             expectn = None,
             allow_failures = False,
             )
+    print('Time', time.time() - t1)
 
     sys.exit(0)
     s1 = ppi_api.get_score_dict(prediction_id = 1265, score_method_id = '4', score_type = 'WildTypeLPartner', structure_id = '23')
