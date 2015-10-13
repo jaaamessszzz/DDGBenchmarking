@@ -20,7 +20,8 @@ def process_ddg_monomer_directory( job_dir ):
         prediction_set_name = prediction_set_name.strip( getpass.getuser() + '_' )
     
     ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database', get_interface_factory = get_interface_factory )
-    ppi_api.extract_data(prediction_set_name, root_directory = job_dir)
+    score_method_id = 7 # rescore with interface weigths
+    ppi_api.extract_data(prediction_set_name, root_directory = job_dir, score_method_id = score_method_id)
     
 if __name__ == '__main__':
     job_dir = sys.argv[1]
