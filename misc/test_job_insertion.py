@@ -17,6 +17,7 @@ if __name__ == "__main__":
 import tools.colortext as colortext
 from tools.fs.fsio import read_file, write_file
 from ddglib.ppi_api import get_interface as get_ppi_interface
+from ddglib.ddg_monomer_ppi_api import get_interface as get_kyles_ppi_interface
 from ddglib.monomer_api import get_interface as get_protein_stability_interface
 
 def export_datasets():
@@ -66,16 +67,27 @@ if __name__ == '__main__':
                                 rosetta_scripts_path =  '/home/oconchus/t14benchmarking/r57934/main/source/bin/rosetta_scripts.linuxgccrelease',
                                 rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
 
+    kyles_ppi_api = get_kyles_ppi_interface(read_file('ddgdb.pw'),
+                                rosetta_scripts_path =  '/home/oconchus/t14benchmarking/r57934/main/source/bin/rosetta_scripts.linuxgccrelease',
+                                rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
+
+
     #pprint.pprint(ppi_api.get_score_method_details())
     #details = ppi_api.get_prediction_set_case_details('ZEMu run 1')
     #print(len(details['Data']))
 
+    prediction_set_id = 'ZEMu run 1'
     score_method_id = ppi_api.get_score_method_id('interface', method_authors = 'kyle', method_type = 'global')
+    prediction_set_credit = "Shane O'Connor"
+
+    #prediction_set_id = 'ddg_monomer_16_002'
+    #score_method_id = kyles_ppi_api.get_score_method_id('Rescore-Interface', method_authors = 'kyle')
+    #prediction_set_credit = 'Kyle Barlow'
 
     import time
     t1 = time.time()
-    ppi_api.get_analysis_dataframe('ZEMu run 1',
-            prediction_set_series_name = 'My test', prediction_set_description = 'My test description', prediction_set_credit = 'Shane',
+    ppi_api.get_analysis_dataframe(prediction_set_id,
+            prediction_set_series_name = 'My test', prediction_set_description = 'My test description', prediction_set_credit = prediction_set_credit,
             use_existing_benchmark_data = True,
             include_derived_mutations = False,
             use_single_reported_value = False,
@@ -91,8 +103,8 @@ if __name__ == '__main__':
             allow_failures = False,
             )
 
-
-    ppi_api.analyze(['ZEMu run 1'], score_method_id,
+    # todo: store credit in dataframe or store/read from database
+    ppi_api.analyze([prediction_set_id], score_method_id,
             analysis_set_ids = [],
             prediction_set_series_names = {}, prediction_set_descriptions = {}, prediction_set_credits = {}, prediction_set_colors = {}, prediction_set_alphas = {},
             use_existing_benchmark_data = True, recreate_graphs = False,
