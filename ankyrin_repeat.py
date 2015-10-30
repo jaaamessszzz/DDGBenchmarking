@@ -2,11 +2,11 @@ import sys
 sys.path.insert(0, "..")
 
 
-from tools import colortext
-from tools.bio.pdb import PDB
-from tools.bio.basics import Mutation, ChainMutation, generate_all_combinations_of_mutations
-from tools.bio.alignment import ScaffoldModelChainMapper
-from tools.fs.fsio import read_file, write_file
+from klab import colortext
+from klab.bio.pdb import PDB
+from klab.bio.basics import Mutation, ChainMutation, generate_all_combinations_of_mutations
+from klab.bio.alignment import ScaffoldModelChainMapper
+from klab.fs.fsio import read_file, write_file
 
 from ddglib import ddgdbapi, db_api
 

@@ -19,23 +19,23 @@ if __name__ == "__main__":
     sys.path.insert(0, "../updatedb")
 import os
 import pickle
-import tools.colortext as colortext
-import tools.deprecated.rosettahelper as rosettahelper
-from tools.deprecated.rosettadb import ReusableDatabaseInterface
-from tools.fs.fsio import get_file_lines, read_file, write_file
-from tools.bio.basics import residue_type_1to3_map, ChainMutation, dssp_elision
-from tools.bio.rcsb import retrieve_pdb
-from tools.bio.pdb import PDB
+import klab.colortext as colortext
+import klab.deprecated.rosettahelper as rosettahelper
+from klab.deprecated.rosettadb import ReusableDatabaseInterface
+from klab.fs.fsio import get_file_lines, read_file, write_file
+from klab.bio.basics import residue_type_1to3_map, ChainMutation, dssp_elision
+from klab.bio.rcsb import retrieve_pdb
+from klab.bio.pdb import PDB
 
 from ddgadmin.updatedb.DatasetReferences import Publications, DataSetHomologs
 
-from tools.deprecated.rosettahelper import NUMBER_KJ_IN_KCAL
+from klab.deprecated.rosettahelper import NUMBER_KJ_IN_KCAL
 from ddg.ddglib.ddgdbapi import ddGDatabase, Publicationv2
 from ddg.ddglib.ddgobjects import DatasetParser
 from ddg.ddglib.db_api import ddG as ddGInterface
 import ddg.ddglib.ddgdbapi as ddgdbapi
 import ddg.ddglib.ddgobjects as ddgobjects
-from tools.biblio.ris import RISEntry
+from klab.biblio.ris import RISEntry
 import numpy
 import json
 import pprint

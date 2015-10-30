@@ -14,8 +14,8 @@ if __name__ == "__main__":
     sys.path.insert(0, "../updatedb")
     sys.path.insert(0, '/home/oconchus/dev/')
 
-import tools.colortext as colortext
-from tools.fs.fsio import read_file, write_file
+import klab.colortext as colortext
+from klab.fs.fsio import read_file, write_file
 from ddglib.ppi_api import get_interface as get_ppi_interface
 from ddglib.ddg_monomer_ppi_api import get_interface as get_kyles_ppi_interface
 from ddglib.monomer_api import get_interface as get_protein_stability_interface

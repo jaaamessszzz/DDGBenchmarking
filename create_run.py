@@ -3,14 +3,14 @@ import time
 import profile
 
 sys.path.insert(0, "..")
-from tools import colortext
-from tools.deprecated import rosettadb
-from tools.debug.profile import ProfileTimer
+from klab import colortext
+from klab.deprecated import rosettadb
+from klab.debug.profile import ProfileTimer
 from ddglib import db_api, ddgdbapi
 from ddglib import help as ddg_help
 #from ddglib.ddgfilters import *
-from tools.bio import pdb
-import tools.deprecated.rosettahelper
+from klab.bio import pdb
+import klab.deprecated.rosettahelper
 
 ddG_connection = db_api.ddG()
 

@@ -7,7 +7,7 @@ import json
 sys.path.insert(0, "../..")
 sys.path.insert(0, "..")
 from ddglib import ddgdbapi
-#from tools import colortext
+#from klab import colortext
 
 def get_details(ExperimentID, expected_num_mutations = None):
     mutations = ddGdb.execute("SELECT * FROM ExperimentMutation WHERE ExperimentID=%s", parameters=(ExperimentID,))

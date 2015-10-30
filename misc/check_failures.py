@@ -4,9 +4,9 @@ import zipfile
 
 sys.path.insert(0, "../..")
 sys.path.insert(0, "..")
-from tools import colortext
-from tools.fs.fsio import read_file
-from tools.bio.pdb import PDB
+from klab import colortext
+from klab.fs.fsio import read_file
+from klab.bio.pdb import PDB
 from ddglib import ddgdbapi
 
 def ask_yes_no(question_text, default_value = None, max_tries = None):
@@ -321,7 +321,7 @@ def count_num_residues_in_active_jobs():
     active_jobs = ddGdb.execute_select("SELECT DISTINCT ExperimentID FROM Prediction WHERE Status='active'")
     colortext.message("\n%d jobs are active" % len(active_jobs))
 
-    from tools.bio.rcsb import parseFASTAs
+    from klab.bio.rcsb import parseFASTAs
 
     chains_in_active_jobs = {}
     PDB_chain_lengths ={}

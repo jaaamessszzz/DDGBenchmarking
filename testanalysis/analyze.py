@@ -60,7 +60,7 @@ if False:
 
 if False:
     for r in ddGdb.execute("SELECT ID, ExperimentID, PredictionSet, ddG FROM Prediction WHERE UserDataSetExperimentID=2698"):
-        import tools.colortext as colortext
+        import klab.colortext as colortext
         colortext.message("%d, %s" % (r['ID'], r['PredictionSet']))
         import pickle
         ddG = pickle.loads(r['ddG'])
@@ -71,7 +71,7 @@ if False:
 if False:
     print("***")
     for r in ddGdb.execute("SELECT ID, ExperimentID, PredictionSet, ddG FROM Prediction WHERE UserDataSetExperimentID=1588"):
-        import tools.colortext as colortext
+        import klab.colortext as colortext
         colortext.message("%d, %s" % (r['ID'], r['PredictionSet']))
         import pickle
         ddG = pickle.loads(r['ddG'])
@@ -106,7 +106,7 @@ print("single_failed",single_failed)
 print("multiple_passed",multiple_passed)
 print('multiple_failed',multiple_failed)
 
-from tools import colortext
+from klab import colortext
 colortext.message("*** %s ***" % prediction_set_for_analysis)
 
 score_cap = 10

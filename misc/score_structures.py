@@ -14,10 +14,10 @@ import pickle
 import subprocess
 import json
 import pprint
-from tools import colortext
-from tools.deprecated.rosettahelper import readBinaryFile, makeTemp755Directory, writeFile, readFileLines
-from tools.bio.pdb import PDB
-from tools.bio.basics import residue_type_3to1_map as aa1
+from klab import colortext
+from klab.deprecated.rosettahelper import readBinaryFile, makeTemp755Directory, writeFile, readFileLines
+from klab.bio.pdb import PDB
+from klab.bio.basics import residue_type_3to1_map as aa1
 
 import ddgdbapi
 from db_api import ddG as ddGInterface

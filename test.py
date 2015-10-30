@@ -1,12 +1,12 @@
 import os, sys
 import shutil
 
-import tools.cluster_template.parse_settings as parse_settings
+import klab.cluster_template.parse_settings as parse_settings
 import time
 import getpass
 import json
 import re
-from tools.cluster_template.write_run_file import process as write_run_file
+from klab.cluster_template.write_run_file import process as write_run_file
 from ddglib.ppi_api import get_interface_with_config_file
 from ddglib.ddg_monomer_ppi_api import get_interface as get_interface_factory
 import time

@@ -8,14 +8,14 @@ sys.path.insert(0, "..")
 
 from ddglib import analysis
 import pprint
-from tools import colortext
-from tools.fs.fsio import read_file, get_file_lines, write_file
+from klab import colortext
+from klab.fs.fsio import read_file, get_file_lines, write_file
 import json
 
 filetype = "pdf"
 
 from ddglib import db_api, ddgdbapi, monomer_api
-from tools.bio import pdb
+from klab.bio import pdb
 
 
 
