@@ -4,15 +4,15 @@ import profile
 
 sys.path.insert(0, "..")
 #sys.path.insert(0, "ddglib")
-from tools import colortext
-from tools.deprecated import rosettadb
-from tools.debug.profile import ProfileTimer
+from klab import colortext
+from klab.deprecated import rosettadb
+from klab.debug.profile import ProfileTimer
 from ddglib import dbapi, ddgdbapi
 from ddglib import help as ddg_help
 from ddglib.ddgfilters import *
 
-from tools import pdb
-import tools.deprecated.rosettahelper
+from klab import pdb
+import klab.deprecated.rosettahelper
 
 def simpleRunExample(self):
 	# Step 1: Open a database connection
@@ -115,7 +115,7 @@ class JobRunner:
 		for chainresidueid, wt in sorted(opdb.ProperResidueIDToAAMap().iteritems()):
 			chain = chainresidueid[0]
 			residueid = chainresidueid[1:].strip()
-			allotherAAs = sorted([aa for aa in tools.deprecated.rosettahelper.ROSETTAWEB_SK_AAinv.keys() if aa != wt])
+			allotherAAs = sorted([aa for aa in klab.deprecated.rosettahelper.ROSETTAWEB_SK_AAinv.keys() if aa != wt])
 			for otherAA in allotherAAs:
 				ms = dbapi.MutationSet()
 				ms.addMutation(chain, residueid, wt, otherAA)
@@ -132,7 +132,7 @@ class JobRunner:
 		for chainresidueid, wt in sorted(opdb.ProperResidueIDToAAMap().iteritems()):
 			chain = chainresidueid[0]
 			residueid = chainresidueid[1:].strip()
-			allotherAAs = sorted([aa for aa in tools.deprecated.rosettahelper.ROSETTAWEB_SK_AAinv.keys() if aa != wt])
+			allotherAAs = sorted([aa for aa in klab.deprecated.rosettahelper.ROSETTAWEB_SK_AAinv.keys() if aa != wt])
 			for otherAA in allotherAAs:
 				ms = dbapi.MutationSet()
 				ms.addMutation(chain, residueid, wt, otherAA)
@@ -155,7 +155,7 @@ class JobRunner:
 		for chainresidueid, wt in sorted(opdb.ProperResidueIDToAAMap().iteritems()):
 			chain = chainresidueid[0]
 			residueid = chainresidueid[1:].strip()
-			allotherAAs = sorted([aa for aa in tools.deprecated.rosettahelper.ROSETTAWEB_SK_AAinv.keys() if aa != wt])
+			allotherAAs = sorted([aa for aa in klab.deprecated.rosettahelper.ROSETTAWEB_SK_AAinv.keys() if aa != wt])
 			for otherAA in allotherAAs:
 				ms = dbapi.MutationSet()
 				ms.addMutation(chain, residueid, wt, otherAA)
