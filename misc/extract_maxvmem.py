@@ -11,9 +11,9 @@ import datetime
 
 sys.path.insert(0, "../..")
 sys.path.insert(0, "..")
-from tools import colortext
-from tools.fs.fsio import read_file, write_file
-from tools.bio.pdb import PDB
+from klab import colortext
+from klab.fs.fsio import read_file, write_file
+from klab.bio.pdb import PDB
 from ddglib import ddgdbapi
 
 def extract_data():
