@@ -4,7 +4,7 @@ sys.path.insert(1, "../common")
 import ddgdbapi
 import common.colortext as colortext
 from common.rosettahelper import ROSETTAWEB_SK_AAinv
-from ddglib import help, dbapi
+from ddglib import help, db_api
 from ddglib.ddgfilters import *
 from string import join
 import pickle

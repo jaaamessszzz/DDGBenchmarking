@@ -5,7 +5,7 @@ import zipfile
 sys.path.insert(0, "../..")
 sys.path.insert(0, "..")
 from tools import colortext
-from tools.fs.io import read_file
+from tools.fs.fsio import read_file
 from tools.bio.pdb import PDB
 from ddglib import ddgdbapi
 

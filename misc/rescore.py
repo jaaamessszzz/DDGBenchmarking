@@ -13,11 +13,11 @@ from tools.deprecated.rosettahelper import readBinaryFile, makeTemp755Directory,
 from tools.bio.pdb import PDB
 from tools.bio.basics import residue_type_3to1_map as aa1
 
-import dbapi
+import db_api
 import ddgdbapi
 if __name__ == '__main__':
     ddGdb = ddgdbapi.ddGDatabase()
-    DDG_interface = dbapi.ddG()
+    DDG_interface = db_api.ddG()
 
 current_score_revision = '0.23'
 class WrongScoreRevisionException(Exception): pass
@@ -60,8 +60,10 @@ class NoahScore(object):
         resnum_list = ','.join(['%s%s' % (rosetta_resid, rosetta_chain) for rosetta_resid in rosetta_resids])
 
         cmd = ([
-            '/home/oconchus/dev/ddg/misc/score_residue.static.linuxgccrelease',
-            '--database=/home/oconchus/test_ddg/general_dev/database',
+            #'/home/oconchus/dev/ddg/misc/score_residue.static.linuxgccrelease',
+            #'--database=/home/oconchus/test_ddg/general_dev/database',
+            '/home/oconchus/RosettaCon2013_rescoring/score_residue.static.linuxgccrelease',
+            '--database=/home/oconchus/RosettaCon2013_rescoring/database/',
             '-s']
             + list_of_files
             + ['-score:fa_max_dis %0.1f' % radius]
