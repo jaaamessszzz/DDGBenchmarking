@@ -28,7 +28,7 @@ def process_ddg_monomer_directory( job_dir ):
     prediction_ids = ppi_api.get_prediction_ids(prediction_set_name)
     
     t1 = time.time()
-    ppi_api.get_analysis_dataframe(prediction_set_name,
+    df = ppi_api.get_analysis_dataframe(prediction_set_name,
             prediction_set_series_name = 'Analysis1', prediction_set_description = 'Analysis1', prediction_set_credit = prediction_set_credit,
             use_existing_benchmark_data = True,
             include_derived_mutations = False,
@@ -47,27 +47,28 @@ def process_ddg_monomer_directory( job_dir ):
             )
 
     # todo: store credit in dataframe or store/read from database
-    ppi_api.analyze([prediction_set_name], score_method_id,
-            analysis_set_ids = [],
-            prediction_set_series_names = {}, prediction_set_descriptions = {}, prediction_set_credits = {}, prediction_set_colors = {}, prediction_set_alphas = {},
-            use_existing_benchmark_data = True, recreate_graphs = False,
-            include_derived_mutations = False,
-            use_single_reported_value = False,
-            expectn = 50,
-            take_lowest = 3,
-            burial_cutoff = 0.25,
-            stability_classication_experimental_cutoff = 1.0,
-            stability_classication_predicted_cutoff = 1.0,
-            output_directory = '/home/kyleb/tmp_analysis',
-            generate_plots = True,
-            report_analysis = True,
-            silent = False,
-            root_directory = None, # where to find the prediction data on disk
-            )
+    # ppi_api.analyze([prediction_set_name], score_method_id,
+    #         analysis_set_ids = [],
+    #         prediction_set_series_names = {}, prediction_set_descriptions = {}, prediction_set_credits = {}, prediction_set_colors = {}, prediction_set_alphas = {},
+    #         use_existing_benchmark_data = True, recreate_graphs = False,
+    #         include_derived_mutations = False,
+    #         use_single_reported_value = False,
+    #         expectn = 50,
+    #         take_lowest = 3,
+    #         burial_cutoff = 0.25,
+    #         stability_classication_experimental_cutoff = 1.0,
+    #         stability_classication_predicted_cutoff = 1.0,
+    #         output_directory = '/home/kyleb/tmp_analysis',
+    #         generate_plots = True,
+    #         report_analysis = True,
+    #         silent = False,
+    #         root_directory = None, # where to find the prediction data on disk
+    #         )
+
     print('Time', time.time() - t1)
 
     #benchmark_run.calculate_metrics('ZEMu')
-
+    df.dataframe.to_csv('zemu_0.1.csv', sep = ',', header = True)
 
     sys.exit(0)
     
