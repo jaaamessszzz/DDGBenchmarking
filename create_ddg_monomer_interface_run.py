@@ -105,7 +105,7 @@ if __name__ == '__main__':
             else:
                 pdb_output_files = []
             if len(pdb_output_files) >= 1:
-                print 'Skipping', prediction_id
+                # print 'Skipping', prediction_id
                 settings['numjobs'] = settings['numjobs'] - 1
                 continue
             if os.path.isdir(prediction_id_dir):
