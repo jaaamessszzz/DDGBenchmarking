@@ -11,6 +11,7 @@ import time
 import getpass
 import json
 import re
+import shutil
 from klab.cluster_template.write_run_file import process as write_run_file
 
 job_output_directory = 'job_output'
@@ -127,8 +128,9 @@ if __name__ == '__main__':
         substitution_parameters = json.loads(job_details['JSONParameters'])
 
         job_data_dir = os.path.join(output_data_dir, str(prediction_id))
-        if not os.path.isdir(job_data_dir):
-            os.makedirs(job_data_dir)
+        if os.path.isdir(job_data_dir):
+            shutil.rmtree(job_data_dir)
+        os.makedirs(job_data_dir)
 
         files_dict = {} # Maps name to filepath position
         for file_name, file_contents in file_tuples:
