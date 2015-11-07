@@ -10,8 +10,8 @@ sys.path.insert(0, "../klab")
 
 from klab import colortext
 from klab.bio.rcsb import retrieve_pdb
-from klab.bio.pdb import PDB, chain_record_types
-from klab.bio.basics import Residue, Mutation, ChainMutation, generate_all_combinations_of_mutations
+from klab.bio.pdb import PDB, coordinate_record_types, chain_record_types
+from klab.bio.basics import Residue, Mutation, ChainMutation, generate_all_combinations_of_mutations, SequenceMap
 from klab.fs.fsio import read_file, write_file, get_file_lines, write_temp_file
 
 from ddglib.ppi_api import get_interface as get_ppi_interface
@@ -44,8 +44,9 @@ ubiquitin_chains = [
     ('uby_UQcon', 'A', 'Ubiquitin scan: UQ_con_yeast p16'),
 ]
 
-human_sequence = 'MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRG'
-yeast_sequence = 'MQIFVKTLTGKTITLEVESSDTIDNVKSKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRG'
+human_sequence = 'MQIFVKTLTGKTITLEVEPSDTIENVKAKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG'
+yeast_sequence = 'MQIFVKTLTGKTITLEVESSDTIDNVKSKIQDKEGIPPDQQRLIFAGKQLEDGRTLSDYNIQKESTLHLVLRLRGG'
+
 
 def get_data():
     for ubiquitin_chain in ubiquitin_chains:
@@ -180,22 +181,22 @@ def setup_year_2_yeast_structures():
 
             chain_a_seq_o = p.atom_sequences['A']
             chain_a_seq = str(chain_a_seq_o)
-            a_occurrence = chain_a_seq.find(human_sequence[:-2]) # not all chains have the whole sequence
+            a_occurrence = chain_a_seq.find(human_sequence[:-3]) # not all chains have the whole sequence
             if a_occurrence == -1 and pdb_id == '3H7P':
                 a_occurrence = chain_a_seq.find(human_sequence[:62] + 'R' + human_sequence[63:]) # 3H7P has the R63K mutation for the isopeptide bond
             if chain_a_seq.startswith('MQ'):
-                for x in range(len(human_sequence[:-2])):
+                for x in range(len(human_sequence[:-3])):
                     if chain_a_seq[x] != human_sequence[x]:
                         print('MISMATCH AT POSITION {0} IN CHAIN A: Found {1}, expected {2}'.format(x, chain_a_seq[x], human_sequence[x]))
             assert(a_occurrence != -1)
 
             chain_b_seq_o = p.atom_sequences['B']
             chain_b_seq = str(chain_b_seq_o)
-            b_occurrence = chain_b_seq.find(human_sequence[:-1]) # not all chains have the whole sequence
+            b_occurrence = chain_b_seq.find(human_sequence[:-2]) # not all chains have the whole sequence
             if b_occurrence == -1 and pdb_id == '2XK5':
                 b_occurrence = chain_b_seq.find(human_sequence[:38] + 'Q' + human_sequence[39:]) # 2XK5 has this extra mutation
             if chain_b_seq.startswith('MQ'):
-                for x in range(len(human_sequence[:-2])):
+                for x in range(len(human_sequence[:-3])):
                     if chain_b_seq[x] != human_sequence[x]:
                         print('MISMATCH AT POSITION {0} IN CHAIN B: Found {1}, expected {2}'.format(x, chain_b_seq[x], human_sequence[x]))
             assert(b_occurrence != -1)
@@ -252,10 +253,10 @@ def setup_year_2_yeast_structures():
             chain_seq_o = p.atom_sequences['A']
             chain_sequence = str(p.atom_sequences['A'])
             first_occurrence = chain_sequence.find(human_sequence[1:])
-            second_occurrence = chain_sequence[first_occurrence + 1:].find(human_sequence[:-2]) + (first_occurrence + 1)
+            second_occurrence = chain_sequence[first_occurrence + 1:].find(human_sequence[:-3]) + (first_occurrence + 1)
             first_occurrence_seq = chain_sequence[first_occurrence:first_occurrence + len(human_sequence) - 1] # we subtract 1 because we threw the FME away
             linker_seq = chain_sequence[first_occurrence + len(human_sequence) - 1:second_occurrence]
-            second_occurrence_seq = chain_sequence[second_occurrence:second_occurrence + len(human_sequence) - 2] # we subtract 2 because there are a couple of missing residues
+            second_occurrence_seq = chain_sequence[second_occurrence:second_occurrence + len(human_sequence) - 3] # we subtract 3 because there are a few missing residues
             assert(first_occurrence_seq + linker_seq + second_occurrence_seq == chain_sequence)
 
             resfile.extend(['NATRO', 'start'])
@@ -331,21 +332,20 @@ def check_year_2_yeast_structures():
         filepath = details['filepath'].replace('.pdb', '.yeast.headers.pdb')
         details['db_filepath'] = filepath
         p = PDB.from_filepath(filepath)
-        resfile = []
         if pdb_id != '2W9N':
             assert(p.atom_sequences.keys() == ['A', 'B'])
             a_sequence = str(p.atom_sequences['A'])
             if pdb_id == '3H7P':
                 a_sequence = a_sequence[:62] + 'K' + a_sequence[63:]
-            assert(a_sequence.find(yeast_sequence[:-2]) != -1)
+            assert(a_sequence.find(yeast_sequence[:-3]) != -1)
             b_sequence = str(p.atom_sequences['B'])
-            assert(b_sequence.find(yeast_sequence[:-2]) != -1)
+            assert(b_sequence.find(yeast_sequence[:-3]) != -1)
         if pdb_id == '2W9N':
             assert(p.atom_sequences.keys() == ['A'])
             a_sequence = str(p.atom_sequences['A'])
             idx = a_sequence.find(yeast_sequence[1:])
             assert(idx != -1)
-            idx = a_sequence[idx + 1:].find(yeast_sequence[:-2])
+            idx = a_sequence[idx + 1:].find(yeast_sequence[:-3])
             assert(idx > 70)
             assert(len(a_sequence) < 160)
     return d
@@ -384,6 +384,76 @@ def import_year_2_structures():
             notes = "Created for the PUBS class at UCSF. Contact David Mavor, Kyle Barlow, Samuel Thompson, or Shane O'Connor for more details. This file is derived from an RCSB human ubiquitin structure but has been altered using the Rosetta fixbb application to use the yeast ubiquitin sequence. HETATM records and chains may also have been removed.",
             allow_missing_molecules = True
         )
+
+
+def split_and_import_2W9N():
+    '''Special-case function for 2W9N.'''
+    pdb_id = '2W9N'
+    details = copy.deepcopy(year_2_cases[pdb_id])
+
+    # Split PDB
+    filepath = details['filepath'].replace('.pdb', '.yeast.headers.pdb')
+    new_content = []
+    step = 1
+    for l in get_file_lines(filepath):
+        new_l = l
+        if step == 1:
+            if l[17:20] == 'GLY' and l[21] == 'A' and l[22:27].strip() == '76':
+                # At the last residue in "chain A"
+                step = 2
+        if step == 2:
+            if not(l[17:20] == 'GLY' and l[21] == 'A' and l[22:27].strip() == '76'):
+                # In "chain B"
+                step = 3
+        if step == 3:
+            new_content.append('TER' + (' ' * 77))
+            step = 4
+        if step == 4:
+            record_type = l[:6].strip()
+            if record_type in coordinate_record_types and len(l) >= 22:
+                # In "chain B", ATOM, ANISOU, HETATM
+                new_l = l[:21] + 'B' + l[22:]
+        new_content.append(new_l)
+    split_filepath = details['filepath'].replace('.pdb', '.yeast.dimer.headers.pdb')
+    write_file(split_filepath, '\n'.join(new_content))
+
+    details['db_filepath'] = split_filepath
+    p = PDB.from_filepath(split_filepath)
+    assert(p.atom_sequences.keys() == ['A', 'B'])
+    a_sequence = str(p.atom_sequences['A'])
+    assert(a_sequence.find(yeast_sequence[1:]) != -1)
+    b_sequence = str(p.atom_sequences['B'])
+    assert(b_sequence.find(yeast_sequence[:-3]) != -1)
+    assert((70 <= len(a_sequence) <= 76) and (70 <= len(b_sequence) <= 76))
+
+    # Set up the database connection
+    ppi_api = get_ppi_interface(read_file('pw'))
+
+    # The UniProt mapping expects the reference PDB file to exist in the database so we will add it
+    results = DDGdb.execute_select('SELECT * FROM PDBFile WHERE ID=%s', parameters=(pdb_id,))
+    if len(results) == 0:
+        colortext.message('Importing {0} (RCSB).'.format(pdb_id))
+        fname = write_temp_file('/tmp', retrieve_pdb(pdb_id), suffix = '.pdb')
+        ppi_api.add_PDB_to_database(
+            filepath = fname,
+            pdbID = pdb_id,
+            force = True,
+            file_source = 'RCSB',
+        )
+        os.remove(fname)
+
+    # Import the modified PDB
+    colortext.message('Importing {0} (modified).'.format(pdb_id))
+    ppi_api.add_PDB_to_database(
+        filepath = details['db_filepath'],
+        pdbID = '2y' + pdb_id,
+        derived_from = pdb_id,
+        force = True,
+        file_source = 'Rosetta',
+        notes = "Created for the PUBS class at UCSF. Contact David Mavor, Kyle Barlow, Samuel Thompson, or Shane O'Connor for more details. This file is derived from an RCSB human ubiquitin structure but has been altered using the Rosetta fixbb application to use the yeast ubiquitin sequence. HETATM records and chains may also have been removed. The original structure was a monomer which we have split manually here into a dimer by adding a chain break. This may cause issues with predictions.",
+        allow_missing_molecules = True
+    )
+    DDGdb.execute('UPDATE PDBFile SET Content=%s WHERE ID=%s', parameters=('\n'.join(new_content), '2y' + pdb_id))
 
 
 def create_year_2_complex_records():
@@ -431,8 +501,10 @@ def create_year_2_complex_records():
 
     wt_set_number = 0
     for pdb_id, details in sorted(year_2_cases.iteritems()):
+
+        db_pdb_id = 'y' + pdb_id
         if pdb_id == '2W9N':
-            continue
+            db_pdb_id = '2y' + pdb_id
 
         existing_records = DDGdb.execute_select('''
             SELECT ID
@@ -440,7 +512,7 @@ def create_year_2_complex_records():
             INNER JOIN PPIPDBPartnerChain
             WHERE PPIPDBSet.PPComplexID = PPIPDBPartnerChain.PPComplexID
             AND PPIPDBSet.SetNumber = PPIPDBPartnerChain.SetNumber
-            AND PPIPDBPartnerChain.PDBFileID=%s''', parameters=('y' + pdb_id,))
+            AND PPIPDBPartnerChain.PDBFileID=%s''', parameters=(db_pdb_id,))
         if existing_records:
             continue
 
@@ -464,7 +536,7 @@ def create_year_2_complex_records():
             SetNumber = set_number,
             Side = 'L',
             ChainIndex = 0,
-            PDBFileID = 'y' + pdb_id,
+            PDBFileID = db_pdb_id,
             Chain = 'A',
             NMRModel = None,
         )
@@ -473,7 +545,7 @@ def create_year_2_complex_records():
             SetNumber = set_number,
             Side = 'R',
             ChainIndex = 0,
-            PDBFileID = 'y' + pdb_id,
+            PDBFileID = db_pdb_id,
             Chain = 'B',
             NMRModel = None,
         )
@@ -487,17 +559,21 @@ def create_year_2_mutagenesis_records():
     ubiquitin_sequence = yeast_sequence
 
     for pdb_id, details in sorted(year_2_cases.iteritems()):
-        if pdb_id == '2W9N':
+        if pdb_id != '2W9N':
             continue
 
+        db_pdb_id = 'y' + pdb_id
+        if pdb_id == '2W9N':
+            db_pdb_id = '2y' + pdb_id
+
         colortext.message(pdb_id)
-        p = PDB(DDGdb.execute_select('SELECT Content FROM PDBFile WHERE ID=%s', parameters=('y' + pdb_id,))[0]['Content'])
+        p = PDB(DDGdb.execute_select('SELECT Content FROM PDBFile WHERE ID=%s', parameters=(db_pdb_id,))[0]['Content'])
 
         seq_a = str(p.atom_sequences['A'])
         seq_b = str(p.atom_sequences['B'])
         print('A:' + seq_a)
         print('B:' + seq_b)
-        assert(seq_a.startswith('MQIF') or seq_a.startswith('SHMQIF'))
+        assert(seq_a.startswith('MQIF') or seq_a.startswith('SHMQIF') or seq_a.startswith('QIF'))
         assert(seq_a.endswith('VLRLRGG') or seq_a.endswith('VLRLRG') or seq_a.endswith('VLRLR') or seq_a.endswith('VLRL'))
         assert(seq_b.startswith('MQIF') or seq_b.startswith('SHMQIF'))
         assert(seq_b.endswith('VLRLRGG') or seq_b.endswith('VLRLRG') or seq_b.endswith('VLRLR') or seq_b.endswith('VLRL'))
@@ -507,14 +583,25 @@ def create_year_2_mutagenesis_records():
         for cr in details['conserved']:
             if pdb_id == '3H7P':
                 residue_ids_to_ignore = [cr['ResidueID'] for cr in details['conserved']]
+            elif pdb_id == '2W9N':
+                typed_residue_ids_to_ignore[cr['ResidueID']] = 'M'
             else:
                 typed_residue_ids_to_ignore[cr['ResidueID']] = 'K'
 
-        mutageneses = p.generate_all_paired_mutations_for_position(['A', 'B'], residue_ids_to_ignore = residue_ids_to_ignore, typed_residue_ids_to_ignore = typed_residue_ids_to_ignore, silent = False)
+        chain_sequence_mappings = {}
+        if pdb_id == '2W9N':
+            sm = SequenceMap()
+            for x in range(1, 76):
+                a_res = 'A{0} '.format(str(x).rjust(4))
+                b_res = 'B{0} '.format(str(x + 76).rjust(4))
+                if (a_res in p.atom_sequences['A'].sequence) and (b_res in p.atom_sequences['B'].sequence):
+                    sm.add(a_res, b_res, None)
+            chain_sequence_mappings[('A', 'B')] = sm
+
+        mutageneses = p.generate_all_paired_mutations_for_position(['A', 'B'], chain_sequence_mappings = chain_sequence_mappings, residue_ids_to_ignore = residue_ids_to_ignore, typed_residue_ids_to_ignore = typed_residue_ids_to_ignore, silent = False)
         print('Number of mutations: {0}\n'.format(len(mutageneses)))
 
         # Get complex/PDB set IDs for the complex
-        db_pdb_id = 'y' + pdb_id
         if pdb_id == '3H7P':
             complex_id = DDGdb.get_unique_record('SELECT ID FROM PPComplex WHERE LName=%s AND RName=%s', parameters=('Ubiquitin (yeast) K63R', 'Ubiquitin (yeast)'))['ID']
         else:
@@ -522,11 +609,13 @@ def create_year_2_mutagenesis_records():
         set_number = DDGdb.get_unique_record('SELECT DISTINCT SetNumber FROM PPIPDBPartnerChain WHERE PPComplexID=%s AND PDBFileID=%s AND Chain="A"', parameters=(complex_id, db_pdb_id))['SetNumber']
 
         for mutagenesis in mutageneses:
-            id_string = ['y' + pdb_id]
+            id_string = [db_pdb_id]
             for mutation in sorted(mutagenesis):
-                print(mutation.__dict__)
-                print('{Chain}:{WildTypeAA}{ResidueID}{MutantAA}'.format(**mutation.__dict__))
                 id_string.append('{Chain}:{WildTypeAA}{ResidueID}{MutantAA}'.format(**mutation.__dict__))
+
+            if pdb_id == '2W9N':
+                assert(int(sorted(mutagenesis)[0].ResidueID) + 76 == int(sorted(mutagenesis)[1].ResidueID))
+
             id_string = '_'.join(id_string)
 
             # Use a transaction to prevent a partial deletion
@@ -542,11 +631,6 @@ def create_year_2_mutagenesis_records():
                         SKEMPI_KEY = id_string
                     )
                     pp_mutagenesis_id = DDGdb.transaction_insert_dict_auto_inc(cur, 'PPMutagenesis', pp_mutagenesis_record, unique_id_fields = ['SKEMPI_KEY'], check_existing = True)
-
-                    #sql, params, record_exists = DDGdb.create_insert_dict_string('PPMutagenesis', pp_mutagenesis_record, PKfields = ['SKEMPI_KEY'], check_existing = True)
-                    #if not record_exists:
-                    #    cur.execute(sql, params)
-                    #pp_mutagenesis_id = DDGdb.get_unique_record('SELECT ID FROM PPMutagenesis WHERE SKEMPI_KEY=%s', parameters=(id_string,))['ID']
 
                     pp_mutagenesis_mutations = []
                     for mutation in sorted(mutagenesis):
@@ -574,22 +658,17 @@ def create_year_2_mutagenesis_records():
                         )
                         pp_mutagenesis_pdb_mutation_id = DDGdb.transaction_insert_dict_auto_inc(cur, 'PPMutagenesisPDBMutation', pp_mutagenesis_pdb_mutation, unique_id_fields = ['PPMutagenesisID', 'PDBFileID', 'Chain', 'ResidueID'], check_existing = True)
 
-                        #sql, params, record_exists = DDGdb.create_insert_dict_string('PPMutagenesisMutation', pp_mutagenesis_mutation, PKfields = ['PPMutagenesisID', 'RecordKey'], check_existing = True)
-                        #if not record_exists:
-                        #    cur.execute(sql, params)
-                        #pp_mutagenesis_mutation_id = DDGdb.get_unique_record('SELECT ID FROM PPMutagenesisMutation WHERE PPMutagenesisID=%s AND RecordKey=%s', parameters=(id_string,))['ID']
-
-                        #print(
-                        #id_string.append('{Chain}:{WildTypeAA}{ResidueID}{MutantAA}'.format(**mutation.__dict__))
-
             except Exception, e:
                 raise colortext.Exception('An exception occurred removing the PredictionSet from the database: "%s".\n%s' % (str(e), traceback.format_exc()))
 
 
 def check_counts():
     for pdb_id, details in sorted(year_2_cases.iteritems()):
+        db_pdb_id = 'y' + pdb_id
+        if pdb_id == '2W9N':
+            db_pdb_id = '2y' + pdb_id
         colortext.message(pdb_id)
-        colortext.warning(len(DDGdb.execute_select('SELECT DISTINCT PPMutagenesisID FROM `PPMutagenesisPDBMutation` WHERE `PDBFileID`=%s', parameters = ('y' + pdb_id,))))
+        colortext.warning(len(DDGdb.execute_select('SELECT DISTINCT PPMutagenesisID FROM `PPMutagenesisPDBMutation` WHERE `PDBFileID`=%s', parameters = (db_pdb_id,))))
 
 
 def create_year_2_user_dataset_records():
@@ -608,11 +687,13 @@ def create_year_2_user_dataset_records():
 
     for pdb_id, details in sorted(year_2_cases.iteritems()):
 
-        if pdb_id == '2W9N':
+        if pdb_id != '2W9N':
             continue
 
         # Get complex/PDB set IDs for the complex
         db_pdb_id = 'y' + pdb_id
+        if pdb_id == '2W9N':
+            db_pdb_id = '2y' + pdb_id
         colortext.message(db_pdb_id)
         if pdb_id == '3H7P':
             complex_id = DDGdb.get_unique_record('SELECT ID FROM PPComplex WHERE LName=%s AND RName=%s', parameters=('Ubiquitin (yeast) K63R', 'Ubiquitin (yeast)'))['ID']
@@ -651,15 +732,14 @@ def add_year_2_prediction_set():
 def test_prediction_set():
     counts = {}
     ppi_api = get_ppi_interface(read_file('pw'))
-    for j in ppi_api.get_queued_jobs('DiPUBS: Complexes #1', order_by = 'Cost', order_order_asc = False, include_files = True, truncate_content = None):
-        counts[j['PDBFileID']] = counts.get(j['PDBFileID'], 0)
-        counts[j['PDBFileID']] += 1
+    for j in ppi_api.get_queued_jobs('DiPUBS: Complexes #1', order_by = 'Cost', order_order_asc = False, include_files = False, truncate_content = None):
+        counts[j['Structure']['PDBFileID']] = counts.get(j['Structure']['PDBFileID'], 0)
+        counts[j['Structure']['PDBFileID']] += 1
     pprint.pprint(counts)
 
-
 test_prediction_set()
-
 sys.exit(0)
+
 if False:
 
     # I have (hopefully) written these functions so that they can be run multiple times without consequences e.g.
