@@ -112,6 +112,12 @@ if __name__ == '__main__':
     prediction_ids = sorted( ppi_api.get_prediction_ids(prediction_set_id) )
     output_data_dir = os.path.join(settings['output_dir'], 'data')
 
+    app_name = 'ddg_monomer'
+    if 'appname' not in settings:
+        settings['appname'] = app_name
+    else:
+        assert( settings['appname'] == app_name )
+
     for prediction_id in prediction_ids:
         # Check if job already ran
         prev_prediction_id = prediction_id
@@ -119,9 +125,13 @@ if __name__ == '__main__':
         prediction_id = '%d-ddg' % prediction_id
         prediction_id_dir = os.path.join(output_dir, prediction_id)
         if existing_job:
+            pdb_output_files = 0
+            for output_f in os.listdir(prediction_id_dir):
+                if output_f.startswith('mut') and 'round' in output_f and 'pdb' in output_f:
+                    pdb_output_files += 1
             rosetta_output_file = os.path.join( prediction_id_dir, 'rosetta.out.gz' )
-            if os.path.isfile(rosetta_output_file):
-                print 'Skipping', prediction_id
+            if pdb_output_files >= 10:
+                # print 'Skipping', prediction_id
                 settings['numjobs'] = settings['numjobs'] - 1
                 continue
             if os.path.isdir(prediction_id_dir):
@@ -129,12 +139,6 @@ if __name__ == '__main__':
                 shutil.rmtree(prediction_id_dir)
             # else:
             #     print 'Creating new job directory %s' % prediction_id_dir
-
-        app_name = 'ddg_monomer'
-        if 'appname' not in settings:
-            settings['appname'] = app_name
-        else:
-            assert( settings['appname'] == app_name )
 
         job_details = ppi_api.get_job_details(prev_prediction_id)
         file_tuples = [] # List of names, contents
