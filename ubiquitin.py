@@ -559,8 +559,6 @@ def create_year_2_mutagenesis_records():
     ubiquitin_sequence = yeast_sequence
 
     for pdb_id, details in sorted(year_2_cases.iteritems()):
-        if pdb_id != '2W9N':
-            continue
 
         db_pdb_id = 'y' + pdb_id
         if pdb_id == '2W9N':
