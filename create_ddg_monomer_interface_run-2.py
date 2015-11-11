@@ -65,7 +65,9 @@ def make_cst_file(cst_file_path, rosetta_outfile):
 
 if __name__ == '__main__':
     # Change this to match previous run
-    prediction_set_id = 'ddg_monomer_16_002'
+    prediction_set_id = 'DiPUBS: Complexes #1'
+    folder_name = 'dipubs'
+    protocol_name = 'ddg_monomer_16_002'
 
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
@@ -75,7 +77,7 @@ if __name__ == '__main__':
     prediction_ids = ppi_api.get_prediction_ids(prediction_set_id)
 
     existing_job = False
-    end_job_name  = '%s_%s' % (getpass.getuser(), prediction_set_id)
+    end_job_name  = '%s_%s' % (getpass.getuser(), folder_name)
     for d in os.listdir(job_output_directory):
         if os.path.isdir(os.path.join(job_output_directory, d)) and end_job_name in d:
             print 'Found existing job:', d
@@ -85,7 +87,7 @@ if __name__ == '__main__':
 
     output_dir = os.path.join(job_output_directory, job_name )
 
-    settings['scriptname'] = prediction_set_id + '_run-2'
+    settings['scriptname'] = folder_name + '_run-2'
     settings['tasks_per_process'] = 1
     settings['numjobs'] = len(prediction_ids)
     settings['mem_free'] = '4.1G'
@@ -124,7 +126,7 @@ if __name__ == '__main__':
         prev_prediction_id_dir = os.path.join(output_dir, str(prediction_id))
         prediction_id = '%d-ddg' % prediction_id
         prediction_id_dir = os.path.join(output_dir, prediction_id)
-        if existing_job:
+        if os.path.isdir(prediction_id_dir):
             pdb_output_files = 0
             for output_f in os.listdir(prediction_id_dir):
                 if output_f.startswith('mut') and 'round' in output_f and 'pdb' in output_f:
