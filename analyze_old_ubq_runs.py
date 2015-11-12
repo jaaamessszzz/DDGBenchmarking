@@ -3,6 +3,7 @@ import shutil
 import pprint
 
 import klab.cluster_template.parse_settings as parse_settings
+from klab.Reporter import Reporter
 import time
 import getpass
 import tempfile
@@ -11,13 +12,15 @@ import re
 import datetime
 import subprocess
 from klab.cluster_template.write_run_file import process as write_run_file
-from ddglib.rescore_db_api import get_interface as get_interface_factory
+from ddglib.ddg_monomer_ppi_api import get_interface as get_interface_factory
 from ddglib.ppi_api import get_interface_with_config_file
 
 from klab import colortext
 from klab.bio.pdb import PDB
 
 from ddglib import ddgdbapi, db_api
+
+tmpdir_location = '/dbscratch/%s/tmp' % getpass.getuser()
 
 ubiquitin_chains = [
     ('1ubq', 'A', 'Ubiquitin scan: 1UBQ p16'),
@@ -94,23 +97,35 @@ def main():
                 residue_id = PDB.ResidueID2String(mutation['ResidueID']),
             ))
 
-        print '%d cases for %s' % ( len(cases), ubiquitin_chain[2] )
+        already_unzipped_dirs = {}
+        for d in os.listdir(tmpdir_location):
+            if d.startswith('analyze_old_ubq_'):
+                prediction_id = long(d.split('_')[3])
+                already_unzipped_dirs[prediction_id] = os.path.join(tmpdir_location, d)
+        
+        print '%d total cases for %s' % ( len(cases), ubiquitin_chain[2] )
+        r = Reporter('processing cases', entries='cases')
+        r.set_total_count( len(cases) )
 
         for case in cases:
-            unzip_dir = tempfile.mkdtemp(prefix='analyze_old_ubq_')
+            prediction_id = long(case['prediction_id'])
+            if prediction_id in already_unzipped_dirs:
+                unzip_dir = already_unzipped_dirs[prediction_id]
+            else:
+                unzip_dir = tempfile.mkdtemp(prefix='analyze_old_ubq_%d_' % prediction_id, dir=tmpdir_location)
             ddg_output_path = os.path.join(unzip_dir, str(case['prediction_id']))
-            subprocess.check_output(['unzip', case['zip_filepath'], '-d', unzip_dir])
-            print unzip_dir
-            start = datetime.datetime.now()
+            if not prediction_id in already_unzipped_dirs:
+                subprocess.check_output(['unzip', case['zip_filepath'], '-d', unzip_dir])
             db_api.add_rescore_cluster_run(
                 ddg_output_path,
                 case['chain'],
-                score_method_id
+                score_method_id,
+                prediction_id,
             )
-            print datetime.datetime.now() - start
-            # print scores
-            sys.exit(0)
-            shutil.rmtree(unzip_dir)
+            r.increment_report()
+        r.done()
+
+    db_api.create_cluster_run_rescore_dir( os.path.join(tmpdir_location, 'cluster_run') )
             
     # ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database', get_interface_factory = get_interface_factory )
     # score_method_id = 7 # rescore with interface weigths
