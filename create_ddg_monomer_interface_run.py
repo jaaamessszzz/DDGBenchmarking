@@ -26,17 +26,17 @@ def write_stripped_pdb(new_file_location, file_contents):
     
 if __name__ == '__main__':
     # Change these for each run
-    prediction_set_id = 'ddg_monomer_16_002'
+    prediction_set_id = 'DiPUBS: Complexes #1'
+    protocol_name = 'ddg_monomer_16_002'
 
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
 
-    print rosetta_scripts_path
     ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database')
-    ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, allow_existing_prediction_set = True)
+    # ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, allow_existing_prediction_set = True)
 
     # Populate the prediction set with jobs from a (tagged subset of a) user dataset
-    ppi_api.add_prediction_run(prediction_set_id, 'AllBindingAffinity', tagged_subset = 'ZEMu', extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True)
+    # ppi_api.add_prediction_run(prediction_set_id, 'AllBindingAffinity', tagged_subset = 'ZEMu', extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True)
 
     prediction_ids = ppi_api.get_prediction_ids(prediction_set_id)
 
@@ -64,16 +64,16 @@ if __name__ == '__main__':
         job_name = '%s-%s' % (time.strftime("%y%m%d"), end_job_name)
     
         ppi_api.add_development_protocol_command_lines(
-            prediction_set_id, prediction_set_id, 'minimize_with_cst', ''
+            prediction_set_id, protocol_name, 'minimize_with_cst', ''
         )
         # 2x because bugs
         ppi_api.add_development_protocol_command_lines(
-            prediction_set_id, prediction_set_id, 'minimize_with_cst', ''
+            prediction_set_id, protocol_name, 'minimize_with_cst', ''
         )
 
     output_dir = os.path.join(job_output_directory, job_name )
 
-    settings['scriptname'] = prediction_set_id + '_run'
+    settings['scriptname'] = 'diubq-pubs' + '_run'
     settings['tasks_per_process'] = 5
     settings['numjobs'] = len(prediction_ids)
     settings['mem_free'] = '3.0G'
