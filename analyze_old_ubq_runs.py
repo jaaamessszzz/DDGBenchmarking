@@ -95,18 +95,17 @@ def main():
             ))
 
         print '%d cases for %s' % ( len(cases), ubiquitin_chain[2] )
-        continue
+
         for case in cases:
             unzip_dir = tempfile.mkdtemp(prefix='analyze_old_ubq_')
             ddg_output_path = os.path.join(unzip_dir, str(case['prediction_id']))
             subprocess.check_output(['unzip', case['zip_filepath'], '-d', unzip_dir])
             print unzip_dir
             start = datetime.datetime.now()
-            scores = db_api.parse_prediction_scores(
-                case['prediction_id'],
-                ddg_output_path=ddg_output_path,
-                score_method_id=score_method_id,
-                chains_to_move=case['chain']
+            db_api.add_rescore_cluster_run(
+                ddg_output_path,
+                case['chain'],
+                score_method_id
             )
             print datetime.datetime.now() - start
             # print scores
