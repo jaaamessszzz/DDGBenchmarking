@@ -13,6 +13,7 @@ if __name__ == "__main__":
     sys.path.insert(0, "../..")
     sys.path.insert(0, "../updatedb")
     sys.path.insert(0, '/home/oconchus/dev/')
+    sys.path.insert(0, "../../klab")
 
 import klab.colortext as colortext
 from klab.fs.fsio import read_file, write_file
@@ -38,7 +39,7 @@ def add_dummy_data(ppi_api):
     '''A function to add random data to the database to test the analysis API.'''
 
     import random
-    score_method_id = ppi_api.get_score_method_id('interface', method_authors = 'kyle')
+    score_method_id = ppi_api.get_score_method_id('interface', method_authors = 'kyle', method_type = 'global')
     prediction_records = ppi_api.DDG_db.execute_select('SELECT * FROM PredictionPPI WHERE PredictionSet="ZEMu run 1"')
     for prediction_record in prediction_records:
         UserPPDataSetExperimentID = prediction_record['UserPPDataSetExperimentID']
@@ -50,8 +51,8 @@ def add_dummy_data(ppi_api):
         jitter = random.uniform(-1, 1)
         adj_experimental_value = experimental_value + jitter
         for i in range(1, 51):
-            predicted_mutant_value = adj_experimental_value + random.uniform(-0.3, 0.3)
 
+            predicted_mutant_value = adj_experimental_value + random.uniform(-0.3, 0.3)
             ppi_api.DDG_db.insertDictIfNew('PredictionPPIStructureScore', dict(
                 PredictionPPIID = prediction_record['ID'],
                 ScoreMethodID = score_method_id,
@@ -59,6 +60,63 @@ def add_dummy_data(ppi_api):
                 StructureID = i,
                 total = predicted_mutant_value
             ), ['PredictionPPIID', 'ScoreMethodID', 'ScoreType', 'StructureID'])
+
+            predicted_mutr_value = (adj_experimental_value / 2.0) + random.uniform(-0.3, 0.3)
+            ppi_api.DDG_db.insertDictIfNew('PredictionPPIStructureScore', dict(
+                PredictionPPIID = prediction_record['ID'],
+                ScoreMethodID = score_method_id,
+                ScoreType = 'MutantRPartner',
+                StructureID = i,
+                total = predicted_mutant_value
+            ), ['PredictionPPIID', 'ScoreMethodID', 'ScoreType', 'StructureID'])
+
+            predicted_mutl_value = (adj_experimental_value / 2.0) + random.uniform(-0.3, 0.3)
+            ppi_api.DDG_db.insertDictIfNew('PredictionPPIStructureScore', dict(
+                PredictionPPIID = prediction_record['ID'],
+                ScoreMethodID = score_method_id,
+                ScoreType = 'MutantLPartner',
+                StructureID = i,
+                total = predicted_mutl_value
+            ), ['PredictionPPIID', 'ScoreMethodID', 'ScoreType', 'StructureID'])
+
+            predicted_mutant_value = adj_experimental_value + random.uniform(-0.3, 0.3)
+            ppi_api.DDG_db.insertDictIfNew('PredictionPPIStructureScore', dict(
+                PredictionPPIID = prediction_record['ID'],
+                ScoreMethodID = score_method_id,
+                ScoreType = 'MutantComplex',
+                StructureID = i,
+                total = predicted_mutant_value
+            ), ['PredictionPPIID', 'ScoreMethodID', 'ScoreType', 'StructureID'])
+
+            predicted_wt_value = adj_experimental_value + random.uniform(-0.1, 0.1)
+            ppi_api.DDG_db.insertDictIfNew('PredictionPPIStructureScore', dict(
+                PredictionPPIID = prediction_record['ID'],
+                ScoreMethodID = score_method_id,
+                ScoreType = 'WildTypeComplex',
+                StructureID = i,
+                total = predicted_wt_value
+            ), ['PredictionPPIID', 'ScoreMethodID', 'ScoreType', 'StructureID'])
+
+            predicted_wtr_value = (adj_experimental_value / 2.0) + random.uniform(-0.1, 0.1)
+            ppi_api.DDG_db.insertDictIfNew('PredictionPPIStructureScore', dict(
+                PredictionPPIID = prediction_record['ID'],
+                ScoreMethodID = score_method_id,
+                ScoreType = 'WildTypeRPartner',
+                StructureID = i,
+                total = predicted_wtr_value
+            ), ['PredictionPPIID', 'ScoreMethodID', 'ScoreType', 'StructureID'])
+
+            predicted_wtl_value = (adj_experimental_value / 2.0) + random.uniform(-0.1, 0.1)
+            ppi_api.DDG_db.insertDictIfNew('PredictionPPIStructureScore', dict(
+                PredictionPPIID = prediction_record['ID'],
+                ScoreMethodID = score_method_id,
+                ScoreType = 'WildTypeLPartner',
+                StructureID = i,
+                total = predicted_wtl_value
+            ), ['PredictionPPIID', 'ScoreMethodID', 'ScoreType', 'StructureID'])
+
+
+
         sys.stdout.write('.'); sys.stdout.flush()
 
 
@@ -87,7 +145,8 @@ if __name__ == '__main__':
     import time
     t1 = time.time()
     ppi_api.get_analysis_dataframe(prediction_set_id,
-            prediction_set_series_name = 'My test', prediction_set_description = 'My test description', prediction_set_credit = prediction_set_credit,
+            experimental_data_exists = False,
+            prediction_set_series_name = 'My prediction only test', prediction_set_description = 'My test description', prediction_set_credit = prediction_set_credit,
             use_existing_benchmark_data = True,
             include_derived_mutations = False,
             use_single_reported_value = False,
@@ -103,8 +162,8 @@ if __name__ == '__main__':
             allow_failures = False,
             )
 
-    # todo: store credit in dataframe or store/read from database
     ppi_api.analyze([prediction_set_id], score_method_id,
+            experimental_data_exists = False,
             analysis_set_ids = [],
             prediction_set_series_names = {}, prediction_set_descriptions = {}, prediction_set_credits = {}, prediction_set_colors = {}, prediction_set_alphas = {},
             use_existing_benchmark_data = True, recreate_graphs = False,
