@@ -40,79 +40,6 @@ ubiquitin_chains = [
     ('uby_UQcon', 'A', 'Ubiquitin scan: UQ_con_yeast p16'),
 ]
 
-def add_scores(output_dir, prediction_structure_scores_table, prediction_id_field, score_method_id):
-    job_dict_path = os.path.join(os.path.join(output_dir, 'data'), 'job_dict.pickle')
-    
-    with open(job_dict_path, 'r') as f:
-        job_dict = pickle.load(f)
-
-    settings = parse_settings.get_dict()
-    rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
-
-    db_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database', get_interface_factory = get_interface_factory )
-    DDGdb = db_api.DDG_db
-
-    prediction_ids_and_structs_score_count = {}
-    for row in DDGdb.execute_select("SELECT %s, ScoreType, StructureID FROM %s WHERE ScoreType IN ('WildTypeLPartner', 'WildTypeRPartner', 'WildTypeComplex', 'MutantLPartner', 'MutantRPartner', 'MutantComplex')" % (prediction_id_field, prediction_structure_scores_table)):
-        prediction_id = long(row[prediction_id_field])
-        score_type = row['ScoreType']
-        structure_id = int(row['StructureID'])
-        if (prediction_id, structure_id) not in prediction_ids_and_structs_score_count:
-            prediction_ids_and_structs_score_count[(prediction_id, structure_id)] = 0
-        prediction_ids_and_structs_score_count[(prediction_id, structure_id)] += 1
-    structs_with_all_scores = set()
-    for prediction_id, structure_id in prediction_ids_and_structs_score_count:
-        if prediction_ids_and_structs_score_count[(prediction_id, structure_id)] == 6:
-            structs_with_all_scores.add( (prediction_id, structure_id) )
-
-    available_db3_files = {}
-    available_db3_files_set = set()
-    for task_name in job_dict:
-        prediction_id = long(task_name.split('_')[0])
-        round_num = int(task_name.split('_')[1])
-        struct_type = task_name.split('_')[2]
-        if struct_type == 'wt':
-            continue
-        wt_task_name = '%d_%d_%s' % (prediction_id, round_num, 'wt')
-        mut_task_name = '%d_%d_%s' % (prediction_id, round_num, 'mut')
-        wt_task_dir = os.path.join(output_dir, wt_task_name)
-        mut_task_dir = os.path.join(output_dir, mut_task_name)
-        wt_db3_file = os.path.join(wt_task_dir, 'output.db3.gz')
-        mut_db3_file = os.path.join(mut_task_dir, 'output.db3.gz')
-        if os.path.isfile(wt_db3_file) and os.path.isfile(mut_db3_file):
-            available_db3_files_set.add( (prediction_id, round_num) )
-            available_db3_files[(prediction_id, round_num)] = (wt_db3_file, mut_db3_file)
-                
-    db3_files_to_process = available_db3_files_set.difference(structs_with_all_scores)
-    print 'Found %d output db3 files to add to score database' % len(db3_files_to_process)
-    r = Reporter('parsing output db3 files and saving scores in database', entries='db3 files')
-    r.set_total_count( len(db3_files_to_process) )
-    scores_dict = {}
-    for prediction_id, round_num in db3_files_to_process:
-        wt_output_db3, mut_output_db3 = available_db3_files[(prediction_id, round_num)]
-
-        tmp_dir = tempfile.mkdtemp(prefix='unzip_db3_')
-        new_wt_output_db3_path = os.path.join(tmp_dir, os.path.basename(wt_output_db3))
-        shutil.copy(wt_output_db3, new_wt_output_db3_path)
-        wt_output_db3 = unzip_file(new_wt_output_db3_path)
-
-        new_mut_output_db3_path = os.path.join(tmp_dir, os.path.basename(mut_output_db3))
-        shutil.copy(mut_output_db3, new_mut_output_db3_path)
-        mut_output_db3 = unzip_file(new_mut_output_db3_path)
-
-        wtl_score = db_api.add_scores_from_db3_file(wt_output_db3, 1, round_num, db_api.get_score_dict(prediction_id = prediction_id, structure_id = round_num, score_type = 'WildTypeLPartner', score_method_id = score_method_id, prediction_structure_scores_table = prediction_structure_scores_table, prediction_id_field = prediction_id_field))
-        wtr_score = db_api.add_scores_from_db3_file(wt_output_db3, 2, round_num, db_api.get_score_dict(prediction_id = prediction_id, structure_id = round_num, score_type = 'WildTypeRPartner', score_method_id = score_method_id, prediction_structure_scores_table = prediction_structure_scores_table, prediction_id_field = prediction_id_field))
-        wtc_score = db_api.add_scores_from_db3_file(wt_output_db3, 3, round_num, db_api.get_score_dict(prediction_id = prediction_id, structure_id = round_num, score_type = 'WildTypeComplex', score_method_id = score_method_id, prediction_structure_scores_table = prediction_structure_scores_table, prediction_id_field = prediction_id_field))
-        ml_score = db_api.add_scores_from_db3_file(mut_output_db3, 1, round_num, db_api.get_score_dict(prediction_id = prediction_id, structure_id = round_num, score_type = 'MutantLPartner', score_method_id = score_method_id, prediction_structure_scores_table = prediction_structure_scores_table, prediction_id_field = prediction_id_field))
-        mr_score = db_api.add_scores_from_db3_file(mut_output_db3, 2, round_num, db_api.get_score_dict(prediction_id = prediction_id, structure_id = round_num, score_type = 'MutantRPartner', score_method_id = score_method_id, prediction_structure_scores_table = prediction_structure_scores_table, prediction_id_field = prediction_id_field))
-        mc_score = db_api.add_scores_from_db3_file(mut_output_db3, 3, round_num, db_api.get_score_dict(prediction_id = prediction_id, structure_id = round_num, score_type = 'MutantComplex', score_method_id = score_method_id, prediction_structure_scores_table = prediction_structure_scores_table, prediction_id_field = prediction_id_field))
-        scores_list = [wtl_score, wtr_score, wtc_score, ml_score, mr_score, mc_score]
-
-        shutil.rmtree(tmp_dir)
-        db_api.store_scores(None, prediction_id, scores_list, prediction_structure_scores_table = prediction_structure_scores_table, prediction_id_field = prediction_id_field)
-        r.increment_report()
-    r.done()
-
 def setup():
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
@@ -207,12 +134,16 @@ def setup():
     # score_method_id = 7 # rescore with interface weigths
     # ppi_api.extract_data(prediction_set_name, root_directory = job_dir, score_method_id = score_method_id)
 
-def add_scores_for_ubq_complex_runs()
+def add_scores_for_ubq_complex_runs():
     output_dir = '/dbscratch/kyleb/tmp/cluster_run/151112-kyleb_rescore_ddg_monomer'
     prediction_structure_scores_table = 'PredictionStructureScore'
     prediction_id_field = 'PredictionID'
     score_method_id = 7 # rescore with interface weights
-    add_scores(output_dir, prediction_structure_scores_table, prediction_id_field, score_method_id)
+    settings = parse_settings.get_dict()
+    rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
+    db_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database', get_interface_factory = get_interface_factory )
+
+    db_api.add_scores_from_cluster_rescore(output_dir, prediction_structure_scores_table, prediction_id_field, score_method_id)
     
 if __name__ == '__main__':
     add_scores_for_ubq_complex_runs()
