@@ -68,11 +68,11 @@ def setup():
             WHERE PredictionSet=%s''', parameters = (ubiquitin_chain[2],))
         native = True
         organism = 'Human'
-        if ubiquitin_chain[0].find('uby_') != 0:
+        if ubiquitin_chain[0].startswith('uby_'):
             organism = 'Yeast'
             native = False
         case_name = ubiquitin_chain[0].replace('ub_', '').replace('uby_', '')
-        if case_name == '1ubq':
+        if case_name == '1ubq' or '1UBQ' in case_name:
             continue
         if organism == 'Human':
             continue
@@ -134,8 +134,7 @@ def setup():
     # score_method_id = 7 # rescore with interface weigths
     # ppi_api.extract_data(prediction_set_name, root_directory = job_dir, score_method_id = score_method_id)
 
-def add_scores_for_ubq_complex_runs():
-    output_dir = '/dbscratch/kyleb/tmp/cluster_run/151112-kyleb_rescore_ddg_monomer'
+def add_scores_for_ubq_complex_runs(output_dir):
     prediction_structure_scores_table = 'PredictionStructureScore'
     prediction_id_field = 'PredictionID'
     score_method_id = 7 # rescore with interface weights
@@ -146,4 +145,5 @@ def add_scores_for_ubq_complex_runs():
     db_api.add_scores_from_cluster_rescore(output_dir, prediction_structure_scores_table, prediction_id_field, score_method_id)
     
 if __name__ == '__main__':
-    add_scores_for_ubq_complex_runs()
+    # setup()
+    add_scores_for_ubq_complex_runs(sys.argv[1])
