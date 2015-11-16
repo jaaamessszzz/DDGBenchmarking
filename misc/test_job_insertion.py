@@ -136,6 +136,8 @@ if __name__ == '__main__':
 
     prediction_set_id = 'ZEMu run 1'
     score_method_id = ppi_api.get_score_method_id('interface', method_authors = 'kyle', method_type = 'global')
+
+
     prediction_set_credit = "Shane O'Connor"
 
     #prediction_set_id = 'ddg_monomer_16_002'
@@ -144,9 +146,17 @@ if __name__ == '__main__':
 
     import time
     t1 = time.time()
+
+    '''SELECT COUNT(PredictionPPIStructureScore.ID) AS NumRecords
+FROM `PredictionPPIStructureScore`
+INNER JOIN PredictionPPI ON PredictionPPI.ID = PredictionPPIID
+WHERE PredictionSet = "DiPUBS: Complexes #1"'''
+
+    prediction_set_id = 'DiPUBS: Complexes #1'
+    score_method_id = ppi_api.get_score_method_id('Rescore-Interface', method_authors = 'kyle', method_type = 'ddg_monomer rescore')
     ppi_api.get_analysis_dataframe(prediction_set_id,
             experimental_data_exists = False,
-            prediction_set_series_name = 'My prediction only test', prediction_set_description = 'My test description', prediction_set_credit = prediction_set_credit,
+            prediction_set_series_name = 'DiPUBS', prediction_set_description = 'DiUbiquitin cases for PUBS year 2', prediction_set_credit = 'Kyle Barlow',
             use_existing_benchmark_data = True,
             include_derived_mutations = False,
             use_single_reported_value = False,
@@ -159,9 +169,9 @@ if __name__ == '__main__':
             root_directory = None,
             score_method_id = score_method_id,
             expectn = None,
-            allow_failures = False,
+            allow_failures = True,
             )
-
+    sys.exit(0)
     ppi_api.analyze([prediction_set_id], score_method_id,
             experimental_data_exists = False,
             analysis_set_ids = [],
