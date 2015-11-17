@@ -132,9 +132,9 @@ def setup():
             
     # ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database', get_interface_factory = get_interface_factory )
     # score_method_id = 7 # rescore with interface weigths
-    # ppi_api.extract_data(prediction_set_name, root_directory = job_dir, score_method_id = score_method_id)
+    # db_api.extract_data(prediction_set_name, root_directory = job_dir, score_method_id = score_method_id)
 
-def add_scores_for_ubq_complex_runs(output_dir):
+def add_scores_for_ubq_complex_runs():
     prediction_structure_scores_table = 'PredictionStructureScore'
     prediction_id_field = 'PredictionID'
     score_method_id = 7 # rescore with interface weights
@@ -142,8 +142,26 @@ def add_scores_for_ubq_complex_runs(output_dir):
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
     db_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database', get_interface_factory = get_interface_factory )
 
-    db_api.add_scores_from_cluster_rescore(output_dir, prediction_structure_scores_table, prediction_id_field, score_method_id)
+    output_dirs = ['/dbscratch/kyleb/tmp/cluster_run/151115-kyleb_rescore_ddg_monomer-%d' % x for x in xrange(1,16)]
+    db_api.add_scores_from_cluster_rescore(output_dirs, prediction_structure_scores_table, prediction_id_field, score_method_id)
+
+def live_analyze():
+    prediction_structure_scores_table = 'PredictionStructureScore'
+    prediction_id_field = 'PredictionID'
+    score_method_id = 7 # rescore with interface weights
+    settings = parse_settings.get_dict()
+    rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
+    db_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database', get_interface_factory = get_interface_factory )
+    for foo, bar, prediction_set_name in ubiquitin_chains:
+        if '1UBQ' in prediction_set_name or 'yeast' not in prediction_set_name:
+            continue
+        print prediction_set_name
+        db_api.prediction_structure_scores_table = prediction_structure_scores_table
+        db_api.prediction_id_field = prediction_id_field
+        db_api.extract_data(prediction_set_name, root_directory = '/dbscratch/kyleb/tmp/fake_old_job_dir', score_method_id = score_method_id)
+    
     
 if __name__ == '__main__':
     # setup()
-    add_scores_for_ubq_complex_runs(sys.argv[1])
+    # add_scores_for_ubq_complex_runs()
+    live_analyze()
