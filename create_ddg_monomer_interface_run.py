@@ -25,33 +25,15 @@ def write_stripped_pdb(new_file_location, file_contents):
                 f.write(line + '\n')
     
 if __name__ == '__main__':
-    # Change these for each run
-    prediction_set_id = 'DiPUBS: Complexes #1'
+    #### Change these for each run
+    prediction_set_id = 'prediction_set' # This should be a valid filename
     protocol_name = 'ddg_monomer_16_002'
+    ####
 
+    # This is hard-coded to use a version of Rosetta in Kyle's home directory on Guybrush that will work
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
-
     ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database')
-    # ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, allow_existing_prediction_set = True)
-
-    # Populate the prediction set with jobs from a (tagged subset of a) user dataset
-    # ppi_api.add_prediction_run(prediction_set_id, 'AllBindingAffinity', tagged_subset = 'ZEMu', extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True)
-
-    prediction_ids = ppi_api.get_prediction_ids(prediction_set_id)
-
-    # debugging lines
-    # for prediction_id in prediction_ids:
-    #     details = ppi_api.get_job_details(prediction_id)
-
-    #     ppi_api.get_chains_for_mutatagenesis(details['PPMutagenesisID'], pdb_file_id, pdb_set_number, complex_id = None)
-    #     print details.keys()
-    #     print details['PDBMutations']
-    #     for x in details['Files']['Input']:
-    #         for key in x.keys():
-    #             print '', key, x[key]
-    #         print x['FileRole'], x['Filetype'], x['Filename']
-    #     sys.exit(0)
 
     existing_job = False
     end_job_name  = '%s_%s' % (getpass.getuser(), prediction_set_id)
@@ -73,7 +55,7 @@ if __name__ == '__main__':
 
     output_dir = os.path.join(job_output_directory, job_name )
 
-    settings['scriptname'] = 'diubq-pubs' + '_run'
+    settings['scriptname'] = prediction_set_id + '_run'
     settings['tasks_per_process'] = 5
     settings['numjobs'] = len(prediction_ids)
     settings['mem_free'] = '3.0G'
@@ -153,11 +135,3 @@ if __name__ == '__main__':
 
     print 'Job files written to directory:', os.path.abspath(output_dir)
 
-# Unnecessary but here is how to change the values of batch_size, priority
-# ppi_api.alter_prediction_set_batch_size(prediction_set_id, 40)
-# ppi_api.alter_prediction_set_priority(prediction_set_id, 5)
-
-# This should be called before kicking off jobs (or set halted = False above)
-#ppi_api.start_prediction_set(prediction_set_id)
-
-# compile the python submission script
