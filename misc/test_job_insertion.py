@@ -130,6 +130,10 @@ if __name__ == '__main__':
                                 rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
 
 
+    score_method_id = ppi_api.get_score_method_id('Rescore-Talaris2014', method_authors = 'kyle', method_type = 'ddg_monomer rescore')
+    pprint.pprint(ppi_api.get_top_x_scores(23849, score_method_id, 'WildTypeComplex', 3, component = 'total', order_by = 'ASC'))
+    pprint.pprint(ppi_api.get_top_x_scores(23849, score_method_id, 'MutantComplex', 3, component = 'total', order_by = 'ASC'))
+    sys.exit(0)
     #pprint.pprint(ppi_api.get_score_method_details())
     #details = ppi_api.get_prediction_set_case_details('ZEMu run 1')
     #print(len(details['Data']))
