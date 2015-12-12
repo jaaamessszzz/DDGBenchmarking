@@ -64,10 +64,11 @@ def make_cst_file(cst_file_path, rosetta_outfile):
         f.write(constraints)
 
 if __name__ == '__main__':
-    # Change this to match previous run
-    prediction_set_id = 'DiPUBS: Complexes #1'
-    folder_name = 'dipubs'
+    #### Change this to match previous run in create_ddg_monomer_interface_run.py
+    prediction_set_id = ''
+    folder_name = prediction_set_id
     protocol_name = 'ddg_monomer_16_002'
+    ####
 
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
@@ -173,12 +174,3 @@ if __name__ == '__main__':
     write_run_file(settings, database_run = False, job_dict = job_dict)
 
     print 'Job files written to directory:', os.path.abspath(output_dir)
-
-# Unnecessary but here is how to change the values of batch_size, priority
-# ppi_api.alter_prediction_set_batch_size(prediction_set_id, 40)
-# ppi_api.alter_prediction_set_priority(prediction_set_id, 5)
-
-# This should be called before kicking off jobs (or set halted = False above)
-#ppi_api.start_prediction_set(prediction_set_id)
-
-# compile the python submission script

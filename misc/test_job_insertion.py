@@ -13,11 +13,12 @@ if __name__ == "__main__":
     sys.path.insert(0, "../..")
     sys.path.insert(0, "../updatedb")
     sys.path.insert(0, '/home/oconchus/dev/')
-    sys.path.insert(0, "../../klab")
+    sys.path.insert(0, "/home/oconchus/dev/klab")
 
 import klab.colortext as colortext
 from klab.fs.fsio import read_file, write_file
 from ddglib.ppi_api import get_interface as get_ppi_interface
+from ddglib.ppi_api import get_interface_with_config_file as get_ppi_interface_with_config_file
 from ddglib.ddg_monomer_ppi_api import get_interface as get_kyles_ppi_interface
 from ddglib.monomer_api import get_interface as get_protein_stability_interface
 
@@ -121,15 +122,20 @@ def add_dummy_data(ppi_api):
 
 
 if __name__ == '__main__':
-    ppi_api = get_ppi_interface(read_file('ddgdb.pw'),
-                                rosetta_scripts_path =  '/home/oconchus/t14benchmarking/r57934/main/source/bin/rosetta_scripts.linuxgccrelease',
-                                rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
+    #ppi_api = get_ppi_interface(read_file('ddgdb.pw'),
+    #                            rosetta_scripts_path =  '/home/oconchus/t14benchmarking/r57934/main/source/bin/rosetta_scripts.linuxgccrelease',
+    #                            rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
 
-    kyles_ppi_api = get_kyles_ppi_interface(read_file('ddgdb.pw'),
-                                rosetta_scripts_path =  '/home/oconchus/t14benchmarking/r57934/main/source/bin/rosetta_scripts.linuxgccrelease',
-                                rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
+    #kyles_ppi_api = get_kyles_ppi_interface(read_file('ddgdb.pw'),
+    #                            rosetta_scripts_path =  '/home/oconchus/t14benchmarking/r57934/main/source/bin/rosetta_scripts.linuxgccrelease',
+    #                            rosetta_database_path = '/home/oconchus/t14benchmarking/r57934/main/database')
 
+    ppi_api = get_ppi_interface_with_config_file(host_config_name = 'kortemmelab')
 
+    score_method_id = ppi_api.get_score_method_id('Rescore-Talaris2014', method_authors = 'kyle', method_type = 'ddg_monomer rescore')
+    pprint.pprint(ppi_api.get_top_x_scores(23849, score_method_id, 'WildTypeComplex', 3, component = 'total', order_by = 'ASC'))
+    pprint.pprint(ppi_api.get_top_x_scores(23849, score_method_id, 'MutantComplex', 3, component = 'total', order_by = 'ASC'))
+    sys.exit(0)
     #pprint.pprint(ppi_api.get_score_method_details())
     #details = ppi_api.get_prediction_set_case_details('ZEMu run 1')
     #print(len(details['Data']))
