@@ -13,6 +13,7 @@ import json
 import re
 from klab.cluster_template.write_run_file import process as write_run_file
 from subprocess import Popen, PIPE, check_call
+import importlib
 import signal
 
 job_output_directory = 'job_output'
@@ -64,11 +65,11 @@ def make_cst_file(cst_file_path, rosetta_outfile):
         f.write(constraints)
 
 if __name__ == '__main__':
-    #### Change this to match previous run in create_ddg_monomer_interface_run.py
-    prediction_set_id = ''
+    assert( len(sys.argv) > 1 )
+    cfg = importlib.import_module(sys.argv[1], package=None)
+    prediction_set_id = cfg.prediction_set_id
+    protocol_name = cfg.protocol_name
     folder_name = prediction_set_id
-    protocol_name = 'ddg_monomer_16_002'
-    ####
 
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
