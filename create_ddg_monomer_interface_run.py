@@ -12,6 +12,7 @@ import getpass
 import json
 import re
 import shutil
+import importlib
 from klab.cluster_template.write_run_file import process as write_run_file
 
 job_output_directory = 'job_output'
@@ -26,8 +27,8 @@ def write_stripped_pdb(new_file_location, file_contents):
     
 if __name__ == '__main__':
     assert( len(sys.argv) > 1 )
-    cfg = __import__(sys.argv[1])
-    
+    cfg = importlib.import_module(sys.argv[1], package=None)
+
     prediction_set_id = cfg.prediction_set_id
     protocol_name = cfg.protocol_name
 
@@ -58,7 +59,6 @@ if __name__ == '__main__':
 
     settings['scriptname'] = prediction_set_id + '_run'
     settings['tasks_per_process'] = 5
-    settings['numjobs'] = len(prediction_ids)
     settings['mem_free'] = '3.0G'
     settings['output_dir'] = output_dir
     settings['rosetta_args_list'] = [
@@ -79,6 +79,9 @@ if __name__ == '__main__':
         os.makedirs(output_data_dir)
 
     prediction_ids = sorted( ppi_api.get_prediction_ids(prediction_set_id) )
+    settings['numjobs'] = len(prediction_ids)
+    app_name = 'minimize_with_cst'
+    settings['appname'] = app_name
 
     for prediction_id in prediction_ids:
         # Check if job already ran
@@ -89,7 +92,7 @@ if __name__ == '__main__':
             else:
                 pdb_output_files = []
             if len(pdb_output_files) >= 1:
-                # print 'Skipping', prediction_id
+                print 'Skipping', prediction_id
                 settings['numjobs'] = settings['numjobs'] - 1
                 continue
             if os.path.isdir(prediction_id_dir):
@@ -97,12 +100,6 @@ if __name__ == '__main__':
                 shutil.rmtree(prediction_id_dir)
             # else:
             #     print 'Creating new job directory %s' % prediction_id_dir
-
-        app_name = 'minimize_with_cst'
-        if 'appname' not in settings:
-            settings['appname'] = app_name
-        else:
-            assert( settings['appname'] == app_name )
 
         job_details = ppi_api.get_job_details(prediction_id)
         file_tuples = [] # List of names, contents
@@ -132,7 +129,9 @@ if __name__ == '__main__':
         }
         job_dict[prediction_id] = argdict
 
-    write_run_file(settings, database_run = False, job_dict = job_dict)
-
-    print 'Job files written to directory:', os.path.abspath(output_dir)
+    if len(job_dict) > 0:
+        write_run_file(settings, database_run = False, job_dict = job_dict)
+        print 'Job files written to directory:', os.path.abspath(output_dir)
+    else:
+        print 'No tasks to process, not writing job files'
 
