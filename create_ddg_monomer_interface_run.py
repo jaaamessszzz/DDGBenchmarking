@@ -25,10 +25,11 @@ def write_stripped_pdb(new_file_location, file_contents):
                 f.write(line + '\n')
     
 if __name__ == '__main__':
-    #### Change these for each run
-    prediction_set_id = 'prediction_set' # This should be a valid filename
-    protocol_name = 'ddg_monomer_16_002'
-    ####
+    assert( len(sys.argv) > 1 )
+    cfg = __import__(sys.argv[1])
+    
+    prediction_set_id = cfg.prediction_set_id
+    protocol_name = cfg.protocol_name
 
     # This is hard-coded to use a version of Rosetta in Kyle's home directory on Guybrush that will work
     settings = parse_settings.get_dict()
