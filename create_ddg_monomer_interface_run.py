@@ -37,6 +37,13 @@ if __name__ == '__main__':
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
     ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database')
 
+    if not ppi_api.prediction_set_exists(prediction_set_id):
+        ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, allow_existing_prediction_set = False, description = cfg.prediction_set_description)
+
+        # Populate the prediction set with jobs from a (tagged subset of a) user dataset
+        ppi_api.add_prediction_run(prediction_set_id, cfg.user_dataset_name, tagged_subset = cfg.tagged_subset, extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True)
+        print 'Created PredictionSet:', prediction_set_id
+
     existing_job = False
     end_job_name  = '%s_%s' % (getpass.getuser(), prediction_set_id)
     for d in os.listdir(job_output_directory):
@@ -63,6 +70,7 @@ if __name__ == '__main__':
     settings['output_dir'] = output_dir
     settings['rosetta_args_list'] = [
         '-in:file:fullatom',
+        '-ignore_zero_occupancy false',
         '-ignore_unrecognized_res',
         '-fa_max_dis 9.0',
         '-ddg::harmonic_ca_tether 0.5',
