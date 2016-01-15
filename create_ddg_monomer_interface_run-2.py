@@ -97,6 +97,7 @@ if __name__ == '__main__':
     settings['job_dict_name'] = 'job_dict-2.pickle'
     settings['rosetta_args_list'] = [
         '-ignore_unrecognized_res',
+        '-ignore_zero_occupancy false',
         '-in:file:fullatom',
         '-fa_max_dis 9.0',
         '-ddg::dump_pdbs true',
