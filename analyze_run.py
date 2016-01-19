@@ -55,12 +55,12 @@ def process_ddg_monomer_directory():
 
     # todo: store credit in dataframe or store/read from database
     ppi_api.analyze([prediction_set_name], score_method_id,
-            analysis_set_ids = [],
+            analysis_set_ids = ['ZEMu'],
             prediction_set_series_names = {}, prediction_set_descriptions = {}, prediction_set_credits = {}, prediction_set_colors = {}, prediction_set_alphas = {},
             use_existing_benchmark_data = True, recreate_graphs = False,
             include_derived_mutations = False,
             use_single_reported_value = False,
-            expectn = 50,
+            expectn = 45,
             take_lowest = 3,
             burial_cutoff = 0.25,
             stability_classication_experimental_cutoff = 1.0,

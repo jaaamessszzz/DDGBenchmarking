@@ -111,6 +111,7 @@ if __name__ == '__main__':
         '-ddg::sc_min_only false',
         '-ddg::ramp_repulsive true',
     ]
+    settings['rosetta_args_list'].extend(cfg.extra_flags)
 
     job_dict = {}
 

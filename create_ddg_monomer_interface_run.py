@@ -32,7 +32,7 @@ if __name__ == '__main__':
     prediction_set_id = cfg.prediction_set_id
     protocol_name = cfg.protocol_name
 
-    # This is hard-coded to use a version of Rosetta in Kyle's home directory on Guybrush that will work
+    # This uses the version of Rosetta from your cluster template settings file
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
     ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database')
@@ -78,6 +78,7 @@ if __name__ == '__main__':
         '-ddg::out_pdb_prefix min_cst_0.5',
         '-ddg::sc_min_only false',
     ]
+    settings['rosetta_args_list'].extend(cfg.extra_flags)
 
     # Now get run settings from database and save to pickle file
     job_dict = {}
