@@ -1,6 +1,9 @@
 import os, sys
 import shutil
 
+if __name__ == '__main__': # Hack for Shane: delete at will!
+    sys.path.insert(0, '../klab')
+
 import klab.cluster_template.parse_settings as parse_settings
 import time
 import getpass
@@ -12,6 +15,7 @@ from ddglib.ddg_monomer_ppi_api import get_interface as get_interface_factory
 import datetime
 import importlib
 import tempfile
+
 
 def process_ddg_monomer_directory():
     assert( len(sys.argv) >= 1 )
@@ -70,6 +74,7 @@ def process_ddg_monomer_directory():
             report_analysis = True,
             silent = False,
             root_directory = None, # where to find the prediction data on disk
+            debug = True,
             )
     print('Time', datetime.datetime.now() - t1)
 
