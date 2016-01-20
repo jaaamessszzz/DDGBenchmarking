@@ -60,8 +60,8 @@ def process_ddg_monomer_directory():
     # todo: store credit in dataframe or store/read from database
     ppi_api.analyze([prediction_set_name], score_method_id,
             analysis_set_ids = ['ZEMu'],
-            prediction_set_series_names = {}, prediction_set_descriptions = {}, prediction_set_credits = {}, prediction_set_colors = {}, prediction_set_alphas = {},
-            use_existing_benchmark_data = True, recreate_graphs = False,
+            prediction_set_series_names = {}, prediction_set_descriptions = {}, prediction_set_credits = {prediction_set_name : 'kyleb'}, prediction_set_colors = {}, prediction_set_alphas = {},
+            use_existing_benchmark_data = False, recreate_graphs = False,
             include_derived_mutations = False,
             use_single_reported_value = False,
             expectn = 45,
@@ -74,7 +74,7 @@ def process_ddg_monomer_directory():
             report_analysis = True,
             silent = False,
             root_directory = None, # where to find the prediction data on disk
-            debug = True,
+            debug = False,
             )
     print('Time', datetime.datetime.now() - t1)
 
