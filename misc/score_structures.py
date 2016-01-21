@@ -4,7 +4,7 @@
 # A script to retrieve the structure scores from the prediction's standard output file and store them in the database
 
 import sys
-sys.path.insert(0, "../..")
+#sys.path.insert(0, "../..")
 sys.path.insert(0, "../ddglib")
 import zipfile
 import shutil

@@ -2,8 +2,8 @@ import sys
 import os
 import pprint
 #sys.path.insert(0, "..")
-sys.path.insert(0, "../ddglib")
-sys.path.insert(0, "../..")
+#sys.path.insert(0, "../ddglib")
+#sys.path.insert(0, "../..")
 sys.path.insert(0, "..")
 
 from ddglib import analysis

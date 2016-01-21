@@ -2,7 +2,7 @@ import sys
 sys.path.insert(0, "..")
 sys.path.insert(0, "../common")
 sys.path.insert(0, "../ddglib")
-sys.path.insert(0, "../..")
+#sys.path.insert(0, "../..")
 import analysis
 
 

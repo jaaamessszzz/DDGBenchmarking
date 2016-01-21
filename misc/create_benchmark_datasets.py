@@ -15,7 +15,7 @@ import datetime
 import string
 if __name__ == "__main__":
     sys.path.insert(0, "..")
-    sys.path.insert(0, "../..")
+    #sys.path.insert(0, "../..")
     sys.path.insert(0, "../updatedb")
 import os
 import pickle

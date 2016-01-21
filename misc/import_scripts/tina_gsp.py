@@ -8,8 +8,8 @@ import glob
 import datetime
 import traceback
 import pprint
-sys.path.insert(0, "../../../klab")
-sys.path.insert(0, "../../..")
+#sys.path.insert(0, "../../../klab")
+#sys.path.insert(0, "../../..")
 
 import pandas
 

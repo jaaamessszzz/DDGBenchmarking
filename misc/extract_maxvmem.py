@@ -9,7 +9,7 @@ import subprocess
 import time
 import datetime
 
-sys.path.insert(0, "../..")
+#sys.path.insert(0, "../..")
 sys.path.insert(0, "..")
 from klab import colortext
 from klab.fs.fsio import read_file, write_file

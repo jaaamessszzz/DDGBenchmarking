@@ -2,7 +2,7 @@ import sys
 import time
 import profile
 
-sys.path.insert(0, "..")
+#sys.path.insert(0, "..")
 #sys.path.insert(0, "ddglib")
 from klab import colortext
 from klab.deprecated import rosettadb

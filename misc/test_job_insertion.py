@@ -10,10 +10,10 @@ import pprint
 
 if __name__ == "__main__":
     sys.path.insert(0, "..")
-    sys.path.insert(0, "../..")
+    #sys.path.insert(0, "../..")
     sys.path.insert(0, "../updatedb")
-    sys.path.insert(0, '/home/oconchus/dev/')
-    sys.path.insert(0, "/home/oconchus/dev/klab")
+    #sys.path.insert(0, '/home/oconchus/dev/')
+    #sys.path.insert(0, "/home/oconchus/dev/klab")
 
 import klab.colortext as colortext
 from klab.fs.fsio import read_file, write_file

@@ -1,8 +1,8 @@
 import os, sys
 import shutil
 
-if __name__ == '__main__': # Hack for Shane: delete at will!
-    sys.path.insert(0, '../klab')
+#if __name__ == '__main__': # Hack for Shane: delete at will!
+#    sys.path.insert(0, '../klab')
 
 import klab.cluster_template.parse_settings as parse_settings
 import time

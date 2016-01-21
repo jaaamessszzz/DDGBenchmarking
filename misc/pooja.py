@@ -5,10 +5,10 @@ import glob
 if True:
   if __name__ == "__main__":
     sys.path.insert(0, "..")
-    sys.path.insert(0, "../..")
+    #sys.path.insert(0, "../..")
     sys.path.insert(0, "../updatedb")
-    sys.path.insert(0, '/home/oconchus/dev/')
-    sys.path.insert(0, "/home/oconchus/dev/klab")
+    #sys.path.insert(0, '/home/oconchus/dev/')
+    #sys.path.insert(0, "/home/oconchus/dev/klab")
 else:
     import klab
 
