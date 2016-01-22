@@ -33,24 +33,26 @@ def process_ddg_monomer_directory():
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
     
     ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database', get_interface_factory = get_interface_factory )
-    score_method_id = cfg.score_method_id
+    score_method_ids = cfg.score_method_ids
 
+    for score_method_id in score_method_ids:
+        if len(score_method_ids) > 1:
+            print 'Processing score_method_id: %d\n' % score_method_id
+        if processing_option == possible_options[0]:
+            # To rescore the ddG output files on the fly:
+            # root_directory should point to where the output files can be found (either the zipped file directories in /kortemmelab/shared or another location
+            ppi_api.extract_data(prediction_set_name, root_directory = root_directory, score_method_id = score_method_id)#, max_prediction_ids_to_process = 40)
 
-    if processing_option == possible_options[0]:
-        # To rescore the ddG output files on the fly:
-        # root_directory should point to where the output files can be found (either the zipped file directories in /kortemmelab/shared or another location
-        ppi_api.extract_data(prediction_set_name, root_directory = root_directory, score_method_id = score_method_id)#, max_prediction_ids_to_process = 40)
+        elif processing_option == possible_options[1]:
+            # To setup cluster run for rescoring:
+            ppi_api.extract_data(prediction_set_name, root_directory = root_directory, score_method_id = score_method_id, setup_cluster_run = True)
 
-    elif processing_option == possible_options[1]:
-        # To setup cluster run for rescoring:
-        ppi_api.extract_data(prediction_set_name, root_directory = root_directory, score_method_id = score_method_id, setup_cluster_run = True)
+        elif processing_option == possible_options[2]:
+            # To load into database rescoring cluster run result:
+            process_cluster_run(ppi_api, prediction_set_name, score_method_id, settings)
 
-    elif processing_option == possible_options[2]:
-        # To load into database rescoring cluster run result:
-        process_cluster_run(ppi_api, prediction_set_name, score_method_id, settings)
-
-    else:
-        print 'ERROR: Argument 2 must be processing option. Choices:', possible_options
+        else:
+            print 'ERROR: Argument 2 must be processing option. Choices:', possible_options
 
 def process_cluster_run(ppi_api, prediction_set_name, score_method_id, settings):
     #### Set this to be a list of all output directories containing rescored PDBs

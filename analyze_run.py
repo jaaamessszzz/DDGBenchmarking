@@ -1,9 +1,5 @@
 import os, sys
 import shutil
-
-if __name__ == '__main__': # Hack for Shane: delete at will!
-    sys.path.insert(0, '../klab')
-
 import klab.cluster_template.parse_settings as parse_settings
 import time
 import getpass
@@ -15,7 +11,6 @@ from ddglib.ddg_monomer_ppi_api import get_interface as get_interface_factory
 import datetime
 import importlib
 import tempfile
-
 
 def process_ddg_monomer_directory():
     assert( len(sys.argv) >= 1 )
@@ -32,58 +27,49 @@ def process_ddg_monomer_directory():
     prediction_set_name = cfg.prediction_set_id
     
     ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = settings['local_rosetta_installation_path'] + '/database', get_interface_factory = get_interface_factory )
-    score_method_id = cfg.score_method_id
     prediction_set_credit = cfg.prediction_set_credit
+    expectn = cfg.expectn
+    take_lowests = cfg.take_lowests
+    score_method_ids = cfg.score_method_ids
 
-    # Test get_top_x
-    prediction_ids = ppi_api.get_prediction_ids(prediction_set_name)
-    
-    t1 = datetime.datetime.now()
-    # ppi_api.get_analysis_dataframe(prediction_set_name,
-    #         prediction_set_series_name = 'DefaultAnalysis', prediction_set_description = 'DefaultAnalysis', prediction_set_credit = prediction_set_credit,
-    #         use_existing_benchmark_data = True,
-    #         include_derived_mutations = False,
-    #         use_single_reported_value = False,
-    #         take_lowest = 3,
-    #         burial_cutoff = 0.25,
-    #         stability_classication_experimental_cutoff = 1.0,
-    #         stability_classication_predicted_cutoff = 1.0,
-    #         report_analysis = True,
-    #         silent = False,
-    #         root_directory = None,
-    #         score_method_id = score_method_id,
-    #         expectn = None,
-    #         allow_failures = True,
-    #         extract_data_for_case_if_missing = False,
-    #         )
+    for score_method_id in score_method_ids:
+        if len(score_method_ids) > 1:
+            print 'Processing score method ID: %d' % score_method_id
+        for take_lowest in take_lowests:
+            if len(take_lowests) > 1:
+                print 'Processing take_lowest (TopX): %d' % take_lowest
+            output_dir_name = '%s-%s-%s_n-%d_topx-%d_score_method-%d_analysis' % (time.strftime("%y%m%d"), getpass.getuser(), prediction_set_name, expectn, take_lowest, score_method_id)
 
-    score_method_details = ppi_api.get_score_method_details(score_method_id = score_method_id)
-    
-    # todo: store credit in dataframe or store/read from database
-    ppi_api.analyze([prediction_set_name], score_method_id,
-            analysis_set_ids = ['ZEMu'],
-            prediction_set_series_names = {}, prediction_set_descriptions = {}, prediction_set_credits = {prediction_set_name : '%s Score method id: %s (%d)' % (cfg.prediction_set_credit, score_method_details['MethodName'], score_method_id)}, prediction_set_colors = {}, prediction_set_alphas = {},
-            use_existing_benchmark_data = True, recreate_graphs = False,
-            include_derived_mutations = False,
-            use_single_reported_value = False,
-            expectn = 45,
-            take_lowest = 3,
-            burial_cutoff = 0.25,
-            stability_classication_experimental_cutoff = 1.0,
-            stability_classication_predicted_cutoff = 1.0,
-            output_directory = tempfile.mkdtemp(prefix='%s-%s-%s-analysis_' % (time.strftime("%y%m%d"), getpass.getuser(), prediction_set_name) ),
-            generate_plots = True,
-            report_analysis = True,
-            silent = False,
-            root_directory = None, # where to find the prediction data on disk
-            debug = False,
-            )
-    print('Time', datetime.datetime.now() - t1)
+            output_directory = os.path.join('/tmp/%s/%s' % (getpass.getuser(), prediction_set_name), output_dir_name)
 
-    #benchmark_run.calculate_metrics('ZEMu')
+            if os.path.isdir( output_directory ):
+                output_directory = tempfile.mkdtemp( prefix = output_dir_name + '_' )
+            else:
+                os.makedirs( output_directory )
 
+            print 'Outputting to directory:', output_directory, '\n'
 
-    sys.exit(0)
+            score_method_details = ppi_api.get_score_method_details(score_method_id = score_method_id)
+
+            # todo: store credit in dataframe or store/read from database
+            ppi_api.analyze([prediction_set_name], score_method_id,
+                    analysis_set_ids = ['ZEMu'],
+                    prediction_set_series_names = {}, prediction_set_descriptions = {}, prediction_set_credits = {prediction_set_name : '%s Score method id: %s (%d)' % (cfg.prediction_set_credit, score_method_details['MethodName'], score_method_id)}, prediction_set_colors = {}, prediction_set_alphas = {},
+                    use_existing_benchmark_data = True, recreate_graphs = False,
+                    include_derived_mutations = False,
+                    use_single_reported_value = False,
+                    expectn = expectn,
+                    take_lowest = take_lowest,
+                    burial_cutoff = 0.25,
+                    stability_classication_experimental_cutoff = 1.0,
+                    stability_classication_predicted_cutoff = 1.0,
+                    output_directory = output_directory,
+                    generate_plots = True,
+                    report_analysis = True,
+                    silent = False,
+                    root_directory = None, # where to find the prediction data on disk
+                    debug = False,
+                    )
     
 if __name__ == '__main__':
     process_ddg_monomer_directory()
