@@ -8,8 +8,6 @@ import glob
 import datetime
 import traceback
 import pprint
-#sys.path.insert(0, "../../../klab")
-#sys.path.insert(0, "../../..")
 
 import pandas
 
@@ -17,10 +15,14 @@ from klab import colortext
 from klab.bio.rcsb import retrieve_pdb, download_pdb
 from klab.bio.pdb import PDB, coordinate_record_types, chain_record_types
 from klab.bio.basics import Residue, Mutation, ChainMutation, generate_all_combinations_of_mutations, SequenceMap
+from klab.bio.ligand import LigandMap
 from klab.fs.fsio import read_file, write_file, get_file_lines, write_temp_file
+
+sys.path.insert(0, "../../..")
 
 from ddg.ddglib.ppi_api import get_interface as get_ppi_interface
 from ddg.ddglib import ddgdbapi, db_api
+from ddg.ddglib.import_api import DataImportInterface
 
 # This script requires the files in /kortemmelab/data/oconchus/lab_projects/tina/gsp1_ddg/2015November9_ddg.zip
 # From this directory:
@@ -40,6 +42,10 @@ def get_ppi_api():
     return ppi_api
 
 ppi_api = get_ppi_api()
+importer = DataImportInterface.get_interface_with_config_file(cache_dir = '/kortemmelab/data/oconchus/ddgcache')
+
+
+### Import setup
 
 pdb_file_paths = {}
 tina_pdb_objects = {}
@@ -49,11 +55,11 @@ tina_pdb_id_to_rcsb_pdb_id = {}
 mutations_dataframe = None
 
 def setup():
-    global pdb_file_paths
-    global rcsb_pdb_objects
-    global tina_pdb_objects
-    global tina_pdb_id_to_rcsb_pdb_id
-    global mutations_dataframe
+    global pdb_file_paths  # RCSB PDB_ID -> PDB file
+    global rcsb_pdb_objects # RCSB PDB_ID -> PDB object
+    global tina_pdb_objects # Tina's PDB_ID -> PDB object
+    global tina_pdb_id_to_rcsb_pdb_id # Tina's PDB_ID -> RCSB PDB_ID
+    global mutations_dataframe # the updated set of mutations stored as a pandas dataframe with the 'pdb' column converted to uppercase
 
     # old_mutations_csv is missing some cases but has the mapping from pdb -> partner 1 name, partner 2 name
     old_mutations_csv = os.path.join('temp', 'mutations_Gsp1_old.txt')
@@ -77,18 +83,17 @@ def setup():
     rcsb_file_dir = '../../rawdata'
 
     for pdb_id in tina_pdb_ids:
-        tina_pdb_objects[pdb_id] = PDB.from_filepath(os.path.join('temp', 'pdbs', '{0}.pdb'.format(pdb_id)))
+        tina_pdb_objects[pdb_id] = PDB.from_filepath(os.path.join('temp', 'pdbs', '{0}.pdb'.format(pdb_id)), parse_ligands = True)
 
     for pdb_id in rcsb_pdb_ids:
         filename = '{0}.pdb'.format(pdb_id.upper())
         pdb_file_paths[pdb_id.upper()] = os.path.join(rcsb_file_dir, filename)
         pdb_contents = download_pdb(pdb_id, rcsb_file_dir, silent = True, filename = filename)
-        p = PDB(pdb_contents)
+        p = PDB(pdb_contents, parse_ligands = True)
         rcsb_pdb_objects[pdb_id] = p
 
     print('\nRosetta files  ({0}) : {1}'.format(str(len(tina_pdb_ids)).rjust(2), ', '.join([s.rjust(5) for s in tina_pdb_ids])))
     print('Original files ({0}) : {1}\n'.format(str(len(rcsb_pdb_ids)).rjust(2), ', '.join([s.rjust(5) for s in rcsb_pdb_ids])))
-
 
     ppi_api = get_ppi_api()
     for pdb_id, pdb_file_path in pdb_file_paths.iteritems():
@@ -101,6 +106,12 @@ def setup():
     print('')
 
 setup()
+
+
+### Check against existing data
+#   Spoiler: There is no experimental binding affinity data at present
+###
+
 
 def print_existing_experimental_data():
     # These PDB files existed in the database before the import so I am interested to see whether any of the experimental
@@ -260,72 +271,34 @@ def check_existing_complexes_by_name():
     print('')
 
 '''
+Did Tina change the chain letters of any PDB files?
+Yes. Tina always has gsp1 as chain A?
+The mapping is below.
+
 At this point, we have a mapping from three of Tina's complexes to entries in the database but with no corresponding experimental data.
 
 1A2K is in the database with molecules NTF2 (A,B) and RAN/GSP1P (C,D,E). Tina calls this Gsp1|NTF2.
-   complex #202 -> 1A2K (C|AB) where Tina uses A|B (chains may be renamed).
+   complex #202 -> 1A2K (C|AB) where Tina uses A|B (which corresponds to C|B after accounting for chain renaming). I will reuse the existing complex and create a new PDBSet.
 
 1K5D is in the database with molecules RAN (A,D,G,J) and RANBP1 (B,E,H,K) and RANGAP (C,F,I,L). Tina calls this Gsp1|RNA1.
-   complex #119 -> 1K5D
+   complex #119 -> 1K5D (AB|C). Tina does not use chain B so we will create a new complex.
 
 1I2M is in the database with molecules RAN (A,C) and RCC1 (B,D). Tina calls this Gsp1|SRM1.
-   complex #176 -> 1I2M (A|B) where Tina uses A|B (chains may be renamed); and
+   complex #176 -> 1I2M (A|B) where Tina uses A|B (same chain labels). This is an exact match so we will create a new PDBSet.
 
-did Tina change the chain letters of any PDB files?
-yes. Tina always has gsp1 as chain A?
 '''
 
 
 
+# ==
+#    Step 1
+#    Description: Add PDB files
+#    Tables: PDBFile, PDBChain, PDBMolecule, PDBMoleculeChain, PDBResidue, PDBLigand, PDBIon
+#    Use: import_api.py:DataImportInterface.add_designed_pdb()
+# ==
+#
 
-### Create the PDB records
-
-##########################
-year_2_cases = {
-    '3NOB' : dict(
-        filepath = '/kortemmelab/data/oconchus/PUBS/year2/K11_3NOB.pdb',
-        conserved = [dict(ResidueID = '11', ResidueAA = 'K')],
-        LChains = ['A'],
-        RChains = ['B'],
-        prediction_set = 'Ubiquitin scan: K11_3NOB p16',
-    ),
-    '4S22' : dict(
-        filepath = '/kortemmelab/data/oconchus/PUBS/year2/K29_4S22.pdb',
-        conserved = [dict(ResidueID = '29', ResidueAA = 'K')],
-        LChains = ['A'],
-        RChains = ['B'],
-        prediction_set = 'Ubiquitin scan: K29_4S22 p16',
-    ),
-    '1AAR' : dict(
-        filepath = '/kortemmelab/data/oconchus/PUBS/year2/K48_1AAR.pdb',
-        conserved = [dict(ResidueID = '48', ResidueAA = 'K')],
-        LChains = ['A'],
-        RChains = ['B'],
-        prediction_set = 'Ubiquitin scan: K48_1AAR p16',
-    ),
-    '2XK5' : dict(
-        filepath = '/kortemmelab/data/oconchus/PUBS/year2/K6_2XK5.pdb',
-        conserved = [dict(ResidueID = '6', ResidueAA = 'K')],
-        LChains = ['A'],
-        RChains = ['B'],
-        prediction_set = 'Ubiquitin scan: K6_2XK5 p16',
-    ),
-    '3H7P' : dict(
-        filepath = '/kortemmelab/data/oconchus/PUBS/year2/K63_3H7P.pdb',
-        conserved = [dict(ResidueID = '63', ResidueAA = 'K')],
-        LChains = ['A'],
-        RChains = ['B'],
-        prediction_set = 'Ubiquitin scan: K63_3H7P p16',
-    ),
-    '2W9N' : dict(
-        filepath = '/kortemmelab/data/oconchus/PUBS/year2/M1_2W9N.pdb',
-        conserved = [dict(ResidueID = '1', ResidueAA = 'M')],
-        LChains = ['A'],
-        RChains = ['B'],
-        prediction_set = 'Ubiquitin scan: M1_2W9N p16',
-    ),
-}
-#####################
+user_dataset_name = 'Tina Perica - GSP1 complexes'
 
 def create_mapping_string():
     for pdb_id, tp in sorted(tina_pdb_objects.iteritems()):
@@ -337,11 +310,69 @@ def create_mapping_string():
             print('')
         print('),')
 
-tina_to_rcsb_chain_mapping = {
+
+complex_definitions = {
     '1A2K' : dict(
-        A = 'C', # choice of C, D, or E
-        B = 'A', # choice of A or B
+        filepath = 'pdbs/1A2K.pdb', # not used here but this would be the data usually required by e.g. a web API
+        rcsb_id = '1A2K',
+        db_id = '1A2K_TP0',
+        description = 'GSP1 complex from Tina Perica. PDB_REDO was unavailable for this file. Chain A corresponds to chain C in the original RCSB file.',
+        params_files = {'G09' : 'temp/pdbs/1A2K.params', 'G0A' : 'temp/pdbs/1A2K.params'},
+        LChains = ['A'],
+        RChains = ['B'],
+        ComplexID = 202,
+        chain_mapping = dict(
+            A = 'C', # choice of C, D, or E
+            B = 'A', # choice of A or B
+        ),
+        ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+           ('G09', 'X   1 ') : ('MG ', 'C 220 '), # PDB columns [17:20], [21:27]
+        }),
+        ion_mapping = LigandMap.from_tuples_dict({
+           ('MG ', 'A 204 ') : ('MG ', 'C 221 '),
+        }),
+        techniques = "Manual edit",
     ),
+}
+
+
+
+
+#tina_pdb_objects : pdb_id -> p
+#tina_pdb_id_to_rcsb_pdb_id: pdb_id -> pdb_id
+#rcsb_pdb_objects: pdb_id -> p
+#tina_to_rcsb_chain_mapping: pdb_id -> chain -> chain
+
+def import_structures():
+    ppi_api = get_ppi_api()
+    for tina_pdb_id, details in sorted(complex_definitions.iteritems()):
+        tina_pdb_id = tina_pdb_id.upper()
+        rcsb_pdb_id = tina_pdb_id_to_rcsb_pdb_id[tina_pdb_id]
+        assert(details['rcsb_id'] == rcsb_pdb_id)
+
+        tina_pdb_object = tina_pdb_objects[tina_pdb_id]
+        rcsb_pdb_object = rcsb_pdb_objects[rcsb_pdb_id]
+        tina_db_id = details['db_id']
+
+        assert((tina_db_id != tina_pdb_id) and (tina_db_id != rcsb_pdb_id) and (len(tina_db_id) > 7) and (tina_db_id[4:7] == '_TP'))
+
+        for k, v in details.get('params_files', {}).iteritems():
+            details[k] = os.path.abspath(v)
+        colortext.message('Importing {0} as {1}'.format(tina_pdb_id, tina_db_id))
+        importer.add_designed_pdb(tina_pdb_object, tina_db_id, rcsb_pdb_id,
+                                  'Tina Perica', details['description'] , 'tina',
+                                  chain_mapping = details['chain_mapping'], ligand_mapping = details['ligand_mapping'],
+                                  params_files = details.get('params_files', {}), techniques=details['techniques'])
+
+
+import_structures()
+sys.exit(0)
+
+
+sys.exit(0)
+
+
+tina_to_rcsb_chain_mapping = {
     '1I2M' : dict(
         A = 'A', # choice of A or C
         B = 'B', # choice of B or D
@@ -367,7 +398,7 @@ tina_to_rcsb_chain_mapping = {
         B = 'B', # choice of B, D
     ),
     '3A6P' : dict(
-        A = 'C', # choice of C, H RAN versus the world!
+        A = 'C', # choice of C, H   RAN versus the world!
         C = 'A', # choice of A, F
         D = 'D', # choice of D, I
         E = 'E', # choice of E, J
@@ -403,15 +434,6 @@ tina_to_rcsb_chain_mapping = {
     ),
 }
 
-#tina_pdb_objects : pdb_id -> p
-#tina_pdb_id_to_rcsb_pdb_id: pdb_id -> pdb_id
-#rcsb_pdb_objects: pdb_id -> p
-#tina_to_rcsb_chain_mapping: pdb_id -> chain -> chain
-
-#1. Update the PDB function to allow renaming of chains i.e. allow it to take a non-RCSB PDB file, a mapping from new chain letters to RCSB letters, and
-#use the header information e.g. molecule etc. renamed for the artificial structure
-
-
 
 def add_headers():
     for pdb_id, details in year_2_cases.iteritems():
@@ -422,50 +444,8 @@ def add_headers():
             new_content = PDB.replace_headers(read_file(source_filepath), read_file(target_filepath))
             write_file(new_filepath, new_content)
 
-# ==
-#    Step 1
-#    Description: Add PDB files
-#    Tables: PDBFile, PDBChain, PDBMolecule, PDBMoleculeChain, PDBResidue
-#    Use: ppi_api.add_PDB_to_database()
-# ==
-#
-
-def import_year_2_structures():
-    ppi_api = get_ppi_interface(read_file('pw'))
-    for tina_pdb_id, p in sorted(tina_pdb_objects.iteritems()):
-        db_name = 'tp{0}'.format(tina_pdb_id)
-        colortext.message('Importing {0} as {1}'.format(tina_pdb_id, db_name))
-
-        # The UniProt mapping expects the reference PDB file to exist in the database so we will add it
-        rcsb_pdb_id = tina_pdb_id_to_rcsb_pdb_id[tina_pdb_id]
-        results = ppi_api.DDG_db.execute_select('SELECT * FROM PDBFile WHERE ID=%s', parameters=(rcsb_pdb_id,))
-        if len(results) == 0:
-            #fname = write_temp_file('/tmp', retrieve_pdb(rcsb_pdb_id), suffix = '.pdb')
-            #print(fname)
-            ppi_api.add_RCSB_pdb_to_database(pdb_id = rcsb_pdb_id)
-            continue
-            sys.exit(0)
-            ppi_api.add_PDB_to_database(
-                filepath = fname,
-                pdbID = rcsb_pdb_id,
-                force = True,
-                file_source = 'RCSB',
-            )
-            os.remove(fname)
-        continue
-        ppi_api.add_PDB_to_database(
-            filepath = details['db_filepath'],
-            pdbID = 'y' + pdb_id,
-            derived_from = pdb_id,
-            force = True,
-            file_source = 'Rosetta',
-            notes = "Created for the PUBS class at UCSF. Contact David Mavor, Kyle Barlow, Samuel Thompson, or Shane O'Connor for more details. This file is derived from an RCSB human ubiquitin structure but has been altered using the Rosetta fixbb application to use the yeast ubiquitin sequence. HETATM records and chains may also have been removed.",
-            allow_missing_molecules = True
-        )
 
 
-import_year_2_structures()
-sys.exit(0)
 
 
 # ==
