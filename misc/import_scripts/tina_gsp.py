@@ -326,10 +326,10 @@ complex_definitions = {
             B = 'A', # choice of A or B
         ),
         ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-           ('G09', 'X   1 ') : ('MG ', 'C 220 '), # PDB columns [17:20], [21:27]
+            ('G09', 'X   1 ') : ('GDP', 'C 220 '), # PDB columns [17:20], [21:27]
         }),
         ion_mapping = LigandMap.from_tuples_dict({
-           ('MG ', 'A 204 ') : ('MG ', 'C 221 '),
+            ('MG ', 'A 204 ') : ('MG ', 'C 221 '),
         }),
         techniques = "Manual edit",
     ),
@@ -362,7 +362,7 @@ def import_structures():
         importer.add_designed_pdb(tina_pdb_object, tina_db_id, rcsb_pdb_id,
                                   'Tina Perica', details['description'] , 'tina',
                                   chain_mapping = details['chain_mapping'], ligand_mapping = details['ligand_mapping'],
-                                  params_files = details.get('params_files', {}), techniques=details['techniques'])
+                                  ligand_params_files = details.get('params_files', {}), techniques=details['techniques'])
 
 
 import_structures()
