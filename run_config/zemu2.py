@@ -12,5 +12,6 @@ score_method_ids = [7, 8]
 
 # Prediction set analysis
 prediction_set_credit = 'Kyle Barlow'
-take_lowests = range(1,51)
+# take_lowests = range(1,51)
+take_lowests = [3, 50]
 expectn = 50
