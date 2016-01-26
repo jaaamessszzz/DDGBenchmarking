@@ -323,7 +323,7 @@ complex_definitions = {
         ComplexID = 202,
         chain_mapping = dict(
             A = 'C', # choice of C, D, or E
-            B = 'A', # choice of A or B
+            B = 'B', # looking at B-factors
         ),
         ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
             ('G09', 'X   1 ') : ('GDP', 'C 220 '), # PDB columns [17:20], [21:27]
