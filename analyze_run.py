@@ -65,6 +65,7 @@ def process_ddg_monomer_directory():
                     stability_classication_predicted_cutoff = 1.0,
                     output_directory = output_directory,
                     generate_plots = True,
+                    generate_matplotlib_plots = True,
                     report_analysis = True,
                     silent = False,
                     root_directory = None, # where to find the prediction data on disk
