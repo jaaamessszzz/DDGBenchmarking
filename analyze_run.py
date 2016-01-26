@@ -43,9 +43,8 @@ def process_ddg_monomer_directory():
             output_directory = os.path.join('/tmp/%s/%s' % (getpass.getuser(), prediction_set_name), output_dir_name)
 
             if os.path.isdir( output_directory ):
-                output_directory = tempfile.mkdtemp( prefix = output_dir_name + '_' )
-            else:
-                os.makedirs( output_directory )
+                print 'Removing old output directory'
+                shutil.rmtree( output_directory )
 
             print 'Outputting to directory:', output_directory, '\n'
 
