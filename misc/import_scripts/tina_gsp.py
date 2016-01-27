@@ -20,7 +20,8 @@ from klab.fs.fsio import read_file, write_file, get_file_lines, write_temp_file
 
 sys.path.insert(0, "../../..")
 
-from ddg.ddglib.ppi_api import get_interface as get_ppi_interface
+#from ddg.ddglib.ppi_api import get_interface as get_ppi_interface
+from ddg.ddglib.ddg_monomer_ppi_api import get_interface as get_ppi_interface
 from ddg.ddglib import ddgdbapi, db_api
 from ddg.ddglib.import_api import DataImportInterface
 
@@ -40,6 +41,12 @@ def get_ppi_api():
     if not ppi_api:
         ppi_api = get_ppi_interface(read_file('pw'))
     return ppi_api
+
+ppi_api = get_ppi_api()
+print(ppi_api.get_unfinished_prediction_ids('ddg_monomer_16_003-zemu-2'))
+
+sys.exit(0)
+
 
 ppi_api = get_ppi_api()
 importer = DataImportInterface.get_interface_with_config_file(cache_dir = '/kortemmelab/data/oconchus/ddgcache')
@@ -317,7 +324,7 @@ complex_definitions = {
         rcsb_id = '1A2K',
         db_id = '1A2K_TP0',
         description = 'GSP1 complex from Tina Perica. PDB_REDO was unavailable for this file. Chain A corresponds to chain C in the original RCSB file.',
-        params_files = {'G09' : 'temp/pdbs/1A2K.params', 'G0A' : 'temp/pdbs/1A2K.params'},
+        params_files = {'G09' : 'temp/pdbs/1A2K.params'},
         LChains = ['A'],
         RChains = ['B'],
         ComplexID = 202,
@@ -357,7 +364,7 @@ def import_structures():
         assert((tina_db_id != tina_pdb_id) and (tina_db_id != rcsb_pdb_id) and (len(tina_db_id) > 7) and (tina_db_id[4:7] == '_TP'))
 
         for k, v in details.get('params_files', {}).iteritems():
-            details[k] = os.path.abspath(v)
+            details['params_files'][k] = os.path.abspath(v)
         colortext.message('Importing {0} as {1}'.format(tina_pdb_id, tina_db_id))
         importer.add_designed_pdb(tina_pdb_object, tina_db_id, rcsb_pdb_id,
                                   'Tina Perica', details['description'] , 'tina',
@@ -365,7 +372,8 @@ def import_structures():
                                   ligand_params_files = details.get('params_files', {}), techniques=details['techniques'])
 
 
-import_structures()
+
+#import_structures()
 sys.exit(0)
 
 
