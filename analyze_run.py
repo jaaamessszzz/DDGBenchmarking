@@ -43,9 +43,8 @@ def process_ddg_monomer_directory():
             output_directory = os.path.join('/tmp/%s/%s' % (getpass.getuser(), prediction_set_name), output_dir_name)
 
             if os.path.isdir( output_directory ):
-                output_directory = tempfile.mkdtemp( prefix = output_dir_name + '_' )
-            else:
-                os.makedirs( output_directory )
+                print 'Removing old output directory'
+                shutil.rmtree( output_directory )
 
             print 'Outputting to directory:', output_directory, '\n'
 
@@ -55,7 +54,8 @@ def process_ddg_monomer_directory():
             ppi_api.analyze([prediction_set_name], score_method_id,
                     analysis_set_ids = ['ZEMu'],
                     prediction_set_series_names = {}, prediction_set_descriptions = {}, prediction_set_credits = {prediction_set_name : '%s Score method id: %s (%d)' % (cfg.prediction_set_credit, score_method_details['MethodName'], score_method_id)}, prediction_set_colors = {}, prediction_set_alphas = {},
-                    use_existing_benchmark_data = True, recreate_graphs = False,
+                    use_existing_benchmark_data = cfg.use_existing_benchmark_data,
+                    recreate_graphs = False,
                     include_derived_mutations = False,
                     use_single_reported_value = False,
                     expectn = expectn,
@@ -65,6 +65,7 @@ def process_ddg_monomer_directory():
                     stability_classication_predicted_cutoff = 1.0,
                     output_directory = output_directory,
                     generate_plots = True,
+                    generate_matplotlib_plots = True,
                     report_analysis = True,
                     silent = False,
                     root_directory = None, # where to find the prediction data on disk
