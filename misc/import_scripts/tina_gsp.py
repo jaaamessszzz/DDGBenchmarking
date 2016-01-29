@@ -44,6 +44,9 @@ def get_ppi_api():
 
 ppi_api = get_ppi_api()
 print(ppi_api.get_unfinished_prediction_ids('ddg_monomer_16_003-zemu-2'))
+pids = ppi_api.get_prediction_ids_with_scores('ddg_monomer_16_003-zemu-2')
+print(pids)
+print(len(pids), min(pids), max(pids))
 
 sys.exit(0)
 
