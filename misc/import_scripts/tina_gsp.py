@@ -56,7 +56,8 @@ ppi_api = get_ppi_api()
 #import time
 #t1 = time.time()
 
-ppi_api.help()
+ppi_api.get_score_method_details()
+pprint.pprint(ppi_api._ddg_interface.cached_score_method_details)
 
 #ppi_api.get_score_method_details(score_method_id)
 
