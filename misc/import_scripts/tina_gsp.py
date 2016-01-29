@@ -43,10 +43,26 @@ def get_ppi_api():
     return ppi_api
 
 ppi_api = get_ppi_api()
-print(ppi_api.get_unfinished_prediction_ids('ddg_monomer_16_003-zemu-2'))
-pids = ppi_api.get_prediction_ids_with_scores('ddg_monomer_16_003-zemu-2')
-print(pids)
-print(len(pids), min(pids), max(pids))
+#print(ppi_api.get_unfinished_prediction_ids('ddg_monomer_16_003-zemu-2'))
+#pids = ppi_api.get_prediction_ids_with_scores('ddg_monomer_16_003-zemu-2')
+#print(pids)
+#print(len(pids), min(pids), max(pids))
+
+
+### Find all prediction_ids with missing scores and setup rescoring or rescore on the fly
+prediction_ids = ppi_api.get_prediction_ids_with_scores('ddg_monomer_16_003-zemu-2')
+print '%d prediction_ids are yet to be scored' % len(prediction_ids)
+import time
+t1 = time.time()
+for prediction_id in list(prediction_ids)[:100]:
+    job_details = ppi_api.get_job_details(prediction_id, truncate_content = 30)
+    pprint.pprint(job_details)
+    break
+    print('.')
+print('{0}s.'.format(time.time() - t1))
+
+# 100 = 7.711s
+# 100 new = 8.23s, 8.23s, 7.58s
 
 sys.exit(0)
 
