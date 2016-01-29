@@ -22,6 +22,7 @@ sys.path.insert(0, "../../..")
 
 #from ddg.ddglib.ppi_api import get_interface as get_ppi_interface
 from ddg.ddglib.ddg_monomer_ppi_api import get_interface as get_ppi_interface
+#from ddg.ddglib.ppi_api import get_interface as get_ppi_interface
 from ddg.ddglib import ddgdbapi, db_api
 from ddg.ddglib.import_api import DataImportInterface
 
@@ -50,10 +51,17 @@ ppi_api = get_ppi_api()
 
 
 ### Find all prediction_ids with missing scores and setup rescoring or rescore on the fly
-prediction_ids = ppi_api.get_prediction_ids_with_scores('ddg_monomer_16_003-zemu-2')
-print '%d prediction_ids are yet to be scored' % len(prediction_ids)
-import time
-t1 = time.time()
+#prediction_ids = ppi_api.get_prediction_ids_with_scores('ddg_monomer_16_003-zemu-2')
+#print '%d prediction_ids are yet to be scored' % len(prediction_ids)
+#import time
+#t1 = time.time()
+
+ppi_api.help()
+
+#ppi_api.get_score_method_details(score_method_id)
+
+sys.exit(0)
+
 for prediction_id in list(prediction_ids)[:100]:
     job_details = ppi_api.get_job_details(prediction_id, truncate_content = 30)
     pprint.pprint(job_details)
