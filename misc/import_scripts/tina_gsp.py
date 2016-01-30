@@ -44,6 +44,8 @@ def get_ppi_api():
     return ppi_api
 
 ppi_api = get_ppi_api()
+
+ppi_api.merge_prediction_run('ddg_monomer_16-zemu-betanov15', 'ddg_monomer_16-zemu-betanov15v2', create_if_does_not_exist = True)
 #print(ppi_api.get_unfinished_prediction_ids('ddg_monomer_16_003-zemu-2'))
 #pids = ppi_api.get_prediction_ids_with_scores('ddg_monomer_16_003-zemu-2')
 #print(pids)
@@ -56,8 +58,10 @@ ppi_api = get_ppi_api()
 #import time
 #t1 = time.time()
 
-ppi_api.get_score_method_details()
-pprint.pprint(ppi_api._ddg_interface.cached_score_method_details)
+#ppi_api.get_score_method_details()
+#pprint.pprint(ppi_api._ddg_interface.cached_score_method_details)
+
+
 
 #ppi_api.get_score_method_details(score_method_id)
 
