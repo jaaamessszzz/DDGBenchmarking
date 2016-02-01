@@ -130,7 +130,7 @@ if __name__ == '__main__':
             
         argdict = {
             'input_file_list' : [files_dict[substitution_parameters['%%input_pdb%%']]],
-            '-parser:script_vars' = [
+            '-parser:script_vars' : [
                 'pathtoresfile=%s' % files_dict[substitution_parameters['%%pathtoresfile%%']],
                 'alascanscorefxn=%s' % rosetta_scripts_score_fxn,
                 'chainstomove=%s' % substitution_parameters['%%chainstomove%%'],
