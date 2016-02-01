@@ -13,17 +13,17 @@
   </MOVERS>
 
   <FILTERS>
-    <DdGScan name=alascan task_operations=rrf repeats=1 scorefxn=fa_interface report_diffs=1 write2pdb=0 ddG_mover=ddgmover />
+    <DdGScan name=alascan task_operations=rrf repeats=1 scorefxn=fa_%%alascanscorefxn%% report_diffs=1 write2pdb=0 ddG_mover=ddgmover />
   </FILTERS>
 
   <MOVERS>
-    <ReportToDB name=alascan_reporter batch_description="interface_weights">
+    <ReportToDB name=alascan_reporter batch_description="%%alascanscorefxn%%_weights">
       <feature name=ResidueFeatures/>
       <feature name=PdbDataFeatures/>
       <feature name=ScoreTypeFeatures/>
-      <feature name=ScoreFunctionFeatures scorefxn=fa_interface/>
-      <feature name=StructureScoresFeatures scorefxn=fa_interface/>
-      <feature name=ResidueScoresFeatures scorefxn=fa_interface/>
+      <feature name=ScoreFunctionFeatures scorefxn=fa_%%alascanscorefxn%%/>
+      <feature name=StructureScoresFeatures scorefxn=fa_%%alascanscorefxn%%/>
+      <feature name=ResidueScoresFeatures scorefxn=fa_%%alascanscorefxn%%/>
       <feature name=DdGFeatures ddG_scan_mover=alascan/>
     </ReportToDB>
   </MOVERS>
