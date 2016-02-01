@@ -70,6 +70,7 @@ def process_ddg_monomer_directory():
                     silent = False,
                     root_directory = None, # where to find the prediction data on disk
                     debug = False,
+                    allow_failures = cfg.allow_missing_case_failures,
                     )
     
 if __name__ == '__main__':
