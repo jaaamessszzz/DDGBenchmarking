@@ -16,3 +16,4 @@ prediction_set_credit = 'Kyle Barlow'
 take_lowests = [3, 50]
 expectn = 50
 use_existing_benchmark_data = True
+allow_missing_case_failures = False
