@@ -20,9 +20,9 @@ from klab.fs.fsio import read_file, write_file, get_file_lines, write_temp_file
 
 sys.path.insert(0, "../../..")
 
+#from ddg.ddglib.ddg_monomer_ppi_api import get_interface as get_ppi_interface
 #from ddg.ddglib.ppi_api import get_interface as get_ppi_interface
-from ddg.ddglib.ddg_monomer_ppi_api import get_interface as get_ppi_interface
-#from ddg.ddglib.ppi_api import get_interface as get_ppi_interface
+from ddg.ddglib.ppi_api import get_interface as get_ppi_interface
 from ddg.ddglib import ddgdbapi, db_api
 from ddg.ddglib.import_api import DataImportInterface
 
@@ -48,7 +48,7 @@ ppi_api = get_ppi_api()
 #ppi_api.merge_prediction_run('ddg_monomer_16-zemu-betanov15', 'ddg_monomer_16-zemu-betanov15v2', create_if_does_not_exist = True)
 #ppi_api.merge_prediction_run('ddg_monomer_16-zemu-betanov15', 'ddg_monomer_16-zemu-betanov15v2', create_if_does_not_exist = True)
 
-ppi_api._ddg_interface._add_file_content('1234567890', db_cursor = None, rm_trailing_line_whitespace = False, forced_mime_type = None)
+#ppi_api._ddg_interface._add_file_content('1234567890', db_cursor = None, rm_trailing_line_whitespace = False, forced_mime_type = None)
 
 
 #print(ppi_api.get_unfinished_prediction_ids('ddg_monomer_16_003-zemu-2'))
@@ -70,19 +70,19 @@ ppi_api._ddg_interface._add_file_content('1234567890', db_cursor = None, rm_trai
 
 #ppi_api.get_score_method_details(score_method_id)
 
-sys.exit(0)
+#sys.exit(0)
 
-for prediction_id in list(prediction_ids)[:100]:
-    job_details = ppi_api.get_job_details(prediction_id, truncate_content = 30)
-    pprint.pprint(job_details)
-    break
-    print('.')
-print('{0}s.'.format(time.time() - t1))
+#for prediction_id in list(prediction_ids)[:100]:
+#    job_details = ppi_api.get_job_details(prediction_id, truncate_content = 30)
+#    pprint.pprint(job_details)
+#    break
+#    print('.')
+#print('{0}s.'.format(time.time() - t1))
 
 # 100 = 7.711s
 # 100 new = 8.23s, 8.23s, 7.58s
 
-sys.exit(0)
+#sys.exit(0)
 
 
 ppi_api = get_ppi_api()
