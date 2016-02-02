@@ -85,7 +85,7 @@ ppi_api = get_ppi_api()
 #sys.exit(0)
 
 
-ppi_api = get_ppi_api()
+#ppi_api = get_ppi_api()
 importer = DataImportInterface.get_interface_with_config_file(cache_dir = '/kortemmelab/data/oconchus/ddgcache')
 
 
@@ -321,14 +321,14 @@ The mapping is below.
 
 At this point, we have a mapping from three of Tina's complexes to entries in the database but with no corresponding experimental data.
 
+1I2M is in the database with molecules RAN (A,C) and RCC1 (B,D). Tina calls this Gsp1|SRM1.
+   complex #176 -> 1I2M (A|B) where Tina uses A|B (same chain labels). This is an exact match so we will use this complex (but we still need to add a new PDBSet since this is a different PDB file).
+
 1A2K is in the database with molecules NTF2 (A,B) and RAN/GSP1P (C,D,E). Tina calls this Gsp1|NTF2.
    complex #202 -> 1A2K (C|AB) where Tina uses A|B (which corresponds to C|B after accounting for chain renaming). I will reuse the existing complex and create a new PDBSet.
 
 1K5D is in the database with molecules RAN (A,D,G,J) and RANBP1 (B,E,H,K) and RANGAP (C,F,I,L). Tina calls this Gsp1|RNA1.
    complex #119 -> 1K5D (AB|C). Tina does not use chain B so we will create a new complex.
-
-1I2M is in the database with molecules RAN (A,C) and RCC1 (B,D). Tina calls this Gsp1|SRM1.
-   complex #176 -> 1I2M (A|B) where Tina uses A|B (same chain labels). This is an exact match so we will create a new PDBSet.
 
 '''
 
@@ -357,79 +357,147 @@ def create_mapping_string():
 
 complex_definitions = {
     '1A2K' : dict(
-        filepath = 'pdbs/1A2K.pdb', # not used here but this would be the data usually required by e.g. a web API
-        rcsb_id = '1A2K',
-        db_id = '1A2K_TP0',
-        description = 'GSP1 complex from Tina Perica. PDB_REDO was unavailable for this file. Chain A corresponds to chain C in the original RCSB file.',
-        params_files = {'G09' : 'temp/pdbs/1A2K.params'},
-        LChains = ['A'],
-        RChains = ['B'],
-        ComplexID = 202,
-        chain_mapping = dict(
-            A = 'C', # choice of C, D, or E
-            B = 'B', # looking at B-factors
+        Structure = dict(
+            filepath = 'pdbs/1A2K.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '1A2K',
+            db_id = '1A2K_TP0',
+            description = 'GSP1 complex (NTF2) from Tina Perica. PDB_REDO was unavailable for this file. Chain A corresponds to chain C in the original RCSB file.',
+            params_files = {'G09' : 'temp/pdbs/1A2K.params'},
+            chain_mapping = dict(
+                A = 'C', # choice of C, D, or E. RAN
+                B = 'B', # looking at B-factors. NTF-2
+            ),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G09', 'X   1 ') : ('GDP', 'C 220 '), # PDB columns [17:20], [21:27]
+            }),
+            ion_mapping = LigandMap.from_tuples_dict({
+                ('MG ', 'A 204 ') : ('MG ', 'C 221 '),
+            }),
+            unchanged_ion_codes = ['MG '],
+            techniques = "Manual edit",
         ),
-        ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-            ('G09', 'X   1 ') : ('GDP', 'C 220 '), # PDB columns [17:20], [21:27]
-        }),
-        ion_mapping = LigandMap.from_tuples_dict({
-            ('MG ', 'A 204 ') : ('MG ', 'C 221 '),
-        }),
-        techniques = "Manual edit",
+        Complex = dict(
+            ComplexID = 202,
+            LChains = ['A'],
+            RChains = ['B'],
+        )
     ),
-}
-
-
-
-
-#tina_pdb_objects : pdb_id -> p
-#tina_pdb_id_to_rcsb_pdb_id: pdb_id -> pdb_id
-#rcsb_pdb_objects: pdb_id -> p
-#tina_to_rcsb_chain_mapping: pdb_id -> chain -> chain
-
-def import_structures():
-    ppi_api = get_ppi_api()
-    for tina_pdb_id, details in sorted(complex_definitions.iteritems()):
-        tina_pdb_id = tina_pdb_id.upper()
-        rcsb_pdb_id = tina_pdb_id_to_rcsb_pdb_id[tina_pdb_id]
-        assert(details['rcsb_id'] == rcsb_pdb_id)
-
-        tina_pdb_object = tina_pdb_objects[tina_pdb_id]
-        rcsb_pdb_object = rcsb_pdb_objects[rcsb_pdb_id]
-        tina_db_id = details['db_id']
-
-        assert((tina_db_id != tina_pdb_id) and (tina_db_id != rcsb_pdb_id) and (len(tina_db_id) > 7) and (tina_db_id[4:7] == '_TP'))
-
-        for k, v in details.get('params_files', {}).iteritems():
-            details['params_files'][k] = os.path.abspath(v)
-        colortext.message('Importing {0} as {1}'.format(tina_pdb_id, tina_db_id))
-        importer.add_designed_pdb(tina_pdb_object, tina_db_id, rcsb_pdb_id,
-                                  'Tina Perica', details['description'] , 'tina',
-                                  chain_mapping = details['chain_mapping'], ligand_mapping = details['ligand_mapping'],
-                                  ligand_params_files = details.get('params_files', {}), techniques=details['techniques'])
-
-
-
-#import_structures()
-sys.exit(0)
-
-
-sys.exit(0)
-
-
-tina_to_rcsb_chain_mapping = {
     '1I2M' : dict(
-        A = 'A', # choice of A or C
-        B = 'B', # choice of B or D
+        Structure = dict(
+            filepath = 'pdbs/1I2M.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '1I2M',
+            db_id = '1I2M_TP0',
+            description = 'GSP1 complex (SRM1) from Tina Perica. This file was taken from PDB_REDO.',
+            params_files = {},
+            chain_mapping = dict(
+                A = 'A', # choice of A or C. RAN
+                B = 'B', # choice of B or D. RCC1
+            ),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('SO4', 'A1250 ') : ('SO4', 'A1250 '),
+            }),
+            ion_mapping = None,
+            techniques = "PDB_REDO",
+        ),
+        Complex = dict(
+            ComplexID = 176,
+            LChains = ['A'],
+            RChains = ['B'],
+        )
     ),
-    '1K5D2' : dict(
-        A = 'A', # choice of A, D, G, J
-        C = 'C', # choice of C, F, I, L
+    '1K5D' : dict(
+        Structure = dict(
+            filepath = 'pdbs/1K5D2.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '1K5D',
+            db_id = '1K5D_TP0',
+            description = 'GSP1 complex (RanGAP1) from Tina Perica. This file was taken from PDB_REDO.',
+            params_files = {'G13' : 'temp/pdbs/1K5D2.params'},
+            chain_mapping = dict(
+                A = 'A', # choice of A, D, G, J. RAN
+                C = 'C', # choice of C, F, I, L. Ran GTPase activating protein 1
+            ),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G13', 'X   1 ') : ('GNP', 'A1250 '),
+            }),
+            ion_mapping = LigandMap.from_tuples_dict({
+                ('MG ', 'A 180 ') : ('MG ', 'A1251 '),
+            }),
+            "PDB_REDO",
+        ),
+        Complex = dict(
+            ComplexID = None,
+            LName = 'Ras-related nuclear protein',
+            LShortName = 'RAN',
+            LHTMLName = 'RAN',
+            RName = 'Ran-specific GTPase-activating protein',
+            RShortName = 'RanGAP1',
+            RHTMLName = 'RanGAP1',
+            FunctionalClassID = 'OG',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = True,
+            WildTypeComplexID = None,
+            Notes = 'Removed residues 180-213 from chain A (RAN/GSP1) (the ones wrapping around YRB1).',
+            Warnings = None,
+            LChains = ['A'],
+            RChains = ['C'],
+        )
     ),
     '1QBK' : dict(
-        A = 'C',
-        B = 'B',
+        Structure = dict(
+            filepath = 'pdbs/1QBK.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '1QBK',
+            db_id = '1QBK_TP0',
+            description = 'GSP1 complex (KAP104/TNPO1) from Tina Perica. This file was taken from PDB_REDO.',
+            params_files = {'G12' : 'temp/pdbs/1QBK.params'},
+            chain_mapping = dict(
+                A = 'C', # RAN
+                B = 'B', # KAP104
+            ),
+            ??? ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G12', 'X   1 ') : ('GNP', 'C 218 '),
+            }),
+            unchanged_ligand_codes = ['MSE'],
+            ??? ion_mapping = LigandMap.from_tuples_dict({
+                ('MG ', 'A 180 ') : ('MG ', ' '),
+            }),
+            ??? "PDB_REDO",
+        ),
+        Complex = dict(
+            ??? ComplexID = None,
+            ??? LName = 'Ras-related nuclear protein',
+            ??? LShortName = 'RAN',
+            ??? LHTMLName = 'RAN',
+            ??? RName = 'Karyopherin beta2',
+            ??? RShortName = 'KAP104',
+            ??? RHTMLName = 'KAP104',
+            ??? FunctionalClassID = 'OG',
+            ??? PPDBMFunctionalClassID = 'O',
+            ??? PPDBMDifficulty = None,
+            ??? IsWildType = True,
+            ??? WildTypeComplexID = None,
+            ??? Notes = 'Removed residues 180-213 from chain A (RAN/GSP1) (the ones wrapping around YRB1).',
+            ??? Warnings = None,
+            ??? LChains = ['A'],
+            ??? RChains = ['B'],
+        )
     ),
+
+
+
+4ol0 (MTR10)
+1wa52 (CSE1)
+3m1i2 (CRM1) - remove Gsp1 residue 180 until the end
+3a6p (MSN5) - removed the peptide with UNK residues
+1wa51 (SRP1) - removed resi 12-19 from chain B (SRP1)
+3w3z (PSE1) - removed PSE1 residues after 736 (just to make the protein smaller - that region is far from gsp1/ran)
+3ea5 (KAP95:GDP)
+2bku (KAP95:GTP)
+3m1i1 (YRB1)
+3icq (LOS1)
+1qbk (KAP104) - NOTE! pdb_redo not available - remove Gsp1/Ran residues after 179 (sticking out and forming crystal contacts)
+3wyf1 (YRB2) - removed residues 97-110 and 141-155 from chain B (YRB2) - the ones wrapping around CRM1 and detached from the rest of YRB2
+
     '1WA51' : dict(
         A = 'A',
         B = 'B',
@@ -477,18 +545,142 @@ tina_to_rcsb_chain_mapping = {
         A = 'A',
         B = 'B',
     ),
+
+    '???' : dict(
+        Structure = dict(
+            ??? filepath = 'pdbs/.pdb', # not used here but this would be the data usually required by e.g. a web API
+            ??? rcsb_id = '',
+            ??? db_id = '_TP0',
+            ??? description = 'GSP1 complex (???) from Tina Perica. This file was taken from PDB_REDO.',
+            ??? params_files = {'XXX' : 'temp/pdbs/???.params'},
+            ??? chain_mapping = dict(
+                A = 'A', # choice of A, D, G, J. RAN
+                C = 'C', # choice of C, F, I, L. Ran GTPase activating protein 1
+            ),
+            ??? ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G13', 'X   1 ') : ('GNP', 'A1250 '),
+            }),
+            ??? ion_mapping = LigandMap.from_tuples_dict({
+                ('MG ', 'A 180 ') : ('MG ', 'A1251 '),
+            }),
+            ??? "PDB_REDO",
+        ),
+        Complex = dict(
+            ??? ComplexID = None,
+            ??? LName = 'Ras-related nuclear protein',
+            ??? LShortName = 'RAN',
+            ??? LHTMLName = 'RAN',
+            ??? RName = 'Ran-specific GTPase-activating protein',
+            ??? RShortName = 'RanGAP1',
+            ??? RHTMLName = 'RanGAP1',
+            ??? FunctionalClassID = 'OG',
+            ??? PPDBMFunctionalClassID = 'O',
+            ??? PPDBMDifficulty = None,
+            ??? IsWildType = True,
+            ??? WildTypeComplexID = None,
+            ??? Notes = 'Removed residues 180-213 from chain A (RAN/GSP1) (the ones wrapping around YRB1).',
+            ??? Warnings = None,
+            ??? LChains = ['A'],
+            ??? RChains = ['C'],
+        )
+    ),
+
 }
 
 
-def add_headers():
-    for pdb_id, details in year_2_cases.iteritems():
-        source_filepath = details['filepath']
-        target_filepath = details['filepath'].replace('.pdb', '.yeast.pdb')
-        new_filepath = details['filepath'].replace('.pdb', '.yeast.headers.pdb')
-        if read_file(target_filepath).strip().startswith('ATOM'):
-            new_content = PDB.replace_headers(read_file(source_filepath), read_file(target_filepath))
-            write_file(new_filepath, new_content)
 
+
+#tina_pdb_objects : pdb_id -> p
+#tina_pdb_id_to_rcsb_pdb_id: pdb_id -> pdb_id
+#rcsb_pdb_objects: pdb_id -> p
+#tina_to_rcsb_chain_mapping: pdb_id -> chain -> chain
+
+def import_structures():
+    ppi_api = get_ppi_api()
+    for tina_pdb_id, details in sorted(complex_definitions.iteritems()):
+
+        structural_details = details['Structure']
+        complex_details = details['Complex']
+
+        if tina_pdb_id in ['1A2K']:
+            continue
+
+        if tina_pdb_id != '1I2M':
+            assert(details['Structure']['chain_mapping'])
+
+        assert(sorted(details['chain_mapping'].keys()) == sorted(details['Complex']['LChains'] + details['Complex']['RChains']))
+
+        tina_pdb_id = tina_pdb_id.upper()
+        rcsb_pdb_id = tina_pdb_id_to_rcsb_pdb_id[tina_pdb_id]
+        assert(structural_details['rcsb_id'] == rcsb_pdb_id)
+
+        tina_pdb_object = tina_pdb_objects[tina_pdb_id]
+        rcsb_pdb_object = rcsb_pdb_objects[rcsb_pdb_id]
+        tina_db_id = structural_details['db_id']
+
+        assert((tina_db_id != tina_pdb_id) and (tina_db_id != rcsb_pdb_id) and (len(tina_db_id) > 7) and (tina_db_id[4:7] == '_TP'))
+
+        #    Step 1: Add complexes
+        complex_id = None
+        if 'complex_id' in complex_details:
+           complex_id = complex_details['complex_id']
+        else:
+
+
+        Complex = dict(
+            ComplexID = 202,
+            LChains = ['A'],
+            RChains = ['B'],
+        )
+
+        ppi_api.add_complex
+
+        mut_complex_3H7P = dict(
+            LName = 'Ubiquitin (yeast) K63R',
+            LShortName = 'Ubiquitin K63R',
+            LHTMLName = 'Ubiquitin (yeast) K63R',
+            RName = 'Ubiquitin (yeast)',
+            RShortName = 'Ubiquitin',
+            RHTMLName = 'Ubiquitin (yeast)',
+            FunctionalClassID = 'OX',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = False,
+            WildTypeComplexID = wt_complex_id,
+            Notes = None,
+            Warnings = None,
+        )
+        DDGdb.insertDictIfNew('PPComplex', mut_complex_3H7P, ['LName', 'RName'])
+
+
+
+1A2K is in the database with molecules NTF2 (A,B) and RAN/GSP1P (C,D,E). Tina calls this Gsp1|NTF2.
+   complex #202 -> 1A2K (C|AB) where Tina uses A|B (which corresponds to C|B after accounting for chain renaming). I will reuse the existing complex and create a new PDBSet.
+
+1K5D is in the database with molecules RAN (A,D,G,J) and RANBP1 (B,E,H,K) and RANGAP (C,F,I,L). Tina calls this Gsp1|RNA1.
+   complex #119 -> 1K5D (AB|C). Tina does not use chain B so we will create a new complex.
+
+1I2M is in the database with molecules RAN (A,C) and RCC1 (B,D). Tina calls this Gsp1|SRM1.
+   complex #176 -> 1I2M (A|B) where Tina uses A|B (same chain labels). This is an exact match so we will use the same PDBSet.
+
+
+        #    Step 1: Add PDB files
+        for k, v in details.get('params_files', {}).iteritems():
+            details['params_files'][k] = os.path.abspath(v)
+        colortext.message('Importing {0} as {1}'.format(tina_pdb_id, tina_db_id))
+        importer.add_designed_pdb(tina_pdb_object, tina_db_id, rcsb_pdb_id,
+                                  'Tina Perica', details['description'] , 'tina',
+                                  chain_mapping = details['chain_mapping'], ligand_mapping = details['ligand_mapping'],
+                                  ligand_params_file_paths = details.get('params_files', {}), techniques=details['techniques'])
+
+
+
+
+import_structures()
+sys.exit(0)
+
+
+sys.exit(0)
 
 
 
