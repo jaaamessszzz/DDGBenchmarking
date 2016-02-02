@@ -370,10 +370,7 @@ complex_definitions = {
             ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G09', 'X   1 ') : ('GDP', 'C 220 '), # PDB columns [17:20], [21:27]
             }),
-            ion_mapping = LigandMap.from_tuples_dict({
-                ('MG ', 'A 204 ') : ('MG ', 'C 221 '),
-            }),
-            unchanged_ion_codes = ['MG '],
+            unchanged_ion_codes = ['MG'],
             techniques = "Manual edit",
         ),
         Complex = dict(
@@ -393,9 +390,8 @@ complex_definitions = {
                 A = 'A', # choice of A or C. RAN
                 B = 'B', # choice of B or D. RCC1
             ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('SO4', 'A1250 ') : ('SO4', 'A1250 '),
-            }),
+            unchanged_ligand_codes = ['SO4'],
+            unchanged_ion_codes = ['MG'],
             ion_mapping = None,
             techniques = "PDB_REDO",
         ),
@@ -410,7 +406,7 @@ complex_definitions = {
             filepath = 'pdbs/1K5D2.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '1K5D',
             db_id = '1K5D_TP0',
-            description = 'GSP1 complex (RanGAP1) from Tina Perica. This file was taken from PDB_REDO.',
+            description = 'GSP1 complex (RanGAP1) from Tina Perica. This file was taken from PDB_REDO. Removed residues 180-213 from chain A (RAN/GSP1) (the ones wrapping around YRB1).',
             params_files = {'G13' : 'temp/pdbs/1K5D2.params'},
             chain_mapping = dict(
                 A = 'A', # choice of A, D, G, J. RAN
@@ -419,13 +415,10 @@ complex_definitions = {
             ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G13', 'X   1 ') : ('GNP', 'A1250 '),
             }),
-            ion_mapping = LigandMap.from_tuples_dict({
-                ('MG ', 'A 180 ') : ('MG ', 'A1251 '),
-            }),
-            "PDB_REDO",
+            unchanged_ion_codes = ['MG'],
+            techniques = "PDB_REDO",
         ),
         Complex = dict(
-            ComplexID = None,
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -437,7 +430,7 @@ complex_definitions = {
             PPDBMDifficulty = None,
             IsWildType = True,
             WildTypeComplexID = None,
-            Notes = 'Removed residues 180-213 from chain A (RAN/GSP1) (the ones wrapping around YRB1).',
+            Notes = 'There is a related complex in the database (complex #119 at the time of writing) with all three unique chains from 1K5D (AB|C).',
             Warnings = None,
             LChains = ['A'],
             RChains = ['C'],
@@ -448,38 +441,34 @@ complex_definitions = {
             filepath = 'pdbs/1QBK.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '1QBK',
             db_id = '1QBK_TP0',
-            description = 'GSP1 complex (KAP104/TNPO1) from Tina Perica. This file was taken from PDB_REDO.',
+            description = 'GSP1 complex (KAP104/TNPO1) from Tina Perica. PDB_REDO was unavailable for this file. Removed Gsp1/Ran residues after 179 (sticking out and forming crystal contacts).',
             params_files = {'G12' : 'temp/pdbs/1QBK.params'},
             chain_mapping = dict(
                 A = 'C', # RAN
                 B = 'B', # KAP104
             ),
-            ??? ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G12', 'X   1 ') : ('GNP', 'C 218 '),
             }),
             unchanged_ligand_codes = ['MSE'],
-            ??? ion_mapping = LigandMap.from_tuples_dict({
-                ('MG ', 'A 180 ') : ('MG ', ' '),
-            }),
-            ??? "PDB_REDO",
+            techniques = "Manual edit",
         ),
         Complex = dict(
-            ??? ComplexID = None,
-            ??? LName = 'Ras-related nuclear protein',
-            ??? LShortName = 'RAN',
-            ??? LHTMLName = 'RAN',
-            ??? RName = 'Karyopherin beta2',
-            ??? RShortName = 'KAP104',
-            ??? RHTMLName = 'KAP104',
-            ??? FunctionalClassID = 'OG',
-            ??? PPDBMFunctionalClassID = 'O',
-            ??? PPDBMDifficulty = None,
-            ??? IsWildType = True,
-            ??? WildTypeComplexID = None,
-            ??? Notes = 'Removed residues 180-213 from chain A (RAN/GSP1) (the ones wrapping around YRB1).',
-            ??? Warnings = None,
-            ??? LChains = ['A'],
-            ??? RChains = ['B'],
+            LName = 'Ras-related nuclear protein',
+            LShortName = 'RAN',
+            LHTMLName = 'RAN',
+            RName = 'Karyopherin beta2',
+            RShortName = 'KAP104',
+            RHTMLName = 'KAP104',
+            FunctionalClassID = 'OG',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = True,
+            WildTypeComplexID = None,
+            Notes = None,
+            Warnings = None,
+            LChains = ['A'],
+            RChains = ['B'],
         )
     ),
 
@@ -563,7 +552,9 @@ complex_definitions = {
             ??? ion_mapping = LigandMap.from_tuples_dict({
                 ('MG ', 'A 180 ') : ('MG ', 'A1251 '),
             }),
-            ??? "PDB_REDO",
+            ??? unchanged_ligand_codes = [],
+            ??? unchanged_ion_codes = [],
+            ??? techniques = 'PDB_REDO',
         ),
         Complex = dict(
             ??? ComplexID = None,
@@ -578,7 +569,7 @@ complex_definitions = {
             ??? PPDBMDifficulty = None,
             ??? IsWildType = True,
             ??? WildTypeComplexID = None,
-            ??? Notes = 'Removed residues 180-213 from chain A (RAN/GSP1) (the ones wrapping around YRB1).',
+            ??? Notes = None,
             ??? Warnings = None,
             ??? LChains = ['A'],
             ??? RChains = ['C'],
@@ -608,7 +599,17 @@ def import_structures():
         if tina_pdb_id != '1I2M':
             assert(details['Structure']['chain_mapping'])
 
-        assert(sorted(details['chain_mapping'].keys()) == sorted(details['Complex']['LChains'] + details['Complex']['RChains']))
+        assert(sorted(details['Structure']['chain_mapping'].keys()) == sorted(details['Complex']['LChains'] + details['Complex']['RChains']))
+
+        assert(details['Structure']['unchanged_ligand_codes'] or details['Structure']['ligand_mapping'])
+
+        for k in details['Structure']['params_files'].keys():
+            print(k)
+            assert(k in details['Structure']['ligand_mapping'.code_map])
+
+
+        assert ComplexID or ComplexDetails - LChains and RChains
+
 
         tina_pdb_id = tina_pdb_id.upper()
         rcsb_pdb_id = tina_pdb_id_to_rcsb_pdb_id[tina_pdb_id]
