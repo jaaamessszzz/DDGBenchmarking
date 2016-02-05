@@ -471,7 +471,42 @@ complex_definitions = {
             RChains = ['B'],
         )
     ),
-
+    '4OL0' : dict(
+        Structure = dict(
+            filepath = 'pdbs/4OL0.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '4OL0',
+            db_id = '4OL0_TP0',
+            description = 'GSP1 complex (MTR10) from Tina Perica. This file was taken from PDB_REDO.',
+            params_files = {'G01' : 'temp/pdbs/4OL0.params'},
+            chain_mapping = dict(
+                A = 'A',
+                B = 'B',
+            ),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G01', 'X   1 ') : ('GTP', 'A 302 '),
+            }),
+            unchanged_ligand_codes = [],
+            unchanged_ion_codes = ['MG'],
+            techniques = 'PDB_REDO',
+        ),
+        Complex = dict(
+            LName = 'Ras-related nuclear protein',
+            LShortName = 'RAN',
+            LHTMLName = 'RAN',
+            RName = 'Transportin-3',
+            RShortName = 'MTR10',
+            RHTMLName = 'MTR10',
+            FunctionalClassID = 'OG',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = True,
+            WildTypeComplexID = None,
+            Notes = None,
+            Warnings = None,
+            LChains = ['A'],
+            RChains = ['B'],
+        )
+    ),
 
 
 4ol0 (MTR10)
@@ -530,10 +565,7 @@ complex_definitions = {
         A = 'A', # choice of A, D
         B = 'B', # choice of B, E
     ),
-    '4OL0' : dict(
-        A = 'A',
-        B = 'B',
-    ),
+
 
     '???' : dict(
         Structure = dict(
@@ -557,7 +589,6 @@ complex_definitions = {
             ??? techniques = 'PDB_REDO',
         ),
         Complex = dict(
-            ??? ComplexID = None,
             ??? LName = 'Ras-related nuclear protein',
             ??? LShortName = 'RAN',
             ??? LHTMLName = 'RAN',
