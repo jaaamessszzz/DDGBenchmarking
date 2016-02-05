@@ -507,11 +507,6 @@ complex_definitions = {
             RChains = ['B'],
         )
     ),
-
-    '1WA51' : dict(
-        A = 'A',
-        B = 'B',
-    ),
     '1WA51' : dict(
         Structure = dict(
             filepath = 'pdbs/1WA51.pdb', # not used here but this would be the data usually required by e.g. a web API
@@ -584,9 +579,80 @@ complex_definitions = {
             RChains = ['C'],
         )
     ),
+    '2BKU' : dict(
+        Structure = dict(
+            filepath = 'pdbs/2BKU.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '2BKU',
+            db_id = '2BKU_TP0',
+            description = 'GSP1 complex (KAP95) from Tina Perica. This file was taken from PDB_REDO.',
+            params_files = {'G08' : 'temp/pdbs/2BKU.params'},
+            chain_mapping = dict(
+                A = 'A', # choice of A, C. RAN
+                B = 'B', # choice of B, D. Importin β subunit, KAP95',
+            ),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G08', 'X   1 ') : ('GTP', 'A 220 '),
+            }),
+            unchanged_ion_codes = ['MG'],
+            techniques = 'PDB_REDO',
+        ),
+        Complex = dict(
+            LName = 'Ras-related nuclear protein',
+            LShortName = 'RAN',
+            LHTMLName = 'RAN',
+            RName = 'Importin β subunit',
+            RShortName = 'KAP95',
+            RHTMLName = 'KAP95',
+            FunctionalClassID = 'OG',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = True,
+            WildTypeComplexID = None,
+            Notes = None,
+            Warnings = None,
+            LChains = ['A'],
+            RChains = ['B'],
+        )
+    ),
+    '3A6P' : dict(
+        Structure = dict(
+            filepath = 'pdbs/3A6P.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '3A6P',
+            db_id = '3A6P_TP0',
+            description = 'GSP1 complex (MSN5) from Tina Perica. This file was taken from PDB_REDO. The peptide (chain B/G) contains UNK residues and was removed.',
+            params_files = {'XXX' : 'temp/pdbs/3A6P.params'},
+            chain_mapping = dict(
+                A = 'C', # choice of C, H. RAN versus the world!
+                C = 'A', # choice of A, F. Exportin-5 / KIAA1291 / RANBP21 / MSN5
+                D = 'D', # choice of D, I. pre-microRNA. GGUAAACAUCCUCGACUGGAAGCU
+                E = 'E', # choice of E, J. pre-microRNA. GGCUUUCAGUCGGAUGUUUGCCGC
+            ),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G04', 'X   1 ') : ('GTP', 'C1177 '),
+            }),
+            unchanged_ligand_codes = [],
+            unchanged_ion_codes = ['MG'],
+            techniques = 'PDB_REDO',
+        ),
+        Complex = dict(
+            LName = 'Ras-related nuclear protein',
+            LShortName = 'RAN',
+            LHTMLName = 'RAN',
+            RName = 'Exportin-5 / KIAA1291 / RANBP21 / MSN5',
+            RShortName = 'MSN5',
+            RHTMLName = 'MSN5',
+            FunctionalClassID = 'OG',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = True,
+            WildTypeComplexID = None,
+            Notes = None,
+            Warnings = None,
+            LChains = ['A'],
+            RChains = ['C', 'D', 'E'],
+        )
+    ),
 
-2bku (KAP95:GTP)
-3a6p (MSN5) - removed the peptide with UNK residues
 3ea5 (KAP95:GDP)
 3icq (LOS1)
 
@@ -599,10 +665,6 @@ complex_definitions = {
 3wyf1 (YRB2) - removed residues 97-110 and 141-155 from chain B (YRB2) - the ones wrapping around CRM1 and detached from the rest of YRB2
 
 
-    '2BKU' : dict(
-        A = 'A', # choice of A, C
-        B = 'B', # choice of B, D
-    ),
     '3A6P' : dict(
         A = 'C', # choice of C, H   RAN versus the world!
         C = 'A', # choice of A, F
