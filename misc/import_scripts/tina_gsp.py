@@ -377,7 +377,7 @@ complex_definitions = {
             ComplexID = 202,
             LChains = ['A'],
             RChains = ['B'],
-        )
+        ),
     ),
     '1I2M' : dict(
         Structure = dict(
@@ -419,6 +419,7 @@ complex_definitions = {
             techniques = "PDB_REDO",
         ),
         Complex = dict(
+            AdditionalKeywords = ['GSP1'],
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
