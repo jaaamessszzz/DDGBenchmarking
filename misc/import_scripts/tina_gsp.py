@@ -620,7 +620,7 @@ complex_definitions = {
             rcsb_id = '3A6P',
             db_id = '3A6P_TP0',
             description = 'GSP1 complex (MSN5) from Tina Perica. This file was taken from PDB_REDO. The peptide (chain B/G) contains UNK residues and was removed.',
-            params_files = {'XXX' : 'temp/pdbs/3A6P.params'},
+            params_files = {'G04' : 'temp/pdbs/3A6P.params'},
             chain_mapping = dict(
                 A = 'C', # choice of C, H. RAN versus the world!
                 C = 'A', # choice of A, F. Exportin-5 / KIAA1291 / RANBP21 / MSN5
@@ -797,61 +797,79 @@ complex_definitions = {
             RChains = ['C'],
         )
     ),
-
-
-3w3z (PSE1) - removed PSE1 residues after 736 (just to make the protein smaller - that region is far from gsp1/ran)
-3wyf1 (YRB2) - removed residues 97-110 and 141-155 from chain B (YRB2) - the ones wrapping around CRM1 and detached from the rest of YRB2
-
     '3W3Z' : dict(
-        A = 'B',
-        B = 'A',
-    ),
-    '3WYF1' : dict(
-        A = 'A', # choice of A, D
-        B = 'B', # choice of B, E
-    ),
-
-
-    '???' : dict(
         Structure = dict(
-            ??? filepath = 'pdbs/.pdb', # not used here but this would be the data usually required by e.g. a web API
-            ??? rcsb_id = '',
-            ??? db_id = '_TP0',
-            ??? description = 'GSP1 complex (???) from Tina Perica. This file was taken from PDB_REDO.',
-            ??? params_files = {'XXX' : 'temp/pdbs/???.params'},
-            ??? chain_mapping = dict(
-                A = 'A', # choice of A, D, G, J. RAN
-                C = 'C', # choice of C, F, I, L. Ran GTPase activating protein 1
+            filepath = 'pdbs/3W3Z.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '3W3Z',
+            db_id = '3W3Z_TP0',
+            description = 'GSP1 complex (PSE1) from Tina Perica. This file was taken from PDB_REDO. MSE HETATM records are renamed as ATOM records. Removed PSE1 residues after 736 (just to make the protein smaller - that region is far from GSP1/RAN).',
+            params_files = {'G06' : 'temp/pdbs/3W3Z.params'},
+            chain_mapping = dict(
+                A = 'B',
+                B = 'A', # Importin subunit beta-3 / PSE1 / KAP121 / YMR308C / YM9952.10C
             ),
-            ??? ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G13', 'X   1 ') : ('GNP', 'A1250 '),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G06', 'X   1 ') : ('GTP', 'B 202 '),
             }),
-            ??? ion_mapping = LigandMap.from_tuples_dict({
-                ('MG ', 'A 180 ') : ('MG ', 'A1251 '),
-            }),
-            ??? unchanged_ligand_codes = [],
-            ??? unchanged_ion_codes = [],
-            ??? techniques = 'PDB_REDO',
+            unchanged_ligand_codes = [],
+            unchanged_ion_codes = ['MG'],
+            techniques = 'PDB_REDO',
         ),
         Complex = dict(
-            ??? LName = 'Ras-related nuclear protein',
-            ??? LShortName = 'RAN',
-            ??? LHTMLName = 'RAN',
-            ??? RName = 'Ran-specific GTPase-activating protein',
-            ??? RShortName = 'RanGAP1',
-            ??? RHTMLName = 'RanGAP1',
-            ??? FunctionalClassID = 'OG',
-            ??? PPDBMFunctionalClassID = 'O',
-            ??? PPDBMDifficulty = None,
-            ??? IsWildType = True,
-            ??? WildTypeComplexID = None,
-            ??? Notes = None,
-            ??? Warnings = None,
-            ??? LChains = ['A'],
-            ??? RChains = ['C'],
+            LName = 'Ras-related nuclear protein',
+            LShortName = 'RAN',
+            LHTMLName = 'RAN',
+            RName = 'Importin subunit beta-3',
+            RShortName = 'PSE1',
+            RHTMLName = 'PSE1',
+            FunctionalClassID = 'OG',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = True,
+            WildTypeComplexID = None,
+            Notes = None,
+            Warnings = None,
+            LChains = ['A'],
+            RChains = ['B'],
         )
     ),
-
+    '3WYF1' : dict(
+        Structure = dict(
+            filepath = 'pdbs/3WYF1.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '3WYF',
+            db_id = '3WYF_TP1',
+            description = 'GSP1 complex (YRB2) from Tina Perica. This file was taken from PDB_REDO. Removed residues 97-110 and 141-155 from chain B (YRB2) - the residues wrapping around CRM1 (chain C) and detached from the rest of YRB2.',
+            params_files = {'G14' : 'temp/pdbs/3WYF1.params'},
+            chain_mapping = dict(
+                A = 'A', # choice of A, D. GTP-binding protein / GTP-binding protein inhibitor
+                B = 'B', # choice of B, E. Ran-specific GTPase-activating protein 2 / Yrb2p / YRB2
+                # Chain C is CRM1 / KAP124 / YGR218W / G8514 / Xpo1p
+            ),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID.
+                ('G14', 'X   1 ') : ('GTP', 'A 301 '),
+            }),
+            unchanged_ligand_codes = [],
+            unchanged_ion_codes = ['MG'],
+            techniques = 'PDB_REDO',
+        ),
+        Complex = dict(
+            LName = 'GTP-binding protein/ GTP-binding protein inhibitor (RAN-related)',
+            LShortName = 'Gsp1p',
+            LHTMLName = 'Gsp1p',
+            RName = 'Ran-specific GTPase-activating protein 2',
+            RShortName = 'YRB2P',
+            RHTMLName = 'Yrb2p',
+            FunctionalClassID = 'OG',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = True,
+            WildTypeComplexID = None,
+            Notes = None,
+            Warnings = None,
+            LChains = ['A'],
+            RChains = ['B'],
+        )
+    ),
 }
 
 
