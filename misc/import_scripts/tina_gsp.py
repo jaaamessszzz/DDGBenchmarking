@@ -479,8 +479,8 @@ complex_definitions = {
             description = 'GSP1 complex (MTR10) from Tina Perica. This file was taken from PDB_REDO.',
             params_files = {'G01' : 'temp/pdbs/4OL0.params'},
             chain_mapping = dict(
-                A = 'A',
-                B = 'B',
+                A = 'A', # RAN
+                B = 'B', # MTR10
             ),
             ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G01', 'X   1 ') : ('GTP', 'A 302 '),
@@ -508,28 +508,97 @@ complex_definitions = {
         )
     ),
 
-
-4ol0 (MTR10)
-1wa52 (CSE1)
-3m1i2 (CRM1) - remove Gsp1 residue 180 until the end
-3a6p (MSN5) - removed the peptide with UNK residues
-1wa51 (SRP1) - removed resi 12-19 from chain B (SRP1)
-3w3z (PSE1) - removed PSE1 residues after 736 (just to make the protein smaller - that region is far from gsp1/ran)
-3ea5 (KAP95:GDP)
-2bku (KAP95:GTP)
-3m1i1 (YRB1)
-3icq (LOS1)
-1qbk (KAP104) - NOTE! pdb_redo not available - remove Gsp1/Ran residues after 179 (sticking out and forming crystal contacts)
-3wyf1 (YRB2) - removed residues 97-110 and 141-155 from chain B (YRB2) - the ones wrapping around CRM1 and detached from the rest of YRB2
-
     '1WA51' : dict(
         A = 'A',
         B = 'B',
     ),
-    '1WA52' : dict(
-        A = 'A',
-        C = 'C',
+    '1WA51' : dict(
+        Structure = dict(
+            filepath = 'pdbs/1WA51.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '1WA5',
+            db_id = '1WA5_TP1',
+            description = 'GSP1 complex (KAP60P/SRP1) from Tina Perica. This file was taken from PDB_REDO. Removed residues 12-19 from chain B (KAP60P/SRP1).',
+            params_files = {'G05' : 'temp/pdbs/1WA51.params'},
+            chain_mapping = dict(
+                A = 'A', # RAN
+                B = 'B', # Importin α subunit / karyopherin α subunit, KAP60P
+            ),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G05', 'X   1 ') : ('GTP', 'A1177 '),
+            }),
+            unchanged_ligand_codes = [],
+            unchanged_ion_codes = ['MG'],
+            techniques = 'PDB_REDO',
+        ),
+        Complex = dict(
+            LName = 'Ras-related nuclear protein',
+            LShortName = 'RAN',
+            LHTMLName = 'RAN',
+            RName = 'Importin α subunit / karyopherin α subunit',
+            RShortName = 'KAP60P',
+            RHTMLName = 'KAP60P',
+            FunctionalClassID = 'OG',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = True,
+            WildTypeComplexID = None,
+            Notes = None,
+            Warnings = None,
+            LChains = ['A'],
+            RChains = ['B'],
+        )
     ),
+    '1WA52' : dict(
+        Structure = dict(
+            filepath = 'pdbs/1WA52.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '1WA5',
+            db_id = '1WA5_TP2',
+            description = 'GSP1 complex (CSE1P) from Tina Perica. This file was taken from PDB_REDO.',
+            params_files = {'G02' : 'temp/pdbs/1WA52.params'},
+            chain_mapping = dict(
+                A = 'A', # RAN
+                B = 'C', # Importin α re-exporter / chromosome segregation protein CSE1, CSE1P
+            ),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G02', 'X   1 ') : ('GTP', 'A1177 '),
+            }),
+            unchanged_ligand_codes = [],
+            unchanged_ion_codes = ['MG'],
+            techniques = 'PDB_REDO',
+        ),
+        Complex = dict(
+            LName = 'Ras-related nuclear protein',
+            LShortName = 'RAN',
+            LHTMLName = 'RAN',
+            RName = 'Importin α re-exporter / chromosome segregation protein CSE1',
+            RShortName = 'CSE1P',
+            RHTMLName = 'CSE1P',
+            FunctionalClassID = 'OG',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = True,
+            WildTypeComplexID = None,
+            Notes = None,
+            Warnings = None,
+            LChains = ['A'],
+            RChains = ['C'],
+        )
+    ),
+
+2bku (KAP95:GTP)
+3a6p (MSN5) - removed the peptide with UNK residues
+3ea5 (KAP95:GDP)
+3icq (LOS1)
+
+3m1i2 (CRM1) - remove Gsp1 residue 180 until the end
+1wa51 (SRP1) - removed resi 12-19 from chain B (SRP1)
+3w3z (PSE1) - removed PSE1 residues after 736 (just to make the protein smaller - that region is far from gsp1/ran)
+
+3m1i1 (YRB1)
+1qbk (KAP104) - NOTE! pdb_redo not available - remove Gsp1/Ran residues after 179 (sticking out and forming crystal contacts)
+3wyf1 (YRB2) - removed residues 97-110 and 141-155 from chain B (YRB2) - the ones wrapping around CRM1 and detached from the rest of YRB2
+
+
     '2BKU' : dict(
         A = 'A', # choice of A, C
         B = 'B', # choice of B, D
