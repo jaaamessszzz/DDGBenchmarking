@@ -597,9 +597,9 @@ complex_definitions = {
             techniques = 'PDB_REDO',
         ),
         Complex = dict(
-            LName = 'Ras-related nuclear protein (canis lupus)',
-            LShortName = 'RAN',
-            LHTMLName = 'RAN',
+            LName = 'Ras-related nuclear protein, canis lupus',
+            LShortName = 'RAN dog',
+            LHTMLName = 'RAN dog',
             RName = 'Importin β subunit',
             RShortName = 'KAP95',
             RHTMLName = 'KAP95',
@@ -660,7 +660,7 @@ complex_definitions = {
             description = 'GSP1 complex (KAP95) from Tina Perica. This file was taken from PDB_REDO.',
             params_files = {'G07' : 'temp/pdbs/3EA5.params'},
             chain_mapping = dict(
-                A = 'A', # choice of A, C. RAN (canis lupus)
+                A = 'A', # choice of A, C. RAN (homo sapiens)
                 B = 'B', # choice of B, D. Importin β subunit, KAP95
             ),
             ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
@@ -671,9 +671,9 @@ complex_definitions = {
             techniques = 'PDB_REDO',
         ),
         Complex = dict(
-            LName = 'Ras-related nuclear protein (homo sapiens)',
-            LShortName = 'RAN',
-            LHTMLName = 'RAN',
+            LName = 'Ras-related nuclear protein, homo sapiens',
+            LShortName = 'RAN human',
+            LHTMLName = 'RAN human',
             RName = 'Importin β subunit',
             RShortName = 'KAP95',
             RHTMLName = 'KAP95',
@@ -724,24 +724,84 @@ complex_definitions = {
             LChains = ['A'],
             RChains = ['D', 'T'],
         )
+    )
+    '3M1I1' : dict(
+        Structure = dict(
+            filepath = 'pdbs/3M1I1.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '3M1I',
+            db_id = '3M1I_TP1',
+            description = 'GSP1 complex (YRB1) from Tina Perica. This file was taken from PDB_REDO.',
+            params_files = {'G10' : 'temp/pdbs/3M1I1.params'},
+            chain_mapping = dict(
+                A = 'A', # RAN / GSP1.
+                B = 'B', # Ran-specific GTPase-activating protein 1, Yrb1p
+            ),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G10', 'X   1 ') : ('GTP', 'A1177 '),
+            }),
+            unchanged_ligand_codes = [],
+            unchanged_ion_codes = ['MG'],
+            techniques = 'PDB_REDO',
+        ),
+        Complex = dict(
+            LName = 'Ras-related nuclear protein',
+            LShortName = 'RAN',
+            LHTMLName = 'RAN',
+            RName = 'Ran-specific GTPase-activating protein 1',
+            RShortName = 'Yrb1p',
+            RHTMLName = 'Yrb1p',
+            FunctionalClassID = 'OG',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = True,
+            WildTypeComplexID = None,
+            Notes = None,
+            Warnings = None,
+            LChains = ['A'],
+            RChains = ['B'],
+        )
+    ),
+    '3M1I2' : dict(
+        Structure = dict(
+            filepath = 'pdbs/3M1I2.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '3M1I',
+            db_id = '3M1I_TP2',
+            description = 'GSP1 complex (CRM1) from Tina Perica. This file was taken from PDB_REDO. Removed Gsp1 residues 180 onwards.',
+            params_files = {'G03' : 'temp/pdbs/3M1I2.params'},
+            chain_mapping = dict(
+                A = 'A', # RAN / GSP1.
+                C = 'C', # Exportin-1 / Yeast CRM1 / Xpo1p
+            ),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G03', 'X   1 ') : ('GTP', 'A1177 '),
+            }),
+            unchanged_ligand_codes = [],
+            unchanged_ion_codes = ['MG'],
+            techniques = 'PDB_REDO',
+        ),
+        Complex = dict(
+            LName = 'Ras-related nuclear protein',
+            LShortName = 'RAN',
+            LHTMLName = 'RAN',
+            RName = 'Exportin-1',
+            RShortName = 'CRM1',
+            RHTMLName = 'CRM1',
+            FunctionalClassID = 'OG',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = True,
+            WildTypeComplexID = None,
+            Notes = None,
+            Warnings = None,
+            LChains = ['A'],
+            RChains = ['C'],
+        )
     ),
 
-3m1i1 (YRB1)
-3m1i2 (CRM1) - remove Gsp1 residue 180 until the end
+
 3w3z (PSE1) - removed PSE1 residues after 736 (just to make the protein smaller - that region is far from gsp1/ran)
 3wyf1 (YRB2) - removed residues 97-110 and 141-155 from chain B (YRB2) - the ones wrapping around CRM1 and detached from the rest of YRB2
 
-
-
-
-    '3M1I1' : dict(
-        A = 'A',
-        B = 'B',
-    ),
-    '3M1I2' : dict(
-        A = 'A',
-        C = 'C',
-    ),
     '3W3Z' : dict(
         A = 'B',
         B = 'A',
