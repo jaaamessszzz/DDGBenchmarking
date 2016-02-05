@@ -587,7 +587,7 @@ complex_definitions = {
             description = 'GSP1 complex (KAP95) from Tina Perica. This file was taken from PDB_REDO.',
             params_files = {'G08' : 'temp/pdbs/2BKU.params'},
             chain_mapping = dict(
-                A = 'A', # choice of A, C. RAN
+                A = 'A', # choice of A, C. RAN (canis lupus)
                 B = 'B', # choice of B, D. Importin β subunit, KAP95',
             ),
             ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
@@ -597,7 +597,7 @@ complex_definitions = {
             techniques = 'PDB_REDO',
         ),
         Complex = dict(
-            LName = 'Ras-related nuclear protein',
+            LName = 'Ras-related nuclear protein (canis lupus)',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
             RName = 'Importin β subunit',
@@ -608,7 +608,7 @@ complex_definitions = {
             PPDBMDifficulty = None,
             IsWildType = True,
             WildTypeComplexID = None,
-            Notes = None,
+            Notes = 'Related to the 3EA5 bound complex.',
             Warnings = None,
             LChains = ['A'],
             RChains = ['B'],
@@ -638,9 +638,9 @@ complex_definitions = {
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
-            RName = 'Exportin-5 / KIAA1291 / RANBP21 / MSN5',
-            RShortName = 'MSN5',
-            RHTMLName = 'MSN5',
+            RName = 'Exportin-5 / KIAA1291 / RANBP21 / MSN5 + 2*pre-microRNA',
+            RShortName = 'MSN5 + 2*pre-microRNA',
+            RHTMLName = 'MSN5 + 2*pre-microRNA',
             FunctionalClassID = 'OG',
             PPDBMFunctionalClassID = 'O',
             PPDBMDifficulty = None,
@@ -652,34 +652,88 @@ complex_definitions = {
             RChains = ['C', 'D', 'E'],
         )
     ),
-
-3ea5 (KAP95:GDP)
-3icq (LOS1)
-
-3m1i2 (CRM1) - remove Gsp1 residue 180 until the end
-1wa51 (SRP1) - removed resi 12-19 from chain B (SRP1)
-3w3z (PSE1) - removed PSE1 residues after 736 (just to make the protein smaller - that region is far from gsp1/ran)
+    '3EA5' : dict(
+        Structure = dict(
+            filepath = 'pdbs/3EA5.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '3EA5',
+            db_id = '3EA5_TP0',
+            description = 'GSP1 complex (KAP95) from Tina Perica. This file was taken from PDB_REDO.',
+            params_files = {'G07' : 'temp/pdbs/3EA5.params'},
+            chain_mapping = dict(
+                A = 'A', # choice of A, C. RAN (canis lupus)
+                B = 'B', # choice of B, D. Importin β subunit, KAP95
+            ),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G07', 'X   1 ') : ('GDP', 'A 220 '),
+            }),
+            unchanged_ligand_codes = [],
+            unchanged_ion_codes = ['MG'],
+            techniques = 'PDB_REDO',
+        ),
+        Complex = dict(
+            LName = 'Ras-related nuclear protein (homo sapiens)',
+            LShortName = 'RAN',
+            LHTMLName = 'RAN',
+            RName = 'Importin β subunit',
+            RShortName = 'KAP95',
+            RHTMLName = 'KAP95',
+            FunctionalClassID = 'OG',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = True,
+            WildTypeComplexID = None,
+            Notes = 'Related to the 2BKU bound complex.',
+            Warnings = None,
+            LChains = ['A'],
+            RChains = ['B'],
+        )
+    ),
+    '3ICQ' : dict(
+        Structure = dict(
+            filepath = 'pdbs/3ICQ.pdb', # not used here but this would be the data usually required by e.g. a web API
+            rcsb_id = '3ICQ',
+            db_id = '3ICQ_TP0',
+            description = 'GSP1 complex (LOS1) from Tina Perica. This file was taken from PDB_REDO.',
+            params_files = {'G11' : 'temp/pdbs/3ICQ.params'},
+            chain_mapping = dict(
+                A = 'B', # choice of B, C. RAN / GSP1/CNR1 versus the world!
+                D = 'D', # choice of D, E. RNA (62-MER).
+                T = 'T', # choice of T, U. Exportin-T, LOS1.
+            ),
+            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+                ('G11', 'X   1 ') : ('GTP', 'B 250 '),
+            }),
+            unchanged_ligand_codes = [],
+            unchanged_ion_codes = ['MG'],
+            techniques = 'PDB_REDO',
+        ),
+        Complex = dict(
+            LName = 'Ras-related nuclear protein',
+            LShortName = 'RAN',
+            LHTMLName = 'RAN',
+            RName = 'Exportin-T + RNA complex',
+            RShortName = 'LOS1 + RNA',
+            RHTMLName = 'LOS1 + RNA',
+            FunctionalClassID = 'OG',
+            PPDBMFunctionalClassID = 'O',
+            PPDBMDifficulty = None,
+            IsWildType = True,
+            WildTypeComplexID = None,
+            Notes = None,
+            Warnings = None,
+            LChains = ['A'],
+            RChains = ['D', 'T'],
+        )
+    ),
 
 3m1i1 (YRB1)
-1qbk (KAP104) - NOTE! pdb_redo not available - remove Gsp1/Ran residues after 179 (sticking out and forming crystal contacts)
+3m1i2 (CRM1) - remove Gsp1 residue 180 until the end
+3w3z (PSE1) - removed PSE1 residues after 736 (just to make the protein smaller - that region is far from gsp1/ran)
 3wyf1 (YRB2) - removed residues 97-110 and 141-155 from chain B (YRB2) - the ones wrapping around CRM1 and detached from the rest of YRB2
 
 
-    '3A6P' : dict(
-        A = 'C', # choice of C, H   RAN versus the world!
-        C = 'A', # choice of A, F
-        D = 'D', # choice of D, I
-        E = 'E', # choice of E, J
-    ),
-    '3EA5' : dict(
-        A = 'A', # choice of A, C
-        B = 'B', # choice of B, D
-    ),
-    '3ICQ' : dict(
-        A = 'B', # choice of B, C   RAN versus the world!
-        D = 'D', # choice of D, E
-        T = 'T', # choice of T, U
-    ),
+
+
     '3M1I1' : dict(
         A = 'A',
         B = 'B',
