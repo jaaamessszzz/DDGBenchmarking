@@ -358,20 +358,22 @@ def create_mapping_string():
 complex_definitions = {
     '1A2K' : dict(
         Structure = dict(
-            filepath = 'pdbs/1A2K.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/1A2K.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '1A2K',
             db_id = '1A2K_TP0',
-            description = 'GSP1 complex (NTF2) from Tina Perica. PDB_REDO was unavailable for this file. Chain A corresponds to chain C in the original RCSB file.',
-            params_files = {'G09' : 'temp/pdbs/1A2K.params'},
+            description = 'GSP1 complex (NTF2) from Tina Perica. PDB_REDO was unavailable for this file. Chains A and B respectively correspond to chains C and B in the original RCSB file.',
+            params_file_paths = {'G09' : 'temp/pdbs/1A2K.params'},
             chain_mapping = dict(
                 A = 'C', # choice of C, D, or E. RAN
                 B = 'B', # looking at B-factors. NTF-2
             ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G09', 'X   1 ') : ('GDP', 'C 220 '), # PDB columns [17:20], [21:27]
             }),
             unchanged_ion_codes = ['MG'],
             techniques = "Manual edit",
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             ComplexID = 202,
@@ -381,19 +383,22 @@ complex_definitions = {
     ),
     '1I2M' : dict(
         Structure = dict(
-            filepath = 'pdbs/1I2M.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/1I2M.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '1I2M',
             db_id = '1I2M_TP0',
             description = 'GSP1 complex (SRM1) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {},
-            chain_mapping = dict(
-                A = 'A', # choice of A or C. RAN
-                B = 'B', # choice of B or D. RCC1
-            ),
+            params_file_paths = {},
+            identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
+            #chain_mapping = dict(
+            #    A = 'A', # choice of A or C. RAN
+            #    B = 'B', # choice of B or D. RCC1
+            #),
             unchanged_ligand_codes = ['SO4'],
             unchanged_ion_codes = ['MG'],
             ion_mapping = None,
             techniques = "PDB_REDO",
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             ComplexID = 176,
@@ -403,20 +408,23 @@ complex_definitions = {
     ),
     '1K5D' : dict(
         Structure = dict(
-            filepath = 'pdbs/1K5D2.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/1K5D2.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '1K5D',
             db_id = '1K5D_TP0',
             description = 'GSP1 complex (RanGAP1) from Tina Perica. This file was taken from PDB_REDO. Removed residues 180-213 from chain A (RAN/GSP1) (the ones wrapping around YRB1).',
-            params_files = {'G13' : 'temp/pdbs/1K5D2.params'},
-            chain_mapping = dict(
-                A = 'A', # choice of A, D, G, J. RAN
-                C = 'C', # choice of C, F, I, L. Ran GTPase activating protein 1
-            ),
+            params_file_paths = {'G13' : 'temp/pdbs/1K5D2.params'},
+            identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
+            #chain_mapping = dict(
+            #    A = 'A', # choice of A, D, G, J. RAN
+            #    C = 'C', # choice of C, F, I, L. Ran GTPase activating protein 1
+            #),
             ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G13', 'X   1 ') : ('GNP', 'A1250 '),
             }),
             unchanged_ion_codes = ['MG'],
             techniques = "PDB_REDO",
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             AdditionalKeywords = ['GSP1'],
@@ -439,11 +447,11 @@ complex_definitions = {
     ),
     '1QBK' : dict(
         Structure = dict(
-            filepath = 'pdbs/1QBK.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/1QBK.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '1QBK',
             db_id = '1QBK_TP0',
-            description = 'GSP1 complex (KAP104/TNPO1) from Tina Perica. PDB_REDO was unavailable for this file. Removed Gsp1/Ran residues after 179 (sticking out and forming crystal contacts).',
-            params_files = {'G12' : 'temp/pdbs/1QBK.params'},
+            description = 'GSP1 complex (KAP104/TNPO1) from Tina Perica. PDB_REDO was unavailable for this file. Removed Gsp1/Ran residues after 179 (sticking out and forming crystal contacts). Chains A and B respectively correspond to chains C and B in the original RCSB file.',
+            params_file_paths = {'G12' : 'temp/pdbs/1QBK.params'},
             chain_mapping = dict(
                 A = 'C', # RAN
                 B = 'B', # KAP104
@@ -453,6 +461,8 @@ complex_definitions = {
             }),
             unchanged_ligand_codes = ['MSE'],
             techniques = "Manual edit",
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             LName = 'Ras-related nuclear protein',
@@ -474,21 +484,24 @@ complex_definitions = {
     ),
     '4OL0' : dict(
         Structure = dict(
-            filepath = 'pdbs/4OL0.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/4OL0.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '4OL0',
             db_id = '4OL0_TP0',
             description = 'GSP1 complex (MTR10) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {'G01' : 'temp/pdbs/4OL0.params'},
-            chain_mapping = dict(
-                A = 'A', # RAN
-                B = 'B', # MTR10
-            ),
+            params_file_paths = {'G01' : 'temp/pdbs/4OL0.params'},
+            identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
+            #chain_mapping = dict(
+            #    A = 'A', # RAN
+            #    B = 'B', # MTR10
+            #),
             ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G01', 'X   1 ') : ('GTP', 'A 302 '),
             }),
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             LName = 'Ras-related nuclear protein',
@@ -510,21 +523,24 @@ complex_definitions = {
     ),
     '1WA51' : dict(
         Structure = dict(
-            filepath = 'pdbs/1WA51.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/1WA51.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '1WA5',
             db_id = '1WA5_TP1',
             description = 'GSP1 complex (KAP60P/SRP1) from Tina Perica. This file was taken from PDB_REDO. Removed residues 12-19 from chain B (KAP60P/SRP1).',
-            params_files = {'G05' : 'temp/pdbs/1WA51.params'},
-            chain_mapping = dict(
-                A = 'A', # RAN
-                B = 'B', # Importin α subunit / karyopherin α subunit, KAP60P
-            ),
+            params_file_paths = {'G05' : 'temp/pdbs/1WA51.params'},
+            identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
+            #chain_mapping = dict(
+            #    A = 'A', # RAN
+            #    B = 'B', # Importin α subunit / karyopherin α subunit, KAP60P
+            #),
             ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G05', 'X   1 ') : ('GTP', 'A1177 '),
             }),
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             LName = 'Ras-related nuclear protein',
@@ -546,11 +562,11 @@ complex_definitions = {
     ),
     '1WA52' : dict(
         Structure = dict(
-            filepath = 'pdbs/1WA52.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/1WA52.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '1WA5',
             db_id = '1WA5_TP2',
-            description = 'GSP1 complex (CSE1P) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {'G02' : 'temp/pdbs/1WA52.params'},
+            description = 'GSP1 complex (CSE1P) from Tina Perica. This file was taken from PDB_REDO. Chains A and B respectively correspond to chains A and C in the original RCSB file.',
+            params_file_paths = {'G02' : 'temp/pdbs/1WA52.params'},
             chain_mapping = dict(
                 A = 'A', # RAN
                 B = 'C', # Importin α re-exporter / chromosome segregation protein CSE1, CSE1P
@@ -561,6 +577,8 @@ complex_definitions = {
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             LName = 'Ras-related nuclear protein',
@@ -582,20 +600,23 @@ complex_definitions = {
     ),
     '2BKU' : dict(
         Structure = dict(
-            filepath = 'pdbs/2BKU.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/2BKU.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '2BKU',
             db_id = '2BKU_TP0',
             description = 'GSP1 complex (KAP95) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {'G08' : 'temp/pdbs/2BKU.params'},
-            chain_mapping = dict(
-                A = 'A', # choice of A, C. RAN (canis lupus)
-                B = 'B', # choice of B, D. Importin β subunit, KAP95',
-            ),
+            params_file_paths = {'G08' : 'temp/pdbs/2BKU.params'},
+            identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
+            #chain_mapping = dict(
+            #    A = 'A', # choice of A, C. RAN (canis lupus)
+            #    B = 'B', # choice of B, D. Importin β subunit, KAP95',
+            #),
             ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G08', 'X   1 ') : ('GTP', 'A 220 '),
             }),
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             LName = 'Ras-related nuclear protein, canis lupus',
@@ -617,11 +638,11 @@ complex_definitions = {
     ),
     '3A6P' : dict(
         Structure = dict(
-            filepath = 'pdbs/3A6P.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/3A6P.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '3A6P',
             db_id = '3A6P_TP0',
-            description = 'GSP1 complex (MSN5) from Tina Perica. This file was taken from PDB_REDO. The peptide (chain B/G) contains UNK residues and was removed.',
-            params_files = {'G04' : 'temp/pdbs/3A6P.params'},
+            description = 'GSP1 complex (MSN5) from Tina Perica. This file was taken from PDB_REDO. The peptide (chain B/G) contains UNK residues and was removed. Chains A, C, D, and E respectively correspond to chains C, A, D, and E in the original RCSB file.',
+            params_file_paths = {'G04' : 'temp/pdbs/3A6P.params'},
             chain_mapping = dict(
                 A = 'C', # choice of C, H. RAN versus the world!
                 C = 'A', # choice of A, F. Exportin-5 / KIAA1291 / RANBP21 / MSN5
@@ -634,6 +655,8 @@ complex_definitions = {
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             LName = 'Ras-related nuclear protein',
@@ -655,21 +678,24 @@ complex_definitions = {
     ),
     '3EA5' : dict(
         Structure = dict(
-            filepath = 'pdbs/3EA5.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/3EA5.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '3EA5',
             db_id = '3EA5_TP0',
             description = 'GSP1 complex (KAP95) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {'G07' : 'temp/pdbs/3EA5.params'},
-            chain_mapping = dict(
-                A = 'A', # choice of A, C. RAN (homo sapiens)
-                B = 'B', # choice of B, D. Importin β subunit, KAP95
-            ),
+            params_file_paths = {'G07' : 'temp/pdbs/3EA5.params'},
+            identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
+            #chain_mapping = dict(
+            #    A = 'A', # choice of A, C. RAN (homo sapiens)
+            #    B = 'B', # choice of B, D. Importin β subunit, KAP95
+            #),
             ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G07', 'X   1 ') : ('GDP', 'A 220 '),
             }),
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             LName = 'Ras-related nuclear protein, homo sapiens',
@@ -691,11 +717,11 @@ complex_definitions = {
     ),
     '3ICQ' : dict(
         Structure = dict(
-            filepath = 'pdbs/3ICQ.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/3ICQ.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '3ICQ',
             db_id = '3ICQ_TP0',
-            description = 'GSP1 complex (LOS1) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {'G11' : 'temp/pdbs/3ICQ.params'},
+            description = 'GSP1 complex (LOS1) from Tina Perica. This file was taken from PDB_REDO. Chains A, D, and T respectively correspond to chains B, D, and T in the original RCSB file.',
+            params_file_paths = {'G11' : 'temp/pdbs/3ICQ.params'},
             chain_mapping = dict(
                 A = 'B', # choice of B, C. RAN / GSP1/CNR1 versus the world!
                 D = 'D', # choice of D, E. RNA (62-MER).
@@ -707,6 +733,8 @@ complex_definitions = {
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             LName = 'Ras-related nuclear protein',
@@ -725,24 +753,27 @@ complex_definitions = {
             LChains = ['A'],
             RChains = ['D', 'T'],
         )
-    )
+    ),
     '3M1I1' : dict(
         Structure = dict(
-            filepath = 'pdbs/3M1I1.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/3M1I1.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '3M1I',
             db_id = '3M1I_TP1',
             description = 'GSP1 complex (YRB1) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {'G10' : 'temp/pdbs/3M1I1.params'},
-            chain_mapping = dict(
-                A = 'A', # RAN / GSP1.
-                B = 'B', # Ran-specific GTPase-activating protein 1, Yrb1p
-            ),
+            params_file_paths = {'G10' : 'temp/pdbs/3M1I1.params'},
+            identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
+            #chain_mapping = dict(
+            #    A = 'A', # RAN / GSP1.
+            #    B = 'B', # Ran-specific GTPase-activating protein 1, Yrb1p
+            #),
             ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G10', 'X   1 ') : ('GTP', 'A1177 '),
             }),
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             LName = 'Ras-related nuclear protein',
@@ -764,21 +795,24 @@ complex_definitions = {
     ),
     '3M1I2' : dict(
         Structure = dict(
-            filepath = 'pdbs/3M1I2.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/3M1I2.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '3M1I',
             db_id = '3M1I_TP2',
             description = 'GSP1 complex (CRM1) from Tina Perica. This file was taken from PDB_REDO. Removed Gsp1 residues 180 onwards.',
-            params_files = {'G03' : 'temp/pdbs/3M1I2.params'},
-            chain_mapping = dict(
-                A = 'A', # RAN / GSP1.
-                C = 'C', # Exportin-1 / Yeast CRM1 / Xpo1p
-            ),
+            params_file_paths = {'G03' : 'temp/pdbs/3M1I2.params'},
+            identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
+            #chain_mapping = dict(
+            #    A = 'A', # RAN / GSP1.
+            #    C = 'C', # Exportin-1 / Yeast CRM1 / Xpo1p
+            #),
             ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G03', 'X   1 ') : ('GTP', 'A1177 '),
             }),
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             LName = 'Ras-related nuclear protein',
@@ -800,11 +834,11 @@ complex_definitions = {
     ),
     '3W3Z' : dict(
         Structure = dict(
-            filepath = 'pdbs/3W3Z.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/3W3Z.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '3W3Z',
             db_id = '3W3Z_TP0',
-            description = 'GSP1 complex (PSE1) from Tina Perica. This file was taken from PDB_REDO. MSE HETATM records are renamed as ATOM records. Removed PSE1 residues after 736 (just to make the protein smaller - that region is far from GSP1/RAN).',
-            params_files = {'G06' : 'temp/pdbs/3W3Z.params'},
+            description = 'GSP1 complex (PSE1) from Tina Perica. This file was taken from PDB_REDO. MSE HETATM records are renamed as ATOM records. Removed PSE1 residues after 736 (just to make the protein smaller - that region is far from GSP1/RAN). Chains A and B respectively correspond to chains B and A in the original RCSB file.',
+            params_file_paths = {'G06' : 'temp/pdbs/3W3Z.params'},
             chain_mapping = dict(
                 A = 'B',
                 B = 'A', # Importin subunit beta-3 / PSE1 / KAP121 / YMR308C / YM9952.10C
@@ -815,6 +849,8 @@ complex_definitions = {
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             LName = 'Ras-related nuclear protein',
@@ -836,22 +872,25 @@ complex_definitions = {
     ),
     '3WYF1' : dict(
         Structure = dict(
-            filepath = 'pdbs/3WYF1.pdb', # not used here but this would be the data usually required by e.g. a web API
+            file_path = 'temp/pdbs/3WYF1.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '3WYF',
             db_id = '3WYF_TP1',
             description = 'GSP1 complex (YRB2) from Tina Perica. This file was taken from PDB_REDO. Removed residues 97-110 and 141-155 from chain B (YRB2) - the residues wrapping around CRM1 (chain C) and detached from the rest of YRB2.',
-            params_files = {'G14' : 'temp/pdbs/3WYF1.params'},
-            chain_mapping = dict(
-                A = 'A', # choice of A, D. GTP-binding protein / GTP-binding protein inhibitor
-                B = 'B', # choice of B, E. Ran-specific GTPase-activating protein 2 / Yrb2p / YRB2
-                # Chain C is CRM1 / KAP124 / YGR218W / G8514 / Xpo1p
-            ),
+            params_file_paths = {'G14' : 'temp/pdbs/3WYF1.params'},
+            identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
+            #chain_mapping = dict(
+            #    A = 'A', # choice of A, D. GTP-binding protein / GTP-binding protein inhibitor
+            #    B = 'B', # choice of B, E. Ran-specific GTPase-activating protein 2 / Yrb2p / YRB2
+            #    # Chain C is CRM1 / KAP124 / YGR218W / G8514 / Xpo1p
+            #),
             ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID.
                 ('G14', 'X   1 ') : ('GTP', 'A 301 '),
             }),
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
+            file_source = 'Tina Perica',
+            user_id = 'tina',
         ),
         Complex = dict(
             LName = 'GTP-binding protein/ GTP-binding protein inhibitor (RAN-related)',
@@ -883,93 +922,10 @@ complex_definitions = {
 
 def import_structures():
     ppi_api = get_ppi_api()
-    for tina_pdb_id, details in sorted(complex_definitions.iteritems()):
-
-        structural_details = details['Structure']
-        complex_details = details['Complex']
-
-        if tina_pdb_id in ['1A2K']:
-            continue
-
-        if tina_pdb_id != '1I2M':
-            assert(details['Structure']['chain_mapping'])
-
-        assert(sorted(details['Structure']['chain_mapping'].keys()) == sorted(details['Complex']['LChains'] + details['Complex']['RChains']))
-
-        assert(details['Structure']['unchanged_ligand_codes'] or details['Structure']['ligand_mapping'])
-
-        for k in details['Structure']['params_files'].keys():
-            print(k)
-            assert(k in details['Structure']['ligand_mapping'.code_map])
-
-
-        assert ComplexID or ComplexDetails - LChains and RChains
-
-
-        tina_pdb_id = tina_pdb_id.upper()
-        rcsb_pdb_id = tina_pdb_id_to_rcsb_pdb_id[tina_pdb_id]
-        assert(structural_details['rcsb_id'] == rcsb_pdb_id)
-
-        tina_pdb_object = tina_pdb_objects[tina_pdb_id]
-        rcsb_pdb_object = rcsb_pdb_objects[rcsb_pdb_id]
-        tina_db_id = structural_details['db_id']
-
-        assert((tina_db_id != tina_pdb_id) and (tina_db_id != rcsb_pdb_id) and (len(tina_db_id) > 7) and (tina_db_id[4:7] == '_TP'))
-
-        #    Step 1: Add complexes
-        complex_id = None
-        if 'complex_id' in complex_details:
-           complex_id = complex_details['complex_id']
-        else:
-
-
-        Complex = dict(
-            ComplexID = 202,
-            LChains = ['A'],
-            RChains = ['B'],
-        )
-
-        ppi_api.add_complex
-
-        mut_complex_3H7P = dict(
-            LName = 'Ubiquitin (yeast) K63R',
-            LShortName = 'Ubiquitin K63R',
-            LHTMLName = 'Ubiquitin (yeast) K63R',
-            RName = 'Ubiquitin (yeast)',
-            RShortName = 'Ubiquitin',
-            RHTMLName = 'Ubiquitin (yeast)',
-            FunctionalClassID = 'OX',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = False,
-            WildTypeComplexID = wt_complex_id,
-            Notes = None,
-            Warnings = None,
-        )
-        DDGdb.insertDictIfNew('PPComplex', mut_complex_3H7P, ['LName', 'RName'])
-
-
-
-1A2K is in the database with molecules NTF2 (A,B) and RAN/GSP1P (C,D,E). Tina calls this Gsp1|NTF2.
-   complex #202 -> 1A2K (C|AB) where Tina uses A|B (which corresponds to C|B after accounting for chain renaming). I will reuse the existing complex and create a new PDBSet.
-
-1K5D is in the database with molecules RAN (A,D,G,J) and RANBP1 (B,E,H,K) and RANGAP (C,F,I,L). Tina calls this Gsp1|RNA1.
-   complex #119 -> 1K5D (AB|C). Tina does not use chain B so we will create a new complex.
-
-1I2M is in the database with molecules RAN (A,C) and RCC1 (B,D). Tina calls this Gsp1|SRM1.
-   complex #176 -> 1I2M (A|B) where Tina uses A|B (same chain labels). This is an exact match so we will use the same PDBSet.
-
-
-        #    Step 1: Add PDB files
-        for k, v in details.get('params_files', {}).iteritems():
-            details['params_files'][k] = os.path.abspath(v)
-        colortext.message('Importing {0} as {1}'.format(tina_pdb_id, tina_db_id))
-        importer.add_designed_pdb(tina_pdb_object, tina_db_id, rcsb_pdb_id,
-                                  'Tina Perica', details['description'] , 'tina',
-                                  chain_mapping = details['chain_mapping'], ligand_mapping = details['ligand_mapping'],
-                                  ligand_params_file_paths = details.get('params_files', {}), techniques=details['techniques'])
-
-
+    for tina_pdb_id, complex_definition in sorted(complex_definitions.iteritems()):
+        del complex_definition['Structure']['file_path']
+        complex_definition['Structure']['pdb_object'] = tina_pdb_objects[tina_pdb_id]
+        ppi_api.add_complex(complex_definition, keywords = ['GSP1'], force = False, allow_missing_params_files = False, debug = True)
 
 
 import_structures()
@@ -989,103 +945,6 @@ sys.exit(0)
 
 
 
-def create_year_2_complex_records():
-    '''todo: For speed, I am doing this manually. This should be folded into an API function.'''
-
-    wt_complex = dict(
-        LName = 'Ubiquitin (yeast)',
-        LShortName = 'Ubiquitin',
-        LHTMLName = 'Ubiquitin (yeast)',
-        RName = 'Ubiquitin (yeast)',
-        RShortName = 'Ubiquitin',
-        RHTMLName = 'Ubiquitin (yeast)',
-        FunctionalClassID = 'OX',
-        PPDBMFunctionalClassID = 'O',
-        PPDBMDifficulty = None,
-        IsWildType = True,
-        WildTypeComplexID = None,
-        Notes = None,
-        Warnings = None,
-    )
-    DDGdb.insertDictIfNew('PPComplex', wt_complex, ['LName', 'RName'])
-    wt_complex_id = DDGdb.execute_select('SELECT ID FROM PPComplex WHERE LName=%s and RName=%s', parameters=(wt_complex['LName'], wt_complex['RName']))
-    assert(len(wt_complex_id) == 1)
-    wt_complex_id = wt_complex_id[0]['ID']
-
-    mut_complex_3H7P = dict(
-        LName = 'Ubiquitin (yeast) K63R',
-        LShortName = 'Ubiquitin K63R',
-        LHTMLName = 'Ubiquitin (yeast) K63R',
-        RName = 'Ubiquitin (yeast)',
-        RShortName = 'Ubiquitin',
-        RHTMLName = 'Ubiquitin (yeast)',
-        FunctionalClassID = 'OX',
-        PPDBMFunctionalClassID = 'O',
-        PPDBMDifficulty = None,
-        IsWildType = False,
-        WildTypeComplexID = wt_complex_id,
-        Notes = None,
-        Warnings = None,
-    )
-    DDGdb.insertDictIfNew('PPComplex', mut_complex_3H7P, ['LName', 'RName'])
-    mut_complex_id = DDGdb.execute_select('SELECT ID FROM PPComplex WHERE LName=%s and RName=%s', parameters=(mut_complex_3H7P['LName'], mut_complex_3H7P['RName']))
-    assert(len(mut_complex_id) == 1)
-    mut_complex_id = mut_complex_id[0]['ID']
-
-    wt_set_number = 0
-    for pdb_id, details in sorted(year_2_cases.iteritems()):
-
-        db_pdb_id = 'y' + pdb_id
-        if pdb_id == '2W9N':
-            db_pdb_id = '2y' + pdb_id
-
-        existing_records = DDGdb.execute_select('''
-            SELECT ID
-            FROM PPIPDBSet
-            INNER JOIN PPIPDBPartnerChain
-            WHERE PPIPDBSet.PPComplexID = PPIPDBPartnerChain.PPComplexID
-            AND PPIPDBSet.SetNumber = PPIPDBPartnerChain.SetNumber
-            AND PPIPDBPartnerChain.PDBFileID=%s''', parameters=(db_pdb_id,))
-        if existing_records:
-            continue
-
-        complex_id = wt_complex_id
-        set_number = None
-        if pdb_id == '3H7P':
-            complex_id = mut_complex_id
-            set_number = 0
-        else:
-            set_number = wt_set_number
-            wt_set_number += 1
-
-        ppi_pdb_set = dict(
-            PPComplexID = complex_id,
-            SetNumber = set_number,
-            IsComplex = True,
-            Notes = None,
-        )
-        ppi_pdb_set_lpartner = dict(
-            PPComplexID = complex_id,
-            SetNumber = set_number,
-            Side = 'L',
-            ChainIndex = 0,
-            PDBFileID = db_pdb_id,
-            Chain = 'A',
-            NMRModel = None,
-        )
-        ppi_pdb_set_rpartner = dict(
-            PPComplexID = complex_id,
-            SetNumber = set_number,
-            Side = 'R',
-            ChainIndex = 0,
-            PDBFileID = db_pdb_id,
-            Chain = 'B',
-            NMRModel = None,
-        )
-
-        DDGdb.insertDictIfNew('PPIPDBSet', ppi_pdb_set, ['PPComplexID', 'SetNumber'])
-        DDGdb.insertDictIfNew('PPIPDBPartnerChain', ppi_pdb_set_lpartner, ['PPComplexID', 'SetNumber', 'Side', 'ChainIndex'])
-        DDGdb.insertDictIfNew('PPIPDBPartnerChain', ppi_pdb_set_rpartner, ['PPComplexID', 'SetNumber', 'Side', 'ChainIndex'])
 
 
 # ==
