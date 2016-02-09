@@ -25,6 +25,7 @@
       <feature name=StructureScoresFeatures scorefxn=fa_%%alascanscorefxn%%/>
       <feature name=ResidueScoresFeatures scorefxn=fa_%%alascanscorefxn%%/>
       <feature name=DdGFeatures ddG_scan_mover=alascan/>
+      <feature name=RuntimeFeatures/>
     </ReportToDB>
   </MOVERS>
 
