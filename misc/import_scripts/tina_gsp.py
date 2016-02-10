@@ -362,7 +362,7 @@ complex_definitions = {
             rcsb_id = '1A2K',
             db_id = '1A2K_TP0',
             description = 'GSP1 complex (NTF2) from Tina Perica. PDB_REDO was unavailable for this file. Chains A and B respectively correspond to chains C and B in the original RCSB file.',
-            params_file_paths = {'G09' : 'temp/pdbs/1A2K.params'},
+            ligand_params_file_paths = {'G09' : 'temp/pdbs/1A2K.params'},
             chain_mapping = dict(
                 A = 'C', # choice of C, D, or E. RAN
                 B = 'B', # looking at B-factors. NTF-2
@@ -374,8 +374,10 @@ complex_definitions = {
             techniques = "Manual edit",
             file_source = 'Tina Perica',
             user_id = 'tina',
+
         ),
         Complex = dict(
+            structure_id = '1A2K_TP0',
             ComplexID = 202,
             LChains = ['A'],
             RChains = ['B'],
@@ -387,7 +389,7 @@ complex_definitions = {
             rcsb_id = '1I2M',
             db_id = '1I2M_TP0',
             description = 'GSP1 complex (SRM1) from Tina Perica. This file was taken from PDB_REDO.',
-            params_file_paths = {},
+            ligand_params_file_paths = {},
             identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
             #chain_mapping = dict(
             #    A = 'A', # choice of A or C. RAN
@@ -395,30 +397,30 @@ complex_definitions = {
             #),
             unchanged_ligand_codes = ['SO4'],
             unchanged_ion_codes = ['MG'],
-            ion_mapping = None,
             techniques = "PDB_REDO",
             file_source = 'Tina Perica',
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '1I2M_TP0',
             ComplexID = 176,
             LChains = ['A'],
             RChains = ['B'],
         )
     ),
-    '1K5D' : dict(
+    '1K5D2' : dict(
         Structure = dict(
             file_path = 'temp/pdbs/1K5D2.pdb', # not used here but this would be the data usually required by e.g. a web API
             rcsb_id = '1K5D',
             db_id = '1K5D_TP0',
             description = 'GSP1 complex (RanGAP1) from Tina Perica. This file was taken from PDB_REDO. Removed residues 180-213 from chain A (RAN/GSP1) (the ones wrapping around YRB1).',
-            params_file_paths = {'G13' : 'temp/pdbs/1K5D2.params'},
+            ligand_params_file_paths = {'G13' : 'temp/pdbs/1K5D2.params'},
             identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
             #chain_mapping = dict(
             #    A = 'A', # choice of A, D, G, J. RAN
             #    C = 'C', # choice of C, F, I, L. Ran GTPase activating protein 1
             #),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G13', 'X   1 ') : ('GNP', 'A1250 '),
             }),
             unchanged_ion_codes = ['MG'],
@@ -427,6 +429,7 @@ complex_definitions = {
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '1K5D_TP0',
             AdditionalKeywords = ['GSP1'],
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
@@ -451,12 +454,12 @@ complex_definitions = {
             rcsb_id = '1QBK',
             db_id = '1QBK_TP0',
             description = 'GSP1 complex (KAP104/TNPO1) from Tina Perica. PDB_REDO was unavailable for this file. Removed Gsp1/Ran residues after 179 (sticking out and forming crystal contacts). Chains A and B respectively correspond to chains C and B in the original RCSB file.',
-            params_file_paths = {'G12' : 'temp/pdbs/1QBK.params'},
+            ligand_params_file_paths = {'G12' : 'temp/pdbs/1QBK.params'},
             chain_mapping = dict(
                 A = 'C', # RAN
                 B = 'B', # KAP104
             ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G12', 'X   1 ') : ('GNP', 'C 218 '),
             }),
             unchanged_ligand_codes = ['MSE'],
@@ -465,6 +468,7 @@ complex_definitions = {
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '1QBK_TP0',
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -488,13 +492,13 @@ complex_definitions = {
             rcsb_id = '4OL0',
             db_id = '4OL0_TP0',
             description = 'GSP1 complex (MTR10) from Tina Perica. This file was taken from PDB_REDO.',
-            params_file_paths = {'G01' : 'temp/pdbs/4OL0.params'},
+            ligand_params_file_paths = {'G01' : 'temp/pdbs/4OL0.params'},
             identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
             #chain_mapping = dict(
             #    A = 'A', # RAN
             #    B = 'B', # MTR10
             #),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G01', 'X   1 ') : ('GTP', 'A 302 '),
             }),
             unchanged_ligand_codes = [],
@@ -504,6 +508,7 @@ complex_definitions = {
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '4OL0_TP0',
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -527,13 +532,13 @@ complex_definitions = {
             rcsb_id = '1WA5',
             db_id = '1WA5_TP1',
             description = 'GSP1 complex (KAP60P/SRP1) from Tina Perica. This file was taken from PDB_REDO. Removed residues 12-19 from chain B (KAP60P/SRP1).',
-            params_file_paths = {'G05' : 'temp/pdbs/1WA51.params'},
+            ligand_params_file_paths = {'G05' : 'temp/pdbs/1WA51.params'},
             identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
             #chain_mapping = dict(
             #    A = 'A', # RAN
             #    B = 'B', # Importin α subunit / karyopherin α subunit, KAP60P
             #),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G05', 'X   1 ') : ('GTP', 'A1177 '),
             }),
             unchanged_ligand_codes = [],
@@ -543,6 +548,7 @@ complex_definitions = {
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '1WA5_TP1',
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -566,12 +572,13 @@ complex_definitions = {
             rcsb_id = '1WA5',
             db_id = '1WA5_TP2',
             description = 'GSP1 complex (CSE1P) from Tina Perica. This file was taken from PDB_REDO. Chains A and B respectively correspond to chains A and C in the original RCSB file.',
-            params_file_paths = {'G02' : 'temp/pdbs/1WA52.params'},
-            chain_mapping = dict(
-                A = 'A', # RAN
-                B = 'C', # Importin α re-exporter / chromosome segregation protein CSE1, CSE1P
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_params_file_paths = {'G02' : 'temp/pdbs/1WA52.params'},
+            identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
+            # chain_mapping = dict(
+            #    A = 'A', # RAN
+            #    C = 'C', # Importin α re-exporter / chromosome segregation protein CSE1, CSE1P
+            #),
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G02', 'X   1 ') : ('GTP', 'A1177 '),
             }),
             unchanged_ligand_codes = [],
@@ -581,6 +588,7 @@ complex_definitions = {
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '1WA5_TP2',
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -604,13 +612,13 @@ complex_definitions = {
             rcsb_id = '2BKU',
             db_id = '2BKU_TP0',
             description = 'GSP1 complex (KAP95) from Tina Perica. This file was taken from PDB_REDO.',
-            params_file_paths = {'G08' : 'temp/pdbs/2BKU.params'},
+            ligand_params_file_paths = {'G08' : 'temp/pdbs/2BKU.params'},
             identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
             #chain_mapping = dict(
             #    A = 'A', # choice of A, C. RAN (canis lupus)
             #    B = 'B', # choice of B, D. Importin β subunit, KAP95',
             #),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G08', 'X   1 ') : ('GTP', 'A 220 '),
             }),
             unchanged_ion_codes = ['MG'],
@@ -619,6 +627,7 @@ complex_definitions = {
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '2BKU_TP0',
             LName = 'Ras-related nuclear protein, canis lupus',
             LShortName = 'RAN dog',
             LHTMLName = 'RAN dog',
@@ -642,14 +651,14 @@ complex_definitions = {
             rcsb_id = '3A6P',
             db_id = '3A6P_TP0',
             description = 'GSP1 complex (MSN5) from Tina Perica. This file was taken from PDB_REDO. The peptide (chain B/G) contains UNK residues and was removed. Chains A, C, D, and E respectively correspond to chains C, A, D, and E in the original RCSB file.',
-            params_file_paths = {'G04' : 'temp/pdbs/3A6P.params'},
+            ligand_params_file_paths = {'G04' : 'temp/pdbs/3A6P.params'},
             chain_mapping = dict(
                 A = 'C', # choice of C, H. RAN versus the world!
                 C = 'A', # choice of A, F. Exportin-5 / KIAA1291 / RANBP21 / MSN5
                 D = 'D', # choice of D, I. pre-microRNA. GGUAAACAUCCUCGACUGGAAGCU
                 E = 'E', # choice of E, J. pre-microRNA. GGCUUUCAGUCGGAUGUUUGCCGC
             ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G04', 'X   1 ') : ('GTP', 'C1177 '),
             }),
             unchanged_ligand_codes = [],
@@ -659,6 +668,7 @@ complex_definitions = {
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '3A6P_TP0',
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -682,13 +692,13 @@ complex_definitions = {
             rcsb_id = '3EA5',
             db_id = '3EA5_TP0',
             description = 'GSP1 complex (KAP95) from Tina Perica. This file was taken from PDB_REDO.',
-            params_file_paths = {'G07' : 'temp/pdbs/3EA5.params'},
+            ligand_params_file_paths = {'G07' : 'temp/pdbs/3EA5.params'},
             identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
             #chain_mapping = dict(
             #    A = 'A', # choice of A, C. RAN (homo sapiens)
             #    B = 'B', # choice of B, D. Importin β subunit, KAP95
             #),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G07', 'X   1 ') : ('GDP', 'A 220 '),
             }),
             unchanged_ligand_codes = [],
@@ -698,6 +708,7 @@ complex_definitions = {
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '3EA5_TP0',
             LName = 'Ras-related nuclear protein, homo sapiens',
             LShortName = 'RAN human',
             LHTMLName = 'RAN human',
@@ -721,13 +732,13 @@ complex_definitions = {
             rcsb_id = '3ICQ',
             db_id = '3ICQ_TP0',
             description = 'GSP1 complex (LOS1) from Tina Perica. This file was taken from PDB_REDO. Chains A, D, and T respectively correspond to chains B, D, and T in the original RCSB file.',
-            params_file_paths = {'G11' : 'temp/pdbs/3ICQ.params'},
+            ligand_params_file_paths = {'G11' : 'temp/pdbs/3ICQ.params'},
             chain_mapping = dict(
                 A = 'B', # choice of B, C. RAN / GSP1/CNR1 versus the world!
                 D = 'D', # choice of D, E. RNA (62-MER).
                 T = 'T', # choice of T, U. Exportin-T, LOS1.
             ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G11', 'X   1 ') : ('GTP', 'B 250 '),
             }),
             unchanged_ligand_codes = [],
@@ -737,6 +748,7 @@ complex_definitions = {
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '3ICQ_TP0',
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -760,13 +772,13 @@ complex_definitions = {
             rcsb_id = '3M1I',
             db_id = '3M1I_TP1',
             description = 'GSP1 complex (YRB1) from Tina Perica. This file was taken from PDB_REDO.',
-            params_file_paths = {'G10' : 'temp/pdbs/3M1I1.params'},
+            ligand_params_file_paths = {'G10' : 'temp/pdbs/3M1I1.params'},
             identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
             #chain_mapping = dict(
             #    A = 'A', # RAN / GSP1.
             #    B = 'B', # Ran-specific GTPase-activating protein 1, Yrb1p
             #),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G10', 'X   1 ') : ('GTP', 'A1177 '),
             }),
             unchanged_ligand_codes = [],
@@ -776,6 +788,7 @@ complex_definitions = {
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '3M1I_TP1',
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -799,13 +812,13 @@ complex_definitions = {
             rcsb_id = '3M1I',
             db_id = '3M1I_TP2',
             description = 'GSP1 complex (CRM1) from Tina Perica. This file was taken from PDB_REDO. Removed Gsp1 residues 180 onwards.',
-            params_file_paths = {'G03' : 'temp/pdbs/3M1I2.params'},
+            ligand_params_file_paths = {'G03' : 'temp/pdbs/3M1I2.params'},
             identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
             #chain_mapping = dict(
             #    A = 'A', # RAN / GSP1.
             #    C = 'C', # Exportin-1 / Yeast CRM1 / Xpo1p
             #),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G03', 'X   1 ') : ('GTP', 'A1177 '),
             }),
             unchanged_ligand_codes = [],
@@ -815,6 +828,7 @@ complex_definitions = {
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '3M1I_TP2',
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -838,12 +852,12 @@ complex_definitions = {
             rcsb_id = '3W3Z',
             db_id = '3W3Z_TP0',
             description = 'GSP1 complex (PSE1) from Tina Perica. This file was taken from PDB_REDO. MSE HETATM records are renamed as ATOM records. Removed PSE1 residues after 736 (just to make the protein smaller - that region is far from GSP1/RAN). Chains A and B respectively correspond to chains B and A in the original RCSB file.',
-            params_file_paths = {'G06' : 'temp/pdbs/3W3Z.params'},
+            ligand_params_file_paths = {'G06' : 'temp/pdbs/3W3Z.params'},
             chain_mapping = dict(
                 A = 'B',
                 B = 'A', # Importin subunit beta-3 / PSE1 / KAP121 / YMR308C / YM9952.10C
             ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
                 ('G06', 'X   1 ') : ('GTP', 'B 202 '),
             }),
             unchanged_ligand_codes = [],
@@ -853,6 +867,7 @@ complex_definitions = {
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '3W3Z_TP0',
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -876,14 +891,14 @@ complex_definitions = {
             rcsb_id = '3WYF',
             db_id = '3WYF_TP1',
             description = 'GSP1 complex (YRB2) from Tina Perica. This file was taken from PDB_REDO. Removed residues 97-110 and 141-155 from chain B (YRB2) - the residues wrapping around CRM1 (chain C) and detached from the rest of YRB2.',
-            params_file_paths = {'G14' : 'temp/pdbs/3WYF1.params'},
+            ligand_params_file_paths = {'G14' : 'temp/pdbs/3WYF1.params'},
             identical_chains = True, # all protein, DNA, and RNA chains have the same chain ids (ligands can be split off into separate chains)
             #chain_mapping = dict(
             #    A = 'A', # choice of A, D. GTP-binding protein / GTP-binding protein inhibitor
             #    B = 'B', # choice of B, E. Ran-specific GTPase-activating protein 2 / Yrb2p / YRB2
             #    # Chain C is CRM1 / KAP124 / YGR218W / G8514 / Xpo1p
             #),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID.
+            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID.
                 ('G14', 'X   1 ') : ('GTP', 'A 301 '),
             }),
             unchanged_ligand_codes = [],
@@ -893,6 +908,7 @@ complex_definitions = {
             user_id = 'tina',
         ),
         Complex = dict(
+            structure_id = '3WYF_TP1',
             LName = 'GTP-binding protein/ GTP-binding protein inhibitor (RAN-related)',
             LShortName = 'Gsp1p',
             LHTMLName = 'Gsp1p',
@@ -922,11 +938,14 @@ complex_definitions = {
 
 def import_structures():
     ppi_api = get_ppi_api()
-    for tina_pdb_id, complex_definition in sorted(complex_definitions.iteritems()):
-        del complex_definition['Structure']['file_path']
-        complex_definition['Structure']['pdb_object'] = tina_pdb_objects[tina_pdb_id]
-        ppi_api.add_complex(complex_definition, keywords = ['GSP1'], force = False, allow_missing_params_files = False, debug = True)
-
+    for tina_pdb_id, complex_structure_definition_pair in sorted(complex_definitions.iteritems()):
+        if tina_pdb_id < '3W3Z':
+            continue
+        #add_designed_pdb
+        colortext.warning(tina_pdb_id)
+        del complex_structure_definition_pair['Structure']['file_path']
+        complex_structure_definition_pair['Structure']['pdb_object'] = tina_pdb_objects[tina_pdb_id]
+        ppi_api.add_complex_structure_pair(complex_structure_definition_pair, keywords = ['GSP1'], force = False, trust_database_content = False, allow_missing_params_files = False, debug = False)
 
 import_structures()
 sys.exit(0)
