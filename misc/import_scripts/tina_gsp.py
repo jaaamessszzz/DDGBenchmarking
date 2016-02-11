@@ -367,20 +367,18 @@ complex_definitions = {
                 A = 'C', # choice of C, D, or E. RAN
                 B = 'B', # looking at B-factors. NTF-2
             ),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G09', 'X   1 ') : ('GDP', 'C 220 '), # PDB columns [17:20], [21:27]
-            }),
+            ligand_code_mapping = {'G09' : 'GDP'},
             unchanged_ion_codes = ['MG'],
             techniques = "Manual edit",
             file_source = 'Tina Perica',
             user_id = 'tina',
-
         ),
         Complex = dict(
             structure_id = '1A2K_TP0',
             ComplexID = 202,
             LChains = ['A'],
             RChains = ['B'],
+            PDBComplexNotes = 'Another bound complex exists for 1A2K which includes a second copy of NTF2 (chain A in 1A2K).',
         ),
     ),
     '1I2M' : dict(
@@ -406,6 +404,7 @@ complex_definitions = {
             ComplexID = 176,
             LChains = ['A'],
             RChains = ['B'],
+            PDBComplexNotes = 'An identical complex exists for the RCSB file 1I2M.',
         )
     ),
     '1K5D2' : dict(
@@ -420,9 +419,7 @@ complex_definitions = {
             #    A = 'A', # choice of A, D, G, J. RAN
             #    C = 'C', # choice of C, F, I, L. Ran GTPase activating protein 1
             #),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G13', 'X   1 ') : ('GNP', 'A1250 '),
-            }),
+            ligand_code_mapping = {'G13' : 'GNP'},
             unchanged_ion_codes = ['MG'],
             techniques = "PDB_REDO",
             file_source = 'Tina Perica',
@@ -430,7 +427,7 @@ complex_definitions = {
         ),
         Complex = dict(
             structure_id = '1K5D_TP0',
-            AdditionalKeywords = ['GSP1'],
+            AdditionalKeywords = ['GSP', 'RAS'],
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -446,6 +443,7 @@ complex_definitions = {
             Warnings = None,
             LChains = ['A'],
             RChains = ['C'],
+            PDBComplexNotes = 'There is a 1K5D complex with both chains A and B as the left partner. This complex omits chain B.',
         )
     ),
     '1QBK' : dict(
@@ -459,9 +457,7 @@ complex_definitions = {
                 A = 'C', # RAN
                 B = 'B', # KAP104
             ),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G12', 'X   1 ') : ('GNP', 'C 218 '),
-            }),
+            ligand_code_mapping = {'G12' : 'GNP'},
             unchanged_ligand_codes = ['MSE'],
             techniques = "Manual edit",
             file_source = 'Tina Perica',
@@ -469,6 +465,7 @@ complex_definitions = {
         ),
         Complex = dict(
             structure_id = '1QBK_TP0',
+            AdditionalKeywords = ['GSP', 'RAS'],
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -498,9 +495,7 @@ complex_definitions = {
             #    A = 'A', # RAN
             #    B = 'B', # MTR10
             #),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G01', 'X   1 ') : ('GTP', 'A 302 '),
-            }),
+            ligand_code_mapping = {'G01' : 'GTP'},
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
@@ -509,6 +504,7 @@ complex_definitions = {
         ),
         Complex = dict(
             structure_id = '4OL0_TP0',
+            AdditionalKeywords = ['GSP', 'RAS'],
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -538,9 +534,7 @@ complex_definitions = {
             #    A = 'A', # RAN
             #    B = 'B', # Importin α subunit / karyopherin α subunit, KAP60P
             #),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G05', 'X   1 ') : ('GTP', 'A1177 '),
-            }),
+            ligand_code_mapping = {'G05' : 'GTP'},
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
@@ -549,6 +543,7 @@ complex_definitions = {
         ),
         Complex = dict(
             structure_id = '1WA5_TP1',
+            AdditionalKeywords = ['GSP', 'RAS'],
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -578,9 +573,7 @@ complex_definitions = {
             #    A = 'A', # RAN
             #    C = 'C', # Importin α re-exporter / chromosome segregation protein CSE1, CSE1P
             #),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G02', 'X   1 ') : ('GTP', 'A1177 '),
-            }),
+            ligand_code_mapping = {'G02' : 'GTP'},
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
@@ -589,6 +582,7 @@ complex_definitions = {
         ),
         Complex = dict(
             structure_id = '1WA5_TP2',
+            AdditionalKeywords = ['GSP', 'RAS'],
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -618,9 +612,7 @@ complex_definitions = {
             #    A = 'A', # choice of A, C. RAN (canis lupus)
             #    B = 'B', # choice of B, D. Importin β subunit, KAP95',
             #),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G08', 'X   1 ') : ('GTP', 'A 220 '),
-            }),
+            ligand_code_mapping = {'G08' : 'GTP'},
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
             file_source = 'Tina Perica',
@@ -628,6 +620,7 @@ complex_definitions = {
         ),
         Complex = dict(
             structure_id = '2BKU_TP0',
+            AdditionalKeywords = ['GSP', 'RAS'],
             LName = 'Ras-related nuclear protein, canis lupus',
             LShortName = 'RAN dog',
             LHTMLName = 'RAN dog',
@@ -658,9 +651,7 @@ complex_definitions = {
                 D = 'D', # choice of D, I. pre-microRNA. GGUAAACAUCCUCGACUGGAAGCU
                 E = 'E', # choice of E, J. pre-microRNA. GGCUUUCAGUCGGAUGUUUGCCGC
             ),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G04', 'X   1 ') : ('GTP', 'C1177 '),
-            }),
+            ligand_code_mapping = {'G04' : 'GTP'},
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
@@ -669,6 +660,7 @@ complex_definitions = {
         ),
         Complex = dict(
             structure_id = '3A6P_TP0',
+            AdditionalKeywords = ['GSP', 'RAS'],
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -698,9 +690,7 @@ complex_definitions = {
             #    A = 'A', # choice of A, C. RAN (homo sapiens)
             #    B = 'B', # choice of B, D. Importin β subunit, KAP95
             #),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G07', 'X   1 ') : ('GDP', 'A 220 '),
-            }),
+            ligand_code_mapping = {'G07' : 'GDP'},
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
@@ -709,6 +699,7 @@ complex_definitions = {
         ),
         Complex = dict(
             structure_id = '3EA5_TP0',
+            AdditionalKeywords = ['GSP', 'RAS'],
             LName = 'Ras-related nuclear protein, homo sapiens',
             LShortName = 'RAN human',
             LHTMLName = 'RAN human',
@@ -738,9 +729,7 @@ complex_definitions = {
                 D = 'D', # choice of D, E. RNA (62-MER).
                 T = 'T', # choice of T, U. Exportin-T, LOS1.
             ),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G11', 'X   1 ') : ('GTP', 'B 250 '),
-            }),
+            ligand_code_mapping = {'G11' : 'GTP'},
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
@@ -749,6 +738,7 @@ complex_definitions = {
         ),
         Complex = dict(
             structure_id = '3ICQ_TP0',
+            AdditionalKeywords = ['GSP', 'RAS'],
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -778,9 +768,7 @@ complex_definitions = {
             #    A = 'A', # RAN / GSP1.
             #    B = 'B', # Ran-specific GTPase-activating protein 1, Yrb1p
             #),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G10', 'X   1 ') : ('GTP', 'A1177 '),
-            }),
+            ligand_code_mapping = {'G10' : 'GTP'},
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
@@ -789,6 +777,7 @@ complex_definitions = {
         ),
         Complex = dict(
             structure_id = '3M1I_TP1',
+            AdditionalKeywords = ['GSP', 'RAS'],
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -818,9 +807,7 @@ complex_definitions = {
             #    A = 'A', # RAN / GSP1.
             #    C = 'C', # Exportin-1 / Yeast CRM1 / Xpo1p
             #),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G03', 'X   1 ') : ('GTP', 'A1177 '),
-            }),
+            ligand_code_mapping = {'G03' : 'GTP'},
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
@@ -829,6 +816,7 @@ complex_definitions = {
         ),
         Complex = dict(
             structure_id = '3M1I_TP2',
+            AdditionalKeywords = ['GSP', 'RAS'],
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -857,9 +845,7 @@ complex_definitions = {
                 A = 'B',
                 B = 'A', # Importin subunit beta-3 / PSE1 / KAP121 / YMR308C / YM9952.10C
             ),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G06', 'X   1 ') : ('GTP', 'B 202 '),
-            }),
+            ligand_code_mapping = {'G06' : 'GTP'},
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
@@ -868,6 +854,7 @@ complex_definitions = {
         ),
         Complex = dict(
             structure_id = '3W3Z_TP0',
+            AdditionalKeywords = ['GSP', 'RAS'],
             LName = 'Ras-related nuclear protein',
             LShortName = 'RAN',
             LHTMLName = 'RAN',
@@ -898,9 +885,7 @@ complex_definitions = {
             #    B = 'B', # choice of B, E. Ran-specific GTPase-activating protein 2 / Yrb2p / YRB2
             #    # Chain C is CRM1 / KAP124 / YGR218W / G8514 / Xpo1p
             #),
-            ligand_instance_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID.
-                ('G14', 'X   1 ') : ('GTP', 'A 301 '),
-            }),
+            ligand_code_mapping = {'G14' : 'GTP'},
             unchanged_ligand_codes = [],
             unchanged_ion_codes = ['MG'],
             techniques = 'PDB_REDO',
@@ -909,6 +894,7 @@ complex_definitions = {
         ),
         Complex = dict(
             structure_id = '3WYF_TP1',
+            AdditionalKeywords = ['GSP', 'RAS'],
             LName = 'GTP-binding protein/ GTP-binding protein inhibitor (RAN-related)',
             LShortName = 'Gsp1p',
             LHTMLName = 'Gsp1p',
@@ -928,6 +914,11 @@ complex_definitions = {
     ),
 }
 
+import json
+#write_file('tinas_complexes.json', json.dumps(complex_definitions, indent = 4, sort_keys = True))
+complex_definitions = json.loads(read_file('tinas_complexes.json'))
+#sys.exit(0)
+
 
 
 
@@ -939,13 +930,23 @@ complex_definitions = {
 def import_structures():
     ppi_api = get_ppi_api()
     for tina_pdb_id, complex_structure_definition_pair in sorted(complex_definitions.iteritems()):
-        if tina_pdb_id < '3W3Z':
-            continue
-        #add_designed_pdb
+        #if tina_pdb_id != '1WA52':
+        #    continue
         colortext.warning(tina_pdb_id)
         del complex_structure_definition_pair['Structure']['file_path']
         complex_structure_definition_pair['Structure']['pdb_object'] = tina_pdb_objects[tina_pdb_id]
-        ppi_api.add_complex_structure_pair(complex_structure_definition_pair, keywords = ['GSP1'], force = False, trust_database_content = False, allow_missing_params_files = False, debug = False)
+        pdb_set = ppi_api.add_complex_structure_pair(complex_structure_definition_pair, keywords = ['GSP1'],
+                                                     force = True, trust_database_content = False, allow_missing_params_files = False, debug = False)
+        if pdb_set['success'] == False:
+            print(pdb_set['error'])
+            if 'possible_matches' in pdb_set:
+                for d in pdb_set['possible_matches']:
+                    colortext.warning(d['ID'])
+                    print('{0}, {1}, {2}'.format(d['LName'].encode('utf-8').strip(), d['LShortName'].encode('utf-8').strip(), d['LHTMLName'].encode('utf-8').strip()))
+                    print('{0}, {1}, {2}'.format(d['RName'].encode('utf-8').strip(), d['RShortName'].encode('utf-8').strip(), d['RHTMLName'].encode('utf-8').strip()))
+
+
+        #sys.exit(0)
 
 import_structures()
 sys.exit(0)
