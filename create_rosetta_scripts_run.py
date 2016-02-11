@@ -16,6 +16,7 @@ import importlib
 from klab.cluster_template.write_run_file import process as write_run_file
 
 job_output_directory = 'job_output'
+alanine_scanning_xml = 'interface/alanine_scanning.xml'
 
 def write_stripped_pdb(new_file_location, file_contents):
     if isinstance(file_contents, basestring):
@@ -72,12 +73,15 @@ if __name__ == '__main__':
     settings['mem_free'] = '1.5G'
     settings['output_dir'] = output_dir
     settings['rosetta_args_list'] = [
+        '-inout:dbms:database_name', 'output.db3'
     ]
     settings['rosetta_args_list'].extend(cfg.extra_flags)
 
     # Now get run settings from database and save to pickle file
     job_dict = {}
     output_data_dir = os.path.join(settings['output_dir'], 'data')
+
+    shutil.copy(alanine_scanning_xml, output_data_dir)
 
     if not os.path.isdir(output_data_dir):
         os.makedirs(output_data_dir)

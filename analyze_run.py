@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import os, sys
 import shutil
 import klab.cluster_template.parse_settings as parse_settings
