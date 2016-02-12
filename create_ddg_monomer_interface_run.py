@@ -110,7 +110,7 @@ if __name__ == '__main__':
         # Progress counter
         count += 1
         if count % records_per_dot == 0: colortext.write(".", "cyan", flush = True)
-        if count > 100:
+        if count > 300:
             break
 
         # Check if job already ran
@@ -173,6 +173,11 @@ if __name__ == '__main__':
             'input_file_list' : [files_dict[substitution_parameters['%%input_pdb%%']]],
         }
         job_dict[prediction_id] = argdict
+
+
+    import pprint
+    print('')
+    pprint.pprint(ppi_api.get_file_content_cache_stats())
 
     t2 = time.time()
     count -= 1
