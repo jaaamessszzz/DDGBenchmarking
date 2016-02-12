@@ -27,7 +27,7 @@ def process_ddg_monomer_directory():
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
 
     prediction_set_name = cfg.prediction_set_id
-    
+
     ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = settings['local_rosetta_installation_path'] + '/database', get_interface_factory = get_interface_factory )
     prediction_set_credit = cfg.prediction_set_credit
     expectn = cfg.expectn
@@ -76,6 +76,6 @@ def process_ddg_monomer_directory():
                 debug = False,
                 allow_failures = cfg.allow_missing_case_failures,
             )
-    
+
 if __name__ == '__main__':
     process_ddg_monomer_directory()
