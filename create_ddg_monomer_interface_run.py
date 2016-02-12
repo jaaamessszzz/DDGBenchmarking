@@ -136,7 +136,6 @@ if __name__ == '__main__':
         # Allow us to resume from an interrupted setup
         truncate_content = None
         all_files_exist = os.path.exists(job_data_dir) and os.path.exists(os.path.join(job_data_dir, '.ready'))
-        all_files_exist = False # todo : remove
         if all_files_exist:
             truncate_content = 0
 
