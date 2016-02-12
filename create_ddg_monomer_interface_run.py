@@ -99,6 +99,11 @@ if __name__ == '__main__':
     app_name = 'minimize_with_cst'
     settings['appname'] = app_name
 
+
+    import cProfile, pstats, StringIO
+    pr = cProfile.Profile()
+    pr.enable()
+
     # Progress counter setup
     colortext.message('Creating input data for %d predictions.' % (len(prediction_ids)))
     count, records_per_dot = 0, 50
@@ -107,6 +112,8 @@ if __name__ == '__main__':
         # Progress counter
         count += 1
         if count % records_per_dot == 0: colortext.write(".", "cyan", flush = True)
+        if count > 100:
+            break
 
         # Check if job already ran
         prediction_id_dir = os.path.join(output_dir, str(prediction_id))
@@ -160,6 +167,13 @@ if __name__ == '__main__':
         }
         job_dict[prediction_id] = argdict
 
+
+    pr.disable()
+    s = StringIO.StringIO()
+    sortby = 'cumulative'
+    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    print s.getvalue()
 
     print('')
     if len(job_dict) > 0:
