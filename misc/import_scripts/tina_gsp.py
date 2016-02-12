@@ -8,6 +8,8 @@ import glob
 import datetime
 import traceback
 import pprint
+import json
+
 
 import pandas
 
@@ -24,7 +26,9 @@ sys.path.insert(0, "../../..")
 #from ddg.ddglib.ppi_api import get_interface as get_ppi_interface
 from ddg.ddglib.ppi_api import get_interface as get_ppi_interface
 from ddg.ddglib import ddgdbapi, db_api
+from ddg.ddglib import db_schema as dbmodel
 from ddg.ddglib.import_api import DataImportInterface
+from klab.db.sqlalchemy_interface import row_to_dict, get_or_create_in_transaction
 
 # This script requires the files in /kortemmelab/data/oconchus/lab_projects/tina/gsp1_ddg/2015November9_ddg.zip
 # From this directory:
@@ -98,23 +102,34 @@ tina_pdb_ids = []
 tina_pdb_id_to_rcsb_pdb_id = {}
 mutations_dataframe = None
 
+
+def setup_mutations_dataframe():
+    global mutations_dataframe # the updated set of mutations stored as a pandas dataframe with the 'pdb' column converted to uppercase
+
+    mutations_csv = os.path.join('temp', 'mutations_Gsp1.txt')
+    assert(os.path.exists(mutations_csv))
+    mutations_dataframe = pandas.read_csv(mutations_csv, sep = '\t')
+    mutations_dataframe['pdb'] = mutations_dataframe['pdb'].str.upper()
+    mutations_dataframe['DatasetID'] = range(1, len(mutations_dataframe) + 1)
+    mutations_dataframe = mutations_dataframe.set_index(['DatasetID'])
+
+
 def setup():
     global pdb_file_paths  # RCSB PDB_ID -> PDB file
     global rcsb_pdb_objects # RCSB PDB_ID -> PDB object
     global tina_pdb_objects # Tina's PDB_ID -> PDB object
     global tina_pdb_id_to_rcsb_pdb_id # Tina's PDB_ID -> RCSB PDB_ID
-    global mutations_dataframe # the updated set of mutations stored as a pandas dataframe with the 'pdb' column converted to uppercase
+    global mutations_dataframe
+
+    if not mutations_dataframe:
+        setup_mutations_dataframe()
 
     # old_mutations_csv is missing some cases but has the mapping from pdb -> partner 1 name, partner 2 name
     old_mutations_csv = os.path.join('temp', 'mutations_Gsp1_old.txt')
-    mutations_csv = os.path.join('temp', 'mutations_Gsp1.txt')
     assert(os.path.exists('temp'))
     assert(os.path.exists(old_mutations_csv))
-    assert(os.path.exists(mutations_csv))
 
     df = pandas.read_csv(old_mutations_csv, sep = '\t')
-    mutations_dataframe = pandas.read_csv(mutations_csv, sep = '\t')
-    mutations_dataframe['pdb'] = mutations_dataframe['pdb'].str.upper()
 
     tina_pdb_ids = sorted(set([p for p in df['pdb'].values]))
     rcsb_pdb_ids = set()
@@ -145,11 +160,10 @@ def setup():
         if existing_records:
             colortext.warning('The PDB file {0} exists in the database.'.format(pdb_id))
         complex_ids = ppi_api.search_complexes_by_pdb_id(pdb_id)
+
         if complex_ids:
             colortext.warning('The PDB file {0} has associated complexes: {1}'.format(pdb_id, ', '.join(map(str, complex_ids))))
     print('')
-
-setup()
 
 
 ### Check against existing data
@@ -336,15 +350,15 @@ At this point, we have a mapping from three of Tina's complexes to entries in th
 
 # ==
 #    Step 1
-#    Description: Add PDB files
-#    Tables: PDBFile, PDBChain, PDBMolecule, PDBMoleculeChain, PDBResidue, PDBLigand, PDBIon
-#    Use: import_api.py:DataImportInterface.add_designed_pdb()
+#    Description: Add PDB files and complexes
+#    Use: import_api.py:DataImportInterface.add_complex_structure_pair() - this calls add_designed_pdb() and add_complex()
 # ==
 #
 
 user_dataset_name = 'Tina Perica - GSP1 complexes'
 
 def create_mapping_string():
+    # todo: use this to create a function to create a skeleton JSON file given a list of complexes
     for pdb_id, tp in sorted(tina_pdb_objects.iteritems()):
         op = rcsb_pdb_objects[tina_pdb_id_to_rcsb_pdb_id[pdb_id]]
         print("'{0}' : dict(".format(pdb_id))
@@ -355,771 +369,159 @@ def create_mapping_string():
         print('),')
 
 
-complex_definitions = {
-    '1A2K' : dict(
-        Structure = dict(
-            filepath = 'pdbs/1A2K.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '1A2K',
-            db_id = '1A2K_TP0',
-            description = 'GSP1 complex (NTF2) from Tina Perica. PDB_REDO was unavailable for this file. Chain A corresponds to chain C in the original RCSB file.',
-            params_files = {'G09' : 'temp/pdbs/1A2K.params'},
-            chain_mapping = dict(
-                A = 'C', # choice of C, D, or E. RAN
-                B = 'B', # looking at B-factors. NTF-2
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G09', 'X   1 ') : ('GDP', 'C 220 '), # PDB columns [17:20], [21:27]
-            }),
-            unchanged_ion_codes = ['MG'],
-            techniques = "Manual edit",
-        ),
-        Complex = dict(
-            ComplexID = 202,
-            LChains = ['A'],
-            RChains = ['B'],
-        )
-    ),
-    '1I2M' : dict(
-        Structure = dict(
-            filepath = 'pdbs/1I2M.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '1I2M',
-            db_id = '1I2M_TP0',
-            description = 'GSP1 complex (SRM1) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {},
-            chain_mapping = dict(
-                A = 'A', # choice of A or C. RAN
-                B = 'B', # choice of B or D. RCC1
-            ),
-            unchanged_ligand_codes = ['SO4'],
-            unchanged_ion_codes = ['MG'],
-            ion_mapping = None,
-            techniques = "PDB_REDO",
-        ),
-        Complex = dict(
-            ComplexID = 176,
-            LChains = ['A'],
-            RChains = ['B'],
-        )
-    ),
-    '1K5D' : dict(
-        Structure = dict(
-            filepath = 'pdbs/1K5D2.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '1K5D',
-            db_id = '1K5D_TP0',
-            description = 'GSP1 complex (RanGAP1) from Tina Perica. This file was taken from PDB_REDO. Removed residues 180-213 from chain A (RAN/GSP1) (the ones wrapping around YRB1).',
-            params_files = {'G13' : 'temp/pdbs/1K5D2.params'},
-            chain_mapping = dict(
-                A = 'A', # choice of A, D, G, J. RAN
-                C = 'C', # choice of C, F, I, L. Ran GTPase activating protein 1
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G13', 'X   1 ') : ('GNP', 'A1250 '),
-            }),
-            unchanged_ion_codes = ['MG'],
-            techniques = "PDB_REDO",
-        ),
-        Complex = dict(
-            LName = 'Ras-related nuclear protein',
-            LShortName = 'RAN',
-            LHTMLName = 'RAN',
-            RName = 'Ran-specific GTPase-activating protein',
-            RShortName = 'RanGAP1',
-            RHTMLName = 'RanGAP1',
-            FunctionalClassID = 'OG',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = True,
-            WildTypeComplexID = None,
-            Notes = 'There is a related complex in the database (complex #119 at the time of writing) with all three unique chains from 1K5D (AB|C).',
-            Warnings = None,
-            LChains = ['A'],
-            RChains = ['C'],
-        )
-    ),
-    '1QBK' : dict(
-        Structure = dict(
-            filepath = 'pdbs/1QBK.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '1QBK',
-            db_id = '1QBK_TP0',
-            description = 'GSP1 complex (KAP104/TNPO1) from Tina Perica. PDB_REDO was unavailable for this file. Removed Gsp1/Ran residues after 179 (sticking out and forming crystal contacts).',
-            params_files = {'G12' : 'temp/pdbs/1QBK.params'},
-            chain_mapping = dict(
-                A = 'C', # RAN
-                B = 'B', # KAP104
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G12', 'X   1 ') : ('GNP', 'C 218 '),
-            }),
-            unchanged_ligand_codes = ['MSE'],
-            techniques = "Manual edit",
-        ),
-        Complex = dict(
-            LName = 'Ras-related nuclear protein',
-            LShortName = 'RAN',
-            LHTMLName = 'RAN',
-            RName = 'Karyopherin beta2',
-            RShortName = 'KAP104',
-            RHTMLName = 'KAP104',
-            FunctionalClassID = 'OG',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = True,
-            WildTypeComplexID = None,
-            Notes = None,
-            Warnings = None,
-            LChains = ['A'],
-            RChains = ['B'],
-        )
-    ),
-    '4OL0' : dict(
-        Structure = dict(
-            filepath = 'pdbs/4OL0.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '4OL0',
-            db_id = '4OL0_TP0',
-            description = 'GSP1 complex (MTR10) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {'G01' : 'temp/pdbs/4OL0.params'},
-            chain_mapping = dict(
-                A = 'A', # RAN
-                B = 'B', # MTR10
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G01', 'X   1 ') : ('GTP', 'A 302 '),
-            }),
-            unchanged_ligand_codes = [],
-            unchanged_ion_codes = ['MG'],
-            techniques = 'PDB_REDO',
-        ),
-        Complex = dict(
-            LName = 'Ras-related nuclear protein',
-            LShortName = 'RAN',
-            LHTMLName = 'RAN',
-            RName = 'Transportin-3',
-            RShortName = 'MTR10',
-            RHTMLName = 'MTR10',
-            FunctionalClassID = 'OG',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = True,
-            WildTypeComplexID = None,
-            Notes = None,
-            Warnings = None,
-            LChains = ['A'],
-            RChains = ['B'],
-        )
-    ),
-    '1WA51' : dict(
-        Structure = dict(
-            filepath = 'pdbs/1WA51.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '1WA5',
-            db_id = '1WA5_TP1',
-            description = 'GSP1 complex (KAP60P/SRP1) from Tina Perica. This file was taken from PDB_REDO. Removed residues 12-19 from chain B (KAP60P/SRP1).',
-            params_files = {'G05' : 'temp/pdbs/1WA51.params'},
-            chain_mapping = dict(
-                A = 'A', # RAN
-                B = 'B', # Importin α subunit / karyopherin α subunit, KAP60P
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G05', 'X   1 ') : ('GTP', 'A1177 '),
-            }),
-            unchanged_ligand_codes = [],
-            unchanged_ion_codes = ['MG'],
-            techniques = 'PDB_REDO',
-        ),
-        Complex = dict(
-            LName = 'Ras-related nuclear protein',
-            LShortName = 'RAN',
-            LHTMLName = 'RAN',
-            RName = 'Importin α subunit / karyopherin α subunit',
-            RShortName = 'KAP60P',
-            RHTMLName = 'KAP60P',
-            FunctionalClassID = 'OG',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = True,
-            WildTypeComplexID = None,
-            Notes = None,
-            Warnings = None,
-            LChains = ['A'],
-            RChains = ['B'],
-        )
-    ),
-    '1WA52' : dict(
-        Structure = dict(
-            filepath = 'pdbs/1WA52.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '1WA5',
-            db_id = '1WA5_TP2',
-            description = 'GSP1 complex (CSE1P) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {'G02' : 'temp/pdbs/1WA52.params'},
-            chain_mapping = dict(
-                A = 'A', # RAN
-                B = 'C', # Importin α re-exporter / chromosome segregation protein CSE1, CSE1P
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G02', 'X   1 ') : ('GTP', 'A1177 '),
-            }),
-            unchanged_ligand_codes = [],
-            unchanged_ion_codes = ['MG'],
-            techniques = 'PDB_REDO',
-        ),
-        Complex = dict(
-            LName = 'Ras-related nuclear protein',
-            LShortName = 'RAN',
-            LHTMLName = 'RAN',
-            RName = 'Importin α re-exporter / chromosome segregation protein CSE1',
-            RShortName = 'CSE1P',
-            RHTMLName = 'CSE1P',
-            FunctionalClassID = 'OG',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = True,
-            WildTypeComplexID = None,
-            Notes = None,
-            Warnings = None,
-            LChains = ['A'],
-            RChains = ['C'],
-        )
-    ),
-    '2BKU' : dict(
-        Structure = dict(
-            filepath = 'pdbs/2BKU.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '2BKU',
-            db_id = '2BKU_TP0',
-            description = 'GSP1 complex (KAP95) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {'G08' : 'temp/pdbs/2BKU.params'},
-            chain_mapping = dict(
-                A = 'A', # choice of A, C. RAN (canis lupus)
-                B = 'B', # choice of B, D. Importin β subunit, KAP95',
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G08', 'X   1 ') : ('GTP', 'A 220 '),
-            }),
-            unchanged_ion_codes = ['MG'],
-            techniques = 'PDB_REDO',
-        ),
-        Complex = dict(
-            LName = 'Ras-related nuclear protein, canis lupus',
-            LShortName = 'RAN dog',
-            LHTMLName = 'RAN dog',
-            RName = 'Importin β subunit',
-            RShortName = 'KAP95',
-            RHTMLName = 'KAP95',
-            FunctionalClassID = 'OG',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = True,
-            WildTypeComplexID = None,
-            Notes = 'Related to the 3EA5 bound complex.',
-            Warnings = None,
-            LChains = ['A'],
-            RChains = ['B'],
-        )
-    ),
-    '3A6P' : dict(
-        Structure = dict(
-            filepath = 'pdbs/3A6P.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '3A6P',
-            db_id = '3A6P_TP0',
-            description = 'GSP1 complex (MSN5) from Tina Perica. This file was taken from PDB_REDO. The peptide (chain B/G) contains UNK residues and was removed.',
-            params_files = {'G04' : 'temp/pdbs/3A6P.params'},
-            chain_mapping = dict(
-                A = 'C', # choice of C, H. RAN versus the world!
-                C = 'A', # choice of A, F. Exportin-5 / KIAA1291 / RANBP21 / MSN5
-                D = 'D', # choice of D, I. pre-microRNA. GGUAAACAUCCUCGACUGGAAGCU
-                E = 'E', # choice of E, J. pre-microRNA. GGCUUUCAGUCGGAUGUUUGCCGC
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G04', 'X   1 ') : ('GTP', 'C1177 '),
-            }),
-            unchanged_ligand_codes = [],
-            unchanged_ion_codes = ['MG'],
-            techniques = 'PDB_REDO',
-        ),
-        Complex = dict(
-            LName = 'Ras-related nuclear protein',
-            LShortName = 'RAN',
-            LHTMLName = 'RAN',
-            RName = 'Exportin-5 / KIAA1291 / RANBP21 / MSN5 + 2*pre-microRNA',
-            RShortName = 'MSN5 + 2*pre-microRNA',
-            RHTMLName = 'MSN5 + 2*pre-microRNA',
-            FunctionalClassID = 'OG',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = True,
-            WildTypeComplexID = None,
-            Notes = None,
-            Warnings = None,
-            LChains = ['A'],
-            RChains = ['C', 'D', 'E'],
-        )
-    ),
-    '3EA5' : dict(
-        Structure = dict(
-            filepath = 'pdbs/3EA5.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '3EA5',
-            db_id = '3EA5_TP0',
-            description = 'GSP1 complex (KAP95) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {'G07' : 'temp/pdbs/3EA5.params'},
-            chain_mapping = dict(
-                A = 'A', # choice of A, C. RAN (homo sapiens)
-                B = 'B', # choice of B, D. Importin β subunit, KAP95
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G07', 'X   1 ') : ('GDP', 'A 220 '),
-            }),
-            unchanged_ligand_codes = [],
-            unchanged_ion_codes = ['MG'],
-            techniques = 'PDB_REDO',
-        ),
-        Complex = dict(
-            LName = 'Ras-related nuclear protein, homo sapiens',
-            LShortName = 'RAN human',
-            LHTMLName = 'RAN human',
-            RName = 'Importin β subunit',
-            RShortName = 'KAP95',
-            RHTMLName = 'KAP95',
-            FunctionalClassID = 'OG',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = True,
-            WildTypeComplexID = None,
-            Notes = 'Related to the 2BKU bound complex.',
-            Warnings = None,
-            LChains = ['A'],
-            RChains = ['B'],
-        )
-    ),
-    '3ICQ' : dict(
-        Structure = dict(
-            filepath = 'pdbs/3ICQ.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '3ICQ',
-            db_id = '3ICQ_TP0',
-            description = 'GSP1 complex (LOS1) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {'G11' : 'temp/pdbs/3ICQ.params'},
-            chain_mapping = dict(
-                A = 'B', # choice of B, C. RAN / GSP1/CNR1 versus the world!
-                D = 'D', # choice of D, E. RNA (62-MER).
-                T = 'T', # choice of T, U. Exportin-T, LOS1.
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G11', 'X   1 ') : ('GTP', 'B 250 '),
-            }),
-            unchanged_ligand_codes = [],
-            unchanged_ion_codes = ['MG'],
-            techniques = 'PDB_REDO',
-        ),
-        Complex = dict(
-            LName = 'Ras-related nuclear protein',
-            LShortName = 'RAN',
-            LHTMLName = 'RAN',
-            RName = 'Exportin-T + RNA complex',
-            RShortName = 'LOS1 + RNA',
-            RHTMLName = 'LOS1 + RNA',
-            FunctionalClassID = 'OG',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = True,
-            WildTypeComplexID = None,
-            Notes = None,
-            Warnings = None,
-            LChains = ['A'],
-            RChains = ['D', 'T'],
-        )
-    )
-    '3M1I1' : dict(
-        Structure = dict(
-            filepath = 'pdbs/3M1I1.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '3M1I',
-            db_id = '3M1I_TP1',
-            description = 'GSP1 complex (YRB1) from Tina Perica. This file was taken from PDB_REDO.',
-            params_files = {'G10' : 'temp/pdbs/3M1I1.params'},
-            chain_mapping = dict(
-                A = 'A', # RAN / GSP1.
-                B = 'B', # Ran-specific GTPase-activating protein 1, Yrb1p
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G10', 'X   1 ') : ('GTP', 'A1177 '),
-            }),
-            unchanged_ligand_codes = [],
-            unchanged_ion_codes = ['MG'],
-            techniques = 'PDB_REDO',
-        ),
-        Complex = dict(
-            LName = 'Ras-related nuclear protein',
-            LShortName = 'RAN',
-            LHTMLName = 'RAN',
-            RName = 'Ran-specific GTPase-activating protein 1',
-            RShortName = 'Yrb1p',
-            RHTMLName = 'Yrb1p',
-            FunctionalClassID = 'OG',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = True,
-            WildTypeComplexID = None,
-            Notes = None,
-            Warnings = None,
-            LChains = ['A'],
-            RChains = ['B'],
-        )
-    ),
-    '3M1I2' : dict(
-        Structure = dict(
-            filepath = 'pdbs/3M1I2.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '3M1I',
-            db_id = '3M1I_TP2',
-            description = 'GSP1 complex (CRM1) from Tina Perica. This file was taken from PDB_REDO. Removed Gsp1 residues 180 onwards.',
-            params_files = {'G03' : 'temp/pdbs/3M1I2.params'},
-            chain_mapping = dict(
-                A = 'A', # RAN / GSP1.
-                C = 'C', # Exportin-1 / Yeast CRM1 / Xpo1p
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G03', 'X   1 ') : ('GTP', 'A1177 '),
-            }),
-            unchanged_ligand_codes = [],
-            unchanged_ion_codes = ['MG'],
-            techniques = 'PDB_REDO',
-        ),
-        Complex = dict(
-            LName = 'Ras-related nuclear protein',
-            LShortName = 'RAN',
-            LHTMLName = 'RAN',
-            RName = 'Exportin-1',
-            RShortName = 'CRM1',
-            RHTMLName = 'CRM1',
-            FunctionalClassID = 'OG',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = True,
-            WildTypeComplexID = None,
-            Notes = None,
-            Warnings = None,
-            LChains = ['A'],
-            RChains = ['C'],
-        )
-    ),
-    '3W3Z' : dict(
-        Structure = dict(
-            filepath = 'pdbs/3W3Z.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '3W3Z',
-            db_id = '3W3Z_TP0',
-            description = 'GSP1 complex (PSE1) from Tina Perica. This file was taken from PDB_REDO. MSE HETATM records are renamed as ATOM records. Removed PSE1 residues after 736 (just to make the protein smaller - that region is far from GSP1/RAN).',
-            params_files = {'G06' : 'temp/pdbs/3W3Z.params'},
-            chain_mapping = dict(
-                A = 'B',
-                B = 'A', # Importin subunit beta-3 / PSE1 / KAP121 / YMR308C / YM9952.10C
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID
-                ('G06', 'X   1 ') : ('GTP', 'B 202 '),
-            }),
-            unchanged_ligand_codes = [],
-            unchanged_ion_codes = ['MG'],
-            techniques = 'PDB_REDO',
-        ),
-        Complex = dict(
-            LName = 'Ras-related nuclear protein',
-            LShortName = 'RAN',
-            LHTMLName = 'RAN',
-            RName = 'Importin subunit beta-3',
-            RShortName = 'PSE1',
-            RHTMLName = 'PSE1',
-            FunctionalClassID = 'OG',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = True,
-            WildTypeComplexID = None,
-            Notes = None,
-            Warnings = None,
-            LChains = ['A'],
-            RChains = ['B'],
-        )
-    ),
-    '3WYF1' : dict(
-        Structure = dict(
-            filepath = 'pdbs/3WYF1.pdb', # not used here but this would be the data usually required by e.g. a web API
-            rcsb_id = '3WYF',
-            db_id = '3WYF_TP1',
-            description = 'GSP1 complex (YRB2) from Tina Perica. This file was taken from PDB_REDO. Removed residues 97-110 and 141-155 from chain B (YRB2) - the residues wrapping around CRM1 (chain C) and detached from the rest of YRB2.',
-            params_files = {'G14' : 'temp/pdbs/3WYF1.params'},
-            chain_mapping = dict(
-                A = 'A', # choice of A, D. GTP-binding protein / GTP-binding protein inhibitor
-                B = 'B', # choice of B, E. Ran-specific GTPase-activating protein 2 / Yrb2p / YRB2
-                # Chain C is CRM1 / KAP124 / YGR218W / G8514 / Xpo1p
-            ),
-            ligand_mapping = LigandMap.from_tuples_dict({ # Tina's HET code, residue ID -> HET code, RCSB residue ID.
-                ('G14', 'X   1 ') : ('GTP', 'A 301 '),
-            }),
-            unchanged_ligand_codes = [],
-            unchanged_ion_codes = ['MG'],
-            techniques = 'PDB_REDO',
-        ),
-        Complex = dict(
-            LName = 'GTP-binding protein/ GTP-binding protein inhibitor (RAN-related)',
-            LShortName = 'Gsp1p',
-            LHTMLName = 'Gsp1p',
-            RName = 'Ran-specific GTPase-activating protein 2',
-            RShortName = 'YRB2P',
-            RHTMLName = 'Yrb2p',
-            FunctionalClassID = 'OG',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = True,
-            WildTypeComplexID = None,
-            Notes = None,
-            Warnings = None,
-            LChains = ['A'],
-            RChains = ['B'],
-        )
-    ),
-}
+def create_project_pdb_records():
+    ppi_api = get_ppi_api()
+    complex_definitions = json.loads(read_file('tinas_complexes.json'))
+    for k, v in complex_definitions.iteritems():
+        ppi_api.associate_pdb_file_with_project(v['Structure']['db_id'], u'GSP1')
 
-
-
-
-#tina_pdb_objects : pdb_id -> p
-#tina_pdb_id_to_rcsb_pdb_id: pdb_id -> pdb_id
-#rcsb_pdb_objects: pdb_id -> p
-#tina_to_rcsb_chain_mapping: pdb_id -> chain -> chain
 
 def import_structures():
+    setup()
     ppi_api = get_ppi_api()
-    for tina_pdb_id, details in sorted(complex_definitions.iteritems()):
+    complex_definitions = json.loads(read_file('tinas_complexes.json'))
+    for tina_pdb_id, complex_structure_definition_pair in sorted(complex_definitions.iteritems()):
+        #if tina_pdb_id != '1WA52':
+        #    continue
+        colortext.warning(tina_pdb_id)
+        del complex_structure_definition_pair['Structure']['file_path']
+        complex_structure_definition_pair['Structure']['pdb_object'] = tina_pdb_objects[tina_pdb_id]
+        pdb_set = ppi_api.add_complex_structure_pair(complex_structure_definition_pair, keywords = ['GSP1'],
+                                                     force = True, trust_database_content = False, allow_missing_params_files = False, debug = False)
+        if pdb_set['success'] == False:
+            print(pdb_set['error'])
+            if 'possible_matches' in pdb_set:
+                for d in pdb_set['possible_matches']:
+                    colortext.warning(d['ID'])
+                    print('{0}, {1}, {2}'.format(d['LName'].encode('utf-8').strip(), d['LShortName'].encode('utf-8').strip(), d['LHTMLName'].encode('utf-8').strip()))
+                    print('{0}, {1}, {2}'.format(d['RName'].encode('utf-8').strip(), d['RShortName'].encode('utf-8').strip(), d['RHTMLName'].encode('utf-8').strip()))
 
-        structural_details = details['Structure']
-        complex_details = details['Complex']
-
-        if tina_pdb_id in ['1A2K']:
-            continue
-
-        if tina_pdb_id != '1I2M':
-            assert(details['Structure']['chain_mapping'])
-
-        assert(sorted(details['Structure']['chain_mapping'].keys()) == sorted(details['Complex']['LChains'] + details['Complex']['RChains']))
-
-        assert(details['Structure']['unchanged_ligand_codes'] or details['Structure']['ligand_mapping'])
-
-        for k in details['Structure']['params_files'].keys():
-            print(k)
-            assert(k in details['Structure']['ligand_mapping'.code_map])
-
-
-        assert ComplexID or ComplexDetails - LChains and RChains
-
-
-        tina_pdb_id = tina_pdb_id.upper()
-        rcsb_pdb_id = tina_pdb_id_to_rcsb_pdb_id[tina_pdb_id]
-        assert(structural_details['rcsb_id'] == rcsb_pdb_id)
-
-        tina_pdb_object = tina_pdb_objects[tina_pdb_id]
-        rcsb_pdb_object = rcsb_pdb_objects[rcsb_pdb_id]
-        tina_db_id = structural_details['db_id']
-
-        assert((tina_db_id != tina_pdb_id) and (tina_db_id != rcsb_pdb_id) and (len(tina_db_id) > 7) and (tina_db_id[4:7] == '_TP'))
-
-        #    Step 1: Add complexes
-        complex_id = None
-        if 'complex_id' in complex_details:
-           complex_id = complex_details['complex_id']
-        else:
-
-
-        Complex = dict(
-            ComplexID = 202,
-            LChains = ['A'],
-            RChains = ['B'],
-        )
-
-        ppi_api.add_complex
-
-        mut_complex_3H7P = dict(
-            LName = 'Ubiquitin (yeast) K63R',
-            LShortName = 'Ubiquitin K63R',
-            LHTMLName = 'Ubiquitin (yeast) K63R',
-            RName = 'Ubiquitin (yeast)',
-            RShortName = 'Ubiquitin',
-            RHTMLName = 'Ubiquitin (yeast)',
-            FunctionalClassID = 'OX',
-            PPDBMFunctionalClassID = 'O',
-            PPDBMDifficulty = None,
-            IsWildType = False,
-            WildTypeComplexID = wt_complex_id,
-            Notes = None,
-            Warnings = None,
-        )
-        DDGdb.insertDictIfNew('PPComplex', mut_complex_3H7P, ['LName', 'RName'])
-
-
-
-1A2K is in the database with molecules NTF2 (A,B) and RAN/GSP1P (C,D,E). Tina calls this Gsp1|NTF2.
-   complex #202 -> 1A2K (C|AB) where Tina uses A|B (which corresponds to C|B after accounting for chain renaming). I will reuse the existing complex and create a new PDBSet.
-
-1K5D is in the database with molecules RAN (A,D,G,J) and RANBP1 (B,E,H,K) and RANGAP (C,F,I,L). Tina calls this Gsp1|RNA1.
-   complex #119 -> 1K5D (AB|C). Tina does not use chain B so we will create a new complex.
-
-1I2M is in the database with molecules RAN (A,C) and RCC1 (B,D). Tina calls this Gsp1|SRM1.
-   complex #176 -> 1I2M (A|B) where Tina uses A|B (same chain labels). This is an exact match so we will use the same PDBSet.
-
-
-        #    Step 1: Add PDB files
-        for k, v in details.get('params_files', {}).iteritems():
-            details['params_files'][k] = os.path.abspath(v)
-        colortext.message('Importing {0} as {1}'.format(tina_pdb_id, tina_db_id))
-        importer.add_designed_pdb(tina_pdb_object, tina_db_id, rcsb_pdb_id,
-                                  'Tina Perica', details['description'] , 'tina',
-                                  chain_mapping = details['chain_mapping'], ligand_mapping = details['ligand_mapping'],
-                                  ligand_params_file_paths = details.get('params_files', {}), techniques=details['techniques'])
-
-
-
-
-import_structures()
-sys.exit(0)
-
-
-sys.exit(0)
-
-
+    create_project_pdb_records()
 
 
 # ==
 #    Step 2
-#    Description: Add Complex records
-#    Tables: PPComplex, PPIPDBSet, PPIPDBPartnerChain
-# ==
-
-
-
-def create_year_2_complex_records():
-    '''todo: For speed, I am doing this manually. This should be folded into an API function.'''
-
-    wt_complex = dict(
-        LName = 'Ubiquitin (yeast)',
-        LShortName = 'Ubiquitin',
-        LHTMLName = 'Ubiquitin (yeast)',
-        RName = 'Ubiquitin (yeast)',
-        RShortName = 'Ubiquitin',
-        RHTMLName = 'Ubiquitin (yeast)',
-        FunctionalClassID = 'OX',
-        PPDBMFunctionalClassID = 'O',
-        PPDBMDifficulty = None,
-        IsWildType = True,
-        WildTypeComplexID = None,
-        Notes = None,
-        Warnings = None,
-    )
-    DDGdb.insertDictIfNew('PPComplex', wt_complex, ['LName', 'RName'])
-    wt_complex_id = DDGdb.execute_select('SELECT ID FROM PPComplex WHERE LName=%s and RName=%s', parameters=(wt_complex['LName'], wt_complex['RName']))
-    assert(len(wt_complex_id) == 1)
-    wt_complex_id = wt_complex_id[0]['ID']
-
-    mut_complex_3H7P = dict(
-        LName = 'Ubiquitin (yeast) K63R',
-        LShortName = 'Ubiquitin K63R',
-        LHTMLName = 'Ubiquitin (yeast) K63R',
-        RName = 'Ubiquitin (yeast)',
-        RShortName = 'Ubiquitin',
-        RHTMLName = 'Ubiquitin (yeast)',
-        FunctionalClassID = 'OX',
-        PPDBMFunctionalClassID = 'O',
-        PPDBMDifficulty = None,
-        IsWildType = False,
-        WildTypeComplexID = wt_complex_id,
-        Notes = None,
-        Warnings = None,
-    )
-    DDGdb.insertDictIfNew('PPComplex', mut_complex_3H7P, ['LName', 'RName'])
-    mut_complex_id = DDGdb.execute_select('SELECT ID FROM PPComplex WHERE LName=%s and RName=%s', parameters=(mut_complex_3H7P['LName'], mut_complex_3H7P['RName']))
-    assert(len(mut_complex_id) == 1)
-    mut_complex_id = mut_complex_id[0]['ID']
-
-    wt_set_number = 0
-    for pdb_id, details in sorted(year_2_cases.iteritems()):
-
-        db_pdb_id = 'y' + pdb_id
-        if pdb_id == '2W9N':
-            db_pdb_id = '2y' + pdb_id
-
-        existing_records = DDGdb.execute_select('''
-            SELECT ID
-            FROM PPIPDBSet
-            INNER JOIN PPIPDBPartnerChain
-            WHERE PPIPDBSet.PPComplexID = PPIPDBPartnerChain.PPComplexID
-            AND PPIPDBSet.SetNumber = PPIPDBPartnerChain.SetNumber
-            AND PPIPDBPartnerChain.PDBFileID=%s''', parameters=(db_pdb_id,))
-        if existing_records:
-            continue
-
-        complex_id = wt_complex_id
-        set_number = None
-        if pdb_id == '3H7P':
-            complex_id = mut_complex_id
-            set_number = 0
-        else:
-            set_number = wt_set_number
-            wt_set_number += 1
-
-        ppi_pdb_set = dict(
-            PPComplexID = complex_id,
-            SetNumber = set_number,
-            IsComplex = True,
-            Notes = None,
-        )
-        ppi_pdb_set_lpartner = dict(
-            PPComplexID = complex_id,
-            SetNumber = set_number,
-            Side = 'L',
-            ChainIndex = 0,
-            PDBFileID = db_pdb_id,
-            Chain = 'A',
-            NMRModel = None,
-        )
-        ppi_pdb_set_rpartner = dict(
-            PPComplexID = complex_id,
-            SetNumber = set_number,
-            Side = 'R',
-            ChainIndex = 0,
-            PDBFileID = db_pdb_id,
-            Chain = 'B',
-            NMRModel = None,
-        )
-
-        DDGdb.insertDictIfNew('PPIPDBSet', ppi_pdb_set, ['PPComplexID', 'SetNumber'])
-        DDGdb.insertDictIfNew('PPIPDBPartnerChain', ppi_pdb_set_lpartner, ['PPComplexID', 'SetNumber', 'Side', 'ChainIndex'])
-        DDGdb.insertDictIfNew('PPIPDBPartnerChain', ppi_pdb_set_rpartner, ['PPComplexID', 'SetNumber', 'Side', 'ChainIndex'])
-
-
-# ==
-#    Step 3
-#    Description: Add Mutagenesis records
+#    Description: Add Mutagenesis and UserDataSet records
 #    Tables: PPMutagenesis, PPMutagenesisMutation, PPMutagenesisPDBMutation
 # ==
 
 
-# ==
-#    Step 4
-#    Description: Add UserDataSet records
-#    Tables: UserDataSet, UserPPDataSetExperiment
-# ==
+def import_mutageneses():
+    setup_mutations_dataframe()
+    ppi_api = get_ppi_api()
+    
+    complex_definitions = json.loads(read_file('tinas_complexes.json'))
 
+    # Determine the mapping from PDB ID to complex ID
+    pdb_id_to_database_id = {}
+    for index, r in mutations_dataframe.iterrows():
+        pdb_id = r['pdb']
+        db_id = complex_definitions[pdb_id]['Structure']['db_id']
+        if pdb_id_to_database_id.get(pdb_id):
+            assert(pdb_id_to_database_id[pdb_id] == db_id)
+        pdb_id_to_database_id[pdb_id] = db_id
+
+    pdb_id_to_complex_id = {}
+    for pdb_id, db_id in sorted(pdb_id_to_database_id.iteritems()):
+        results = ppi_api.DDG_db.execute_select('SELECT DISTINCT PPComplexID, SetNumber FROM PPIPDBPartnerChain WHERE PDBFileID=%s', parameters=(db_id,))
+        assert(len(results) == 1)
+        pdb_id_to_complex_id[pdb_id] = dict(PPComplexID = results[0]['PPComplexID'], SetNumber = results[0]['SetNumber'])
+
+    pdb_residues = {}
+    for db_id in pdb_id_to_database_id.values():
+        pdb_residues[db_id] = {}
+        for r in ppi_api.DDG_db.execute_select('SELECT Chain, ResidueID, ResidueAA FROM PDBResidue WHERE PDBFileID=%s', parameters=(db_id,)):
+            pdb_residues[db_id][r['Chain']] = pdb_residues[db_id].get(r['Chain'], {})
+            pdb_residues[db_id][r['Chain']][r['ResidueID']] = r['ResidueAA']
+
+    assert(len(pdb_id_to_complex_id) == 15)
+
+    user_data_set_text_id = 'RAN-GSP'
+    ppi_api.add_user_dataset('oconchus', user_data_set_text_id, "Tina's dataset for RAN/GSP1 complexes.")
+
+    user_dataset_cases = []
+    for index, r in mutations_dataframe.iterrows():
+        pdb_id = r['pdb']
+        database_pdb_id = pdb_id_to_database_id[pdb_id]
+        dataset_id = index
+        pdb_id = r['pdb']
+        complex_definition = complex_definitions[pdb_id]
+
+        # all the mutations are on chain1 (which is always chain A)
+        chain_id = 'A'
+        residue_id = str(r['pdb_res_num'])
+        wildtype_aa = pdb_residues[database_pdb_id][chain_id][PDB.ResidueID2String(residue_id)]
+        mutant_aa = r['mutation']
+        assert(wildtype_aa != mutant_aa)
+
+        case_details = dict(
+
+            # These records are used to create a PPMutagenesis record and the associated mutagenesis details
+
+            Mutagenesis = dict(
+                RecognizableString = 'TinaGSP_{0}'.format(dataset_id),
+                PPComplexID = pdb_id_to_complex_id[pdb_id]['PPComplexID'],
+            ),
+
+            Mutations = [
+                # There is one dict per mutation
+                dict(
+                    MutagenesisMutation = dict(
+                        # PPMutagenesisID will be filled in when the PPMutagenesis record is created.
+                        RecordKey = '{0} {1}{2}{3}'.format(chain_id, wildtype_aa, residue_id.strip(), mutant_aa),
+                        ProteinID = None, # todo
+                        ResidueIndex = None, # todo
+                        WildTypeAA = wildtype_aa,
+                        MutantAA = mutant_aa,
+                    ),
+                    MutagenesisPDBMutation = dict(
+                        # PPMutagenesisID and PPMutagenesisMutationID will be filled in when the PPMutagenesisMutation record is created.
+                        # PPComplexID is taken from the PPMutagenesis section. WildTypeAA and MutantAA are taken from the PPMutagenesisMutation section.
+                        SetNumber = pdb_id_to_complex_id[pdb_id]['SetNumber'],
+                        PDBFileID = database_pdb_id,
+                        Chain = chain_id,
+                        ResidueID = residue_id,
+                    ),
+                ),
+            ],
+
+            # This field is used to create the UserPPDataSetExperiment record. All other fields can be derived from the above.
+            # Note: We use the human-readable label here. The database ID is retrieved using e.g. ppi_api.get_defined_user_datasets()[<UserDataSetTextID>]['ID']
+            UserDataSetTextID = user_data_set_text_id,
+        )
+        user_dataset_cases.append(case_details)
+
+    colortext.porange('Creating the UserDataSet cases')
+    user_dataset_name_to_id_map = {}
+    tsession = ppi_api.get_session(new_session = True)
+    try:
+        for user_dataset_case in user_dataset_cases:
+            ppi_api.add_user_dataset_case(tsession, user_dataset_case, user_dataset_name_to_id_map = user_dataset_name_to_id_map)
+
+        print('\n\nSuccess')
+        tsession.commit()
+        #tsession.rollback()
+        tsession.close()
+    except Exception, e:
+        colortext.error('\n\nFailure: An error occurred.')
+        colortext.warning(str(e))
+        colortext.warning(traceback.format_exc())
+        tsession.rollback()
+        tsession.close()
 
 # ==
-#    Step 5
-#    Description: Add PredictionSet
+#    Step 3
+#    Description: Add PredictionSet and predictions
 #    Tables: PredictionSet
 #    Use: ppi_api.add_prediction_set()
+#    Use: ppi_api.add_prediction_run()
 # ==
 
 prediction_set = 'GSP1 complexes'
 
-# ==
-#    Step 6
-#    Description: Add Predictions
-#    Tables: PredictionPPI
-#    Use: ppi_api.add_prediction_run()
-# ==
-
 
 # ==
-#    Step 7
+#    Step 4
 #    Description: Test prediction set
 #    Use: ppi_api.get_queued_jobs()
 # ==
