@@ -103,10 +103,6 @@ if __name__ == '__main__':
     colortext.message('Creating input data for %d predictions.' % (len(prediction_ids)))
     count, records_per_dot = 0, 50
     print("|" + ("*" * (int(len(prediction_ids)/records_per_dot)-2)) + "|")
-
-    t1 = time.time()
-    num_predictions_completed = 0.0
-
     for prediction_id in prediction_ids:
         # Progress counter
         count += 1
@@ -157,10 +153,6 @@ if __name__ == '__main__':
                         f.write(file_contents)
             files_dict[file_name] = os.path.relpath(new_file_location, settings['output_dir'])
 
-        num_predictions_completed += 1.0
-        if num_predictions_completed >= 200:
-            break # todo remove
-
         # Figure out input fi
             
         argdict = {
@@ -168,8 +160,6 @@ if __name__ == '__main__':
         }
         job_dict[prediction_id] = argdict
 
-    t2 = time.time()
-    print('Time taken for {0} predictions: {1}s ({2}s per prediction).'.format(num_predictions_completed, t2-t1, (t2-t1)/num_predictions_completed))
 
     print('')
     if len(job_dict) > 0:
