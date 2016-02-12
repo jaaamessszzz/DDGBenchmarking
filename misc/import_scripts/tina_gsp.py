@@ -26,7 +26,9 @@ sys.path.insert(0, "../../..")
 #from ddg.ddglib.ppi_api import get_interface as get_ppi_interface
 from ddg.ddglib.ppi_api import get_interface as get_ppi_interface
 from ddg.ddglib import ddgdbapi, db_api
+from ddg.ddglib import db_schema as dbmodel
 from ddg.ddglib.import_api import DataImportInterface
+from klab.db.sqlalchemy_interface import row_to_dict, get_or_create_in_transaction
 
 # This script requires the files in /kortemmelab/data/oconchus/lab_projects/tina/gsp1_ddg/2015November9_ddg.zip
 # From this directory:
@@ -100,23 +102,34 @@ tina_pdb_ids = []
 tina_pdb_id_to_rcsb_pdb_id = {}
 mutations_dataframe = None
 
+
+def setup_mutations_dataframe():
+    global mutations_dataframe # the updated set of mutations stored as a pandas dataframe with the 'pdb' column converted to uppercase
+
+    mutations_csv = os.path.join('temp', 'mutations_Gsp1.txt')
+    assert(os.path.exists(mutations_csv))
+    mutations_dataframe = pandas.read_csv(mutations_csv, sep = '\t')
+    mutations_dataframe['pdb'] = mutations_dataframe['pdb'].str.upper()
+    mutations_dataframe['DatasetID'] = range(1, len(mutations_dataframe) + 1)
+    mutations_dataframe = mutations_dataframe.set_index(['DatasetID'])
+
+
 def setup():
     global pdb_file_paths  # RCSB PDB_ID -> PDB file
     global rcsb_pdb_objects # RCSB PDB_ID -> PDB object
     global tina_pdb_objects # Tina's PDB_ID -> PDB object
     global tina_pdb_id_to_rcsb_pdb_id # Tina's PDB_ID -> RCSB PDB_ID
-    global mutations_dataframe # the updated set of mutations stored as a pandas dataframe with the 'pdb' column converted to uppercase
+    global mutations_dataframe
+
+    if not mutations_dataframe:
+        setup_mutations_dataframe()
 
     # old_mutations_csv is missing some cases but has the mapping from pdb -> partner 1 name, partner 2 name
     old_mutations_csv = os.path.join('temp', 'mutations_Gsp1_old.txt')
-    mutations_csv = os.path.join('temp', 'mutations_Gsp1.txt')
     assert(os.path.exists('temp'))
     assert(os.path.exists(old_mutations_csv))
-    assert(os.path.exists(mutations_csv))
 
     df = pandas.read_csv(old_mutations_csv, sep = '\t')
-    mutations_dataframe = pandas.read_csv(mutations_csv, sep = '\t')
-    mutations_dataframe['pdb'] = mutations_dataframe['pdb'].str.upper()
 
     tina_pdb_ids = sorted(set([p for p in df['pdb'].values]))
     rcsb_pdb_ids = set()
@@ -147,11 +160,10 @@ def setup():
         if existing_records:
             colortext.warning('The PDB file {0} exists in the database.'.format(pdb_id))
         complex_ids = ppi_api.search_complexes_by_pdb_id(pdb_id)
+
         if complex_ids:
             colortext.warning('The PDB file {0} has associated complexes: {1}'.format(pdb_id, ', '.join(map(str, complex_ids))))
     print('')
-
-setup()
 
 
 ### Check against existing data
@@ -338,15 +350,15 @@ At this point, we have a mapping from three of Tina's complexes to entries in th
 
 # ==
 #    Step 1
-#    Description: Add PDB files
-#    Tables: PDBFile, PDBChain, PDBMolecule, PDBMoleculeChain, PDBResidue, PDBLigand, PDBIon
-#    Use: import_api.py:DataImportInterface.add_designed_pdb()
+#    Description: Add PDB files and complexes
+#    Use: import_api.py:DataImportInterface.add_complex_structure_pair() - this calls add_designed_pdb() and add_complex()
 # ==
 #
 
 user_dataset_name = 'Tina Perica - GSP1 complexes'
 
 def create_mapping_string():
+    # todo: use this to create a function to create a skeleton JSON file given a list of complexes
     for pdb_id, tp in sorted(tina_pdb_objects.iteritems()):
         op = rcsb_pdb_objects[tina_pdb_id_to_rcsb_pdb_id[pdb_id]]
         print("'{0}' : dict(".format(pdb_id))
@@ -357,7 +369,15 @@ def create_mapping_string():
         print('),')
 
 
+def create_project_pdb_records():
+    ppi_api = get_ppi_api()
+    complex_definitions = json.loads(read_file('tinas_complexes.json'))
+    for k, v in complex_definitions.iteritems():
+        ppi_api.associate_pdb_file_with_project(v['Structure']['db_id'], u'GSP1')
+
+
 def import_structures():
+    setup()
     ppi_api = get_ppi_api()
     complex_definitions = json.loads(read_file('tinas_complexes.json'))
     for tina_pdb_id, complex_structure_definition_pair in sorted(complex_definitions.iteritems()):
@@ -376,61 +396,132 @@ def import_structures():
                     print('{0}, {1}, {2}'.format(d['LName'].encode('utf-8').strip(), d['LShortName'].encode('utf-8').strip(), d['LHTMLName'].encode('utf-8').strip()))
                     print('{0}, {1}, {2}'.format(d['RName'].encode('utf-8').strip(), d['RShortName'].encode('utf-8').strip(), d['RHTMLName'].encode('utf-8').strip()))
 
-
-        #sys.exit(0)
-
-import_structures()
-sys.exit(0)
-
-
-sys.exit(0)
-
-
+    create_project_pdb_records()
 
 
 # ==
 #    Step 2
-#    Description: Add Complex records
-#    Tables: PPComplex, PPIPDBSet, PPIPDBPartnerChain
-# ==
-
-
-
-
-
-# ==
-#    Step 3
-#    Description: Add Mutagenesis records
+#    Description: Add Mutagenesis and UserDataSet records
 #    Tables: PPMutagenesis, PPMutagenesisMutation, PPMutagenesisPDBMutation
 # ==
 
 
-# ==
-#    Step 4
-#    Description: Add UserDataSet records
-#    Tables: UserDataSet, UserPPDataSetExperiment
-# ==
+def import_mutageneses():
+    setup_mutations_dataframe()
+    ppi_api = get_ppi_api()
+    
+    complex_definitions = json.loads(read_file('tinas_complexes.json'))
 
+    # Determine the mapping from PDB ID to complex ID
+    pdb_id_to_database_id = {}
+    for index, r in mutations_dataframe.iterrows():
+        pdb_id = r['pdb']
+        db_id = complex_definitions[pdb_id]['Structure']['db_id']
+        if pdb_id_to_database_id.get(pdb_id):
+            assert(pdb_id_to_database_id[pdb_id] == db_id)
+        pdb_id_to_database_id[pdb_id] = db_id
+
+    pdb_id_to_complex_id = {}
+    for pdb_id, db_id in sorted(pdb_id_to_database_id.iteritems()):
+        results = ppi_api.DDG_db.execute_select('SELECT DISTINCT PPComplexID, SetNumber FROM PPIPDBPartnerChain WHERE PDBFileID=%s', parameters=(db_id,))
+        assert(len(results) == 1)
+        pdb_id_to_complex_id[pdb_id] = dict(PPComplexID = results[0]['PPComplexID'], SetNumber = results[0]['SetNumber'])
+
+    pdb_residues = {}
+    for db_id in pdb_id_to_database_id.values():
+        pdb_residues[db_id] = {}
+        for r in ppi_api.DDG_db.execute_select('SELECT Chain, ResidueID, ResidueAA FROM PDBResidue WHERE PDBFileID=%s', parameters=(db_id,)):
+            pdb_residues[db_id][r['Chain']] = pdb_residues[db_id].get(r['Chain'], {})
+            pdb_residues[db_id][r['Chain']][r['ResidueID']] = r['ResidueAA']
+
+    assert(len(pdb_id_to_complex_id) == 15)
+
+    user_data_set_text_id = 'RAN-GSP'
+    ppi_api.add_user_dataset('oconchus', user_data_set_text_id, "Tina's dataset for RAN/GSP1 complexes.")
+
+    user_dataset_cases = []
+    for index, r in mutations_dataframe.iterrows():
+        pdb_id = r['pdb']
+        database_pdb_id = pdb_id_to_database_id[pdb_id]
+        dataset_id = index
+        pdb_id = r['pdb']
+        complex_definition = complex_definitions[pdb_id]
+
+        # all the mutations are on chain1 (which is always chain A)
+        chain_id = 'A'
+        residue_id = str(r['pdb_res_num'])
+        wildtype_aa = pdb_residues[database_pdb_id][chain_id][PDB.ResidueID2String(residue_id)]
+        mutant_aa = r['mutation']
+        assert(wildtype_aa != mutant_aa)
+
+        case_details = dict(
+
+            # These records are used to create a PPMutagenesis record and the associated mutagenesis details
+
+            Mutagenesis = dict(
+                RecognizableString = 'TinaGSP_{0}'.format(dataset_id),
+                PPComplexID = pdb_id_to_complex_id[pdb_id]['PPComplexID'],
+            ),
+
+            Mutations = [
+                # There is one dict per mutation
+                dict(
+                    MutagenesisMutation = dict(
+                        # PPMutagenesisID will be filled in when the PPMutagenesis record is created.
+                        RecordKey = '{0} {1}{2}{3}'.format(chain_id, wildtype_aa, residue_id.strip(), mutant_aa),
+                        ProteinID = None, # todo
+                        ResidueIndex = None, # todo
+                        WildTypeAA = wildtype_aa,
+                        MutantAA = mutant_aa,
+                    ),
+                    MutagenesisPDBMutation = dict(
+                        # PPMutagenesisID and PPMutagenesisMutationID will be filled in when the PPMutagenesisMutation record is created.
+                        # PPComplexID is taken from the PPMutagenesis section. WildTypeAA and MutantAA are taken from the PPMutagenesisMutation section.
+                        SetNumber = pdb_id_to_complex_id[pdb_id]['SetNumber'],
+                        PDBFileID = database_pdb_id,
+                        Chain = chain_id,
+                        ResidueID = residue_id,
+                    ),
+                ),
+            ],
+
+            # This field is used to create the UserPPDataSetExperiment record. All other fields can be derived from the above.
+            # Note: We use the human-readable label here. The database ID is retrieved using e.g. ppi_api.get_defined_user_datasets()[<UserDataSetTextID>]['ID']
+            UserDataSetTextID = user_data_set_text_id,
+        )
+        user_dataset_cases.append(case_details)
+
+    colortext.porange('Creating the UserDataSet cases')
+    user_dataset_name_to_id_map = {}
+    tsession = ppi_api.get_session(new_session = True)
+    try:
+        for user_dataset_case in user_dataset_cases:
+            ppi_api.add_user_dataset_case(tsession, user_dataset_case, user_dataset_name_to_id_map = user_dataset_name_to_id_map)
+
+        print('\n\nSuccess')
+        tsession.commit()
+        #tsession.rollback()
+        tsession.close()
+    except Exception, e:
+        colortext.error('\n\nFailure: An error occurred.')
+        colortext.warning(str(e))
+        colortext.warning(traceback.format_exc())
+        tsession.rollback()
+        tsession.close()
 
 # ==
-#    Step 5
-#    Description: Add PredictionSet
+#    Step 3
+#    Description: Add PredictionSet and predictions
 #    Tables: PredictionSet
 #    Use: ppi_api.add_prediction_set()
+#    Use: ppi_api.add_prediction_run()
 # ==
 
 prediction_set = 'GSP1 complexes'
 
-# ==
-#    Step 6
-#    Description: Add Predictions
-#    Tables: PredictionPPI
-#    Use: ppi_api.add_prediction_run()
-# ==
-
 
 # ==
-#    Step 7
+#    Step 4
 #    Description: Test prediction set
 #    Use: ppi_api.get_queued_jobs()
 # ==
