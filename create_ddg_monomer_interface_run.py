@@ -19,26 +19,8 @@ from klab.fs.fsio import write_file
 
 job_output_directory = 'job_output'
 
-
-time_spent_in_write_stripped_pdb = 0.0
-
 def write_stripped_pdb(new_file_location, file_contents):
-    global time_spent_in_write_stripped_pdb
-    t1 = time.time()
-    if isinstance(file_contents, basestring):
-        file_contents = file_contents.split('\n')
-    with open(new_file_location, 'w') as f:
-        for line in file_contents:
-            if line.startswith('ATOM'):
-                f.write(line + '\n')
-    time_spent_in_write_stripped_pdb += time.time() - t1
-
-
-def write_stripped_pdb(new_file_location, file_contents):
-    global time_spent_in_write_stripped_pdb
-    t1 = time.time()
     write_file(new_file_location, '\n'.join([l for l in file_contents.split('\n') if l.startswith('ATOM')]))
-    time_spent_in_write_stripped_pdb += time.time() - t1
 
 
 if __name__ == '__main__':
@@ -193,4 +175,4 @@ if __name__ == '__main__':
     else:
         print 'No tasks to process, not writing job files'
 
-    print('time in time_spent_in_write_stripped_pdb is {0}s: {1}s per file ({2} files).'.format(time_spent_in_write_stripped_pdb, time_spent_in_write_stripped_pdb / num_stripped_files_written, num_stripped_files_written))
+    
