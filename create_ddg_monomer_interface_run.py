@@ -99,6 +99,9 @@ if __name__ == '__main__':
     app_name = 'minimize_with_cst'
     settings['appname'] = app_name
 
+    import pprint
+    print('')
+    pprint.pprint(ppi_api.get_file_content_cache_stats())
 
     t1 = time.time()
 
@@ -110,8 +113,6 @@ if __name__ == '__main__':
         # Progress counter
         count += 1
         if count % records_per_dot == 0: colortext.write(".", "cyan", flush = True)
-        if count > 300:
-            break
 
         # Check if job already ran
         prediction_id_dir = os.path.join(output_dir, str(prediction_id))
@@ -175,12 +176,10 @@ if __name__ == '__main__':
         job_dict[prediction_id] = argdict
 
 
-    import pprint
     print('')
     pprint.pprint(ppi_api.get_file_content_cache_stats())
 
     t2 = time.time()
-    count -= 1
     print('Time taken for {0} predictions: {1}s ({2}s per prediction).'.format(count, t2-t1, (t2-t1)/count))
 
     print('')
