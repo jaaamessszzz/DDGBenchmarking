@@ -33,20 +33,21 @@ if __name__ == '__main__':
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
     ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database')
 
-    #ppi_api.destroy_prediction_set('ran_gsp1_ddg-monomer-16_1')
-
     if not ppi_api.prediction_set_exists(prediction_set_id):
         print 'Creating new prediction set:', prediction_set_id
         ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, allow_existing_prediction_set = False, description = cfg.prediction_set_description)
 
     # Read the keep_hetatm_lines optional setting
     keep_hetatm_lines = False
+    keep_all_lines = False
     try: keep_hetatm_lines = cfg.keep_hetatm_lines
     except: colortext.warning('Note: keep_hetatm_lines is not specified in {0}. Defaulting to {1}.'.format(sys.argv[1], keep_hetatm_lines))
+    try: keep_all_lines = cfg.keep_all_lines
+    except: colortext.warning('Note: keep_all_lines is not specified in {0}. Defaulting to {1}.'.format(sys.argv[1], keep_all_lines))
 
     # Populate the prediction set with jobs from a (tagged subset of a) user dataset
     print 'Created PredictionSet:', prediction_set_id
-    ppi_api.add_prediction_run(prediction_set_id, cfg.user_dataset_name, keep_hetatm_lines = keep_hetatm_lines, tagged_subset = cfg.tagged_subset, extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True)
+    ppi_api.add_prediction_run(prediction_set_id, cfg.user_dataset_name, keep_all_lines = keep_all_lines, keep_hetatm_lines = keep_hetatm_lines, tagged_subset = cfg.tagged_subset, extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True)
 
     existing_job = False
     end_job_name  = '%s_%s' % (getpass.getuser(), prediction_set_id)
@@ -156,7 +157,7 @@ if __name__ == '__main__':
             new_file_location = os.path.join(job_data_dir, file_name)
             if not all_files_exist:
                 if '.pdb' in file_name:
-                    if keep_hetatm_lines:
+                    if keep_hetatm_lines or keep_all_lines:
                         write_file(new_file_location, file_contents)
                     else:
                         write_file(new_file_location, '\n'.join([l for l in file_contents.split('\n') if l.startswith('ATOM')]))
