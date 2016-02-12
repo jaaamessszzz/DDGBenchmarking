@@ -100,9 +100,7 @@ if __name__ == '__main__':
     settings['appname'] = app_name
 
 
-    import cProfile, pstats, StringIO
-    pr = cProfile.Profile()
-    pr.enable()
+    t1 = time.time()
 
     # Progress counter setup
     colortext.message('Creating input data for %d predictions.' % (len(prediction_ids)))
@@ -112,7 +110,7 @@ if __name__ == '__main__':
         # Progress counter
         count += 1
         if count % records_per_dot == 0: colortext.write(".", "cyan", flush = True)
-        if count > 100:
+        if count > 200:
             break
 
         # Check if job already ran
@@ -132,15 +130,21 @@ if __name__ == '__main__':
             # else:
             #     print 'Creating new job directory %s' % prediction_id_dir
 
-        job_details = ppi_api.get_job_details(prediction_id)
+        job_data_dir = os.path.join(output_data_dir, str(prediction_id))
+
+        # Allow us to resume from an interrupted setup
+        truncate_content = None
+        all_files_exist = os.path.exists(job_data_dir) and os.path.exists(os.path.join(job_data_dir, '.ready'))
+        if all_files_exist:
+            truncate_content = 0
+
+        job_details = ppi_api.get_job_details(prediction_id, truncate_content = truncate_content)
         file_tuples = [] # List of names, contents
         for file_info in job_details['Files']['Input']:
             file_tuples.append( (file_info['Filename'], file_info['Content']) )
         substitution_parameters = json.loads(job_details['JSONParameters'])
 
-        job_data_dir = os.path.join(output_data_dir, str(prediction_id))
-        # Allow us to resume from an interrupted setup
-        all_files_exist = os.path.exists(job_data_dir) and os.path.exists(os.path.join(job_data_dir, '.ready'))
+        # Scrub the folder
         if not all_files_exist:
             if os.path.isdir(job_data_dir):
                 shutil.rmtree(job_data_dir)
@@ -159,6 +163,8 @@ if __name__ == '__main__':
                     with open(new_file_location, 'w') as f:
                         f.write(file_contents)
             files_dict[file_name] = os.path.relpath(new_file_location, settings['output_dir'])
+        if not all_files_exist:
+            write_file(os.path.join(job_data_dir, '.ready'), '')
 
         # Figure out input fi
             
@@ -167,13 +173,9 @@ if __name__ == '__main__':
         }
         job_dict[prediction_id] = argdict
 
-
-    pr.disable()
-    s = StringIO.StringIO()
-    sortby = 'cumulative'
-    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    ps.print_stats()
-    print s.getvalue()
+    t2 = time.time()
+    count -= 1
+    print('Time taken for {0} predictions: {1}s ({2}s per prediction).'.format(count, t2-t1, (t2-t1)/count))
 
     print('')
     if len(job_dict) > 0:

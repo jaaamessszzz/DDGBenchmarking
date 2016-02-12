@@ -49,6 +49,10 @@ def get_ppi_api():
 
 ppi_api = get_ppi_api()
 
+print(ppi_api.DDG_db.execute_select('SELECT * FROM `FileContent` WHERE `ID`=27169')[0]['Content'])
+sys.exit(0)
+
+
 #ppi_api.merge_prediction_run('ddg_monomer_16-zemu-betanov15', 'ddg_monomer_16-zemu-betanov15v2', create_if_does_not_exist = True)
 #ppi_api.merge_prediction_run('ddg_monomer_16-zemu-betanov15', 'ddg_monomer_16-zemu-betanov15v2', create_if_does_not_exist = True)
 
