@@ -110,7 +110,7 @@ if __name__ == '__main__':
         # Progress counter
         count += 1
         if count % records_per_dot == 0: colortext.write(".", "cyan", flush = True)
-        if count > 200:
+        if count > 100:
             break
 
         # Check if job already ran
@@ -135,6 +135,7 @@ if __name__ == '__main__':
         # Allow us to resume from an interrupted setup
         truncate_content = None
         all_files_exist = os.path.exists(job_data_dir) and os.path.exists(os.path.join(job_data_dir, '.ready'))
+        all_files_exist = False # todo : remove
         if all_files_exist:
             truncate_content = 0
 
