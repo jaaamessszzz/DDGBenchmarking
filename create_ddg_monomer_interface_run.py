@@ -104,7 +104,9 @@ if __name__ == '__main__':
     count, records_per_dot = 0, 50
     print("|" + ("*" * (int(len(prediction_ids)/records_per_dot)-2)) + "|")
 
-    num_stripped_files_written = 0.0
+    t1 = time.time()
+    num_predictions_completed = 0.0
+
     for prediction_id in prediction_ids:
         # Progress counter
         count += 1
@@ -136,7 +138,6 @@ if __name__ == '__main__':
         job_data_dir = os.path.join(output_data_dir, str(prediction_id))
         # Allow us to resume from an interrupted setup
         all_files_exist = os.path.exists(job_data_dir) and os.path.exists(os.path.join(job_data_dir, '.ready'))
-        all_files_exist = False # todo: remove
         if not all_files_exist:
             if os.path.isdir(job_data_dir):
                 shutil.rmtree(job_data_dir)
@@ -151,15 +152,13 @@ if __name__ == '__main__':
                         write_file(new_file_location, file_contents)
                     else:
                         write_file(new_file_location, '\n'.join([l for l in file_contents.split('\n') if l.startswith('ATOM')]))
-                    num_stripped_files_written += 1.0
-                    if num_stripped_files_written > 100:
-                        break # todo remove
                 else:
                     with open(new_file_location, 'w') as f:
                         f.write(file_contents)
             files_dict[file_name] = os.path.relpath(new_file_location, settings['output_dir'])
 
-        if num_stripped_files_written > 100:
+        num_predictions_completed += 1.0
+        if num_predictions_completed >= 200:
             break # todo remove
 
         # Figure out input fi
@@ -168,6 +167,9 @@ if __name__ == '__main__':
             'input_file_list' : [files_dict[substitution_parameters['%%input_pdb%%']]],
         }
         job_dict[prediction_id] = argdict
+
+    t2 = time.time()
+    print('Time taken for {0} predictions: {1}s ({2}s per prediction).'.format(num_predictions_completed, t2-t1, (t2-t1)/num_predictions_completed))
 
     print('')
     if len(job_dict) > 0:
