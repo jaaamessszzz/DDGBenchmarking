@@ -5,6 +5,7 @@ user_dataset_name = 'RAN-GSP'
 tagged_subset = None
 prediction_set_description = 'First run of ddg monomer (row 16) on ran gsp1 data'
 extra_flags = []
+keep_hetatm_lines = True
 
 # score_method_id = 7 # rescore with interface weights score method (this is better for this run)
 # score_method_id = 8 # rescore with talaris weights score method (not as good for this run)
