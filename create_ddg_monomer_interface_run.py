@@ -17,10 +17,8 @@ from klab.cluster_template.write_run_file import process as write_run_file
 from klab import colortext
 from klab.fs.fsio import write_file
 
-job_output_directory = 'job_output'
 
-def write_stripped_pdb(new_file_location, file_contents):
-    write_file(new_file_location, '\n'.join([l for l in file_contents.split('\n') if l.startswith('ATOM')]))
+job_output_directory = 'job_output'
 
 
 if __name__ == '__main__':
@@ -149,7 +147,10 @@ if __name__ == '__main__':
             new_file_location = os.path.join(job_data_dir, file_name)
             if not all_files_exist:
                 if '.pdb' in file_name:
-                    write_stripped_pdb(new_file_location, file_contents)
+                    if keep_hetatm_lines:
+                        write_file(new_file_location, file_contents)
+                    else:
+                        write_file(new_file_location, '\n'.join([l for l in file_contents.split('\n') if l.startswith('ATOM')]))
                     num_stripped_files_written += 1.0
                     if num_stripped_files_written > 100:
                         break # todo remove
@@ -175,4 +176,3 @@ if __name__ == '__main__':
     else:
         print 'No tasks to process, not writing job files'
 
-    
