@@ -33,10 +33,6 @@ if __name__ == '__main__':
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
     ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database')
 
-    if not ppi_api.prediction_set_exists(prediction_set_id):
-        print 'Creating new prediction set:', prediction_set_id
-        ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, allow_existing_prediction_set = False, description = cfg.prediction_set_description)
-
     # Read the keep_hetatm_lines optional setting
     keep_hetatm_lines = False
     keep_all_lines = False
@@ -45,9 +41,13 @@ if __name__ == '__main__':
     try: keep_all_lines = cfg.keep_all_lines
     except: colortext.warning('Note: keep_all_lines is not specified in {0}. Defaulting to {1}.'.format(sys.argv[1], keep_all_lines))
 
-    # Populate the prediction set with jobs from a (tagged subset of a) user dataset
-    print 'Created PredictionSet:', prediction_set_id
-    ppi_api.add_prediction_run(prediction_set_id, cfg.user_dataset_name, keep_all_lines = keep_all_lines, keep_hetatm_lines = keep_hetatm_lines, tagged_subset = cfg.tagged_subset, extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True)
+    if not ppi_api.prediction_set_exists(prediction_set_id):
+        print 'Creating new prediction set:', prediction_set_id
+        ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, allow_existing_prediction_set = False, description = cfg.prediction_set_description)
+
+        # Populate the prediction set with jobs from a (tagged subset of a) user dataset
+        print 'Created PredictionSet:', prediction_set_id
+        ppi_api.add_prediction_run(prediction_set_id, cfg.user_dataset_name, keep_all_lines = keep_all_lines, keep_hetatm_lines = keep_hetatm_lines, tagged_subset = cfg.tagged_subset, extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True)
 
     existing_job = False
     end_job_name  = '%s_%s' % (getpass.getuser(), prediction_set_id)
@@ -168,11 +168,12 @@ if __name__ == '__main__':
         if not all_files_exist:
             write_file(os.path.join(job_data_dir, '.ready'), '')
 
-        # Figure out input fi
-            
         argdict = {
             'input_file_list' : [files_dict[substitution_parameters['%%input_pdb%%']]],
         }
+        for file_name, file_location in files_dict.iteritems():
+            if 'params' in file_name:
+                argdict['-extra_res_fa'] = file_location
         job_dict[prediction_id] = argdict
 
 

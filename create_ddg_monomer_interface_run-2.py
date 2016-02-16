@@ -172,6 +172,9 @@ if __name__ == '__main__':
             '-ddg::mut_file' : files_dict[substitution_parameters['%%pathtomutfile%%']],
             '-constraints::cst_file' : rel_cst_path,
         }
+        for file_name, file_location in files_dict.iteritems():
+            if 'params' in file_name:
+                argdict['-extra_res_fa'] = file_location
         job_dict[prediction_id] = argdict
 
     write_run_file(settings, database_run = False, job_dict = job_dict)
