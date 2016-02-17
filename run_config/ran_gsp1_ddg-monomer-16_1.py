@@ -4,7 +4,7 @@ protocol_name = 'ddg_monomer_16_003'
 user_dataset_name = 'RAN-GSP'
 tagged_subset = None
 prediction_set_description = 'First run of ddg monomer (row 16) on ran gsp1 data'
-extra_flags = []
+extra_flags = ['-in:auto_setup_metals']
 keep_hetatm_lines = True
 keep_all_lines = True
 
