@@ -36,10 +36,6 @@ def process_ddg_monomer_directory():
 
     output_directory_root = '/tmp/%s/%s' % (getpass.getuser(), prediction_set_name)
 
-    if os.path.isdir( output_directory_root ):
-        print 'Removing old output directory root'
-        shutil.rmtree( output_directory_root )
-
     print 'Outputting to directory root:', output_directory_root, '\n'
 
     # todo: store credit in dataframe or store/read from database
