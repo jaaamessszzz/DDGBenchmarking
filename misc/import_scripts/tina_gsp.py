@@ -56,8 +56,6 @@ sys.exit(0)
 #ppi_api.merge_prediction_run('ddg_monomer_16-zemu-betanov15', 'ddg_monomer_16-zemu-betanov15v2', create_if_does_not_exist = True)
 #ppi_api.merge_prediction_run('ddg_monomer_16-zemu-betanov15', 'ddg_monomer_16-zemu-betanov15v2', create_if_does_not_exist = True)
 
-#ppi_api._ddg_interface._add_file_content('1234567890', db_cursor = None, rm_trailing_line_whitespace = False, forced_mime_type = None)
-
 
 #print(ppi_api.get_unfinished_prediction_ids('ddg_monomer_16_003-zemu-2'))
 #pids = ppi_api.get_prediction_ids_with_scores('ddg_monomer_16_003-zemu-2')
