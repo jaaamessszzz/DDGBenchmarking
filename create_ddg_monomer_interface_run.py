@@ -1,5 +1,6 @@
 import os, sys
 import shutil
+import pprint
 
 # Add parent directory to path
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -28,6 +29,8 @@ if __name__ == '__main__':
     prediction_set_id = cfg.prediction_set_id
     protocol_name = cfg.protocol_name
 
+    suppress_warnings = True
+
     # This uses the version of Rosetta from your cluster template settings file
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
@@ -41,13 +44,16 @@ if __name__ == '__main__':
     try: keep_all_lines = cfg.keep_all_lines
     except: colortext.warning('Note: keep_all_lines is not specified in {0}. Defaulting to {1}.'.format(sys.argv[1], keep_all_lines))
 
+    t1, t2 = None, None
     if not ppi_api.prediction_set_exists(prediction_set_id):
         print 'Creating new prediction set:', prediction_set_id
+        t1 = time.time()
         ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, allow_existing_prediction_set = False, description = cfg.prediction_set_description)
 
         # Populate the prediction set with jobs from a (tagged subset of a) user dataset
         print 'Created PredictionSet:', prediction_set_id
-        ppi_api.add_prediction_run(prediction_set_id, cfg.user_dataset_name, keep_all_lines = keep_all_lines, keep_hetatm_lines = keep_hetatm_lines, tagged_subset = cfg.tagged_subset, extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True)
+        ppi_api.add_prediction_run(prediction_set_id, cfg.user_dataset_name, keep_all_lines = keep_all_lines, keep_hetatm_lines = keep_hetatm_lines, tagged_subset = cfg.tagged_subset, extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True, suppress_warnings = suppress_warnings)
+        t2 = time.time()
 
     existing_job = False
     end_job_name  = '%s_%s' % (getpass.getuser(), prediction_set_id)
@@ -95,14 +101,16 @@ if __name__ == '__main__':
     if not os.path.isdir(output_data_dir):
         os.makedirs(output_data_dir)
 
-    prediction_ids = sorted( ppi_api.get_prediction_ids(prediction_set_id) )
+    prediction_ids = sorted(ppi_api.get_prediction_ids(prediction_set_id))
+    if t1 != None and t2 != None and len(prediction_ids) != 0:
+        print('Time taken for {0} predictions: {1}s ({2}s per prediction).'.format(len(prediction_ids), t2-t1, (t2-t1)/len(prediction_ids)))
+    print('File cache statistics:')
+    pprint.pprint(ppi_api.get_file_content_cache_stats())
     settings['numjobs'] = len(prediction_ids)
     app_name = 'minimize_with_cst'
     settings['appname'] = app_name
 
-    import pprint
     print('')
-    pprint.pprint(ppi_api.get_file_content_cache_stats())
 
     t1 = time.time()
 
@@ -177,11 +185,13 @@ if __name__ == '__main__':
         job_dict[prediction_id] = argdict
 
 
-    print('')
-    pprint.pprint(ppi_api.get_file_content_cache_stats())
-
     t2 = time.time()
-    print('Time taken for {0} predictions: {1}s ({2}s per prediction).'.format(count, t2-t1, (t2-t1)/count))
+
+    print('')
+    if count != 0:
+        print('Time taken for {0} predictions: {1}s ({2}s per prediction).'.format(count, t2-t1, (t2-t1)/count))
+    print('File cache statistics:')
+    pprint.pprint(ppi_api.get_file_content_cache_stats())
 
     print('')
     if len(job_dict) > 0:
