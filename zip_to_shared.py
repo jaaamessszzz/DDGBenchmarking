@@ -22,6 +22,8 @@ def find_all_files(search_dir, prepend_dir=None):
     return return_list
 
 def zip_dir(output_path, ddg_dir, output_files):
+    remove_existing_zips = False
+
     ddg_dir_path = os.path.join(output_path, ddg_dir)
     prediction_id, ddg_str = ddg_dir.split('-')
     prediction_id = long(prediction_id)
@@ -33,15 +35,19 @@ def zip_dir(output_path, ddg_dir, output_files):
         min_dir_files = []
     zipfile_path = os.path.join(ppijobs, '%d.zip' % prediction_id)
     if os.path.isfile(zipfile_path):
-        print zipfile_path, 'already exists'
-        return
+        if remove_existing_zips:
+            os.remove(zipfile_path)
+        else:
+            print zipfile_path, 'already exists'
+            return
     with zipfile.ZipFile(zipfile_path, 'w') as job_zip:
         for f in all_files:
             f_path = os.path.join(ddg_dir_path, f)
             job_zip.write(f_path, arcname=f)
-        for output_file in output_files[prediction_id]:
-            f_path = os.path.join(output_path, output_file)
-            job_zip.write(f_path, arcname=os.path.join('output_logs', output_file) )
+        if prediction_id in output_files:
+            for output_file in output_files[prediction_id]:
+                f_path = os.path.join(output_path, output_file)
+                job_zip.write(f_path, arcname=os.path.join('output_logs', output_file) )
         for f in min_dir_files:
             f_path = os.path.join(ddg_dir_path, os.path.join(min_dir_path, f))
             job_zip.write(f_path, arcname=os.path.join('%d-premin' % prediction_id, f))
