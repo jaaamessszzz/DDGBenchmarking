@@ -8,45 +8,6 @@ import multiprocessing
 
 ppijobs = '/kortemmelab/shared/DDG/ppijobs'
 
-def is_int(s):
-    try:
-        int(s)
-        return True
-    except ValueError:
-        return False
-
-def job_dir_from_output_file(output_file):
-    job_dir_line_start = 'Job dir:'
-    with open(output_file, 'r') as f:
-        for line in f:
-            if line.startswith(job_dir_line_start):
-                return line[len(job_dir_line_start):].strip()
-    raise Exception()
-
-def move_output_files():
-    output_files = []
-    for f in os.listdir(os.getcwd()):
-        if f.endswith('-ddg'):
-            output_files.append(f)
-        elif is_int(f):
-            output_files.append(f)
-    # output_files = [os.path.join(output_path, f) for f in os.listdir(output_path) if '.o' in f]
-    r = Reporter('moving output files', entries='files')
-    r.set_total_count(len(output_files))
-    for output_file in output_files:
-        shutil.move(output_file, os.path.join(output_path, job_dir_from_output_file(output_file)))
-        r.increment_report()
-    r.done()
-
-def move_min_dirs():
-    prediction_ids = [d for d in os.listdir(output_path) if is_int(d)]
-    for prediction_id in prediction_ids:
-        min_dir = os.path.join(output_path, prediction_id)
-        ddg_dir = os.path.join(output_path, prediction_id + '-ddg')
-        assert( os.path.isdir(min_dir) )
-        assert( os.path.isdir(ddg_dir) )
-        shutil.move(min_dir, ddg_dir)
-
 def find_all_files(search_dir, prepend_dir=None):
     return_list = []
     for f in os.listdir(search_dir):
