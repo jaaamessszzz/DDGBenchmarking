@@ -5,6 +5,7 @@ import shutil
 import pprint
 import klab.cluster_template.cluster_template as cluster_template
 import klab.cluster_template.parse_settings as parse_settings
+from ddglib.ppi_api import get_interface_with_config_file
 import time
 import getpass
 import json
@@ -50,7 +51,6 @@ def find_neighbors(data_dir, pdb_path, neighbor_distance = 8.0):
     neighbors = set()
     for mutation in mutations:
         res_id, chain_id, pikaa, mut_aa = mutation
-        ### print res_id, chain_id, pikaa, mut_aa
         mut_chain = str(chain_id)
         try:
             mut_pos = int( res_id )
@@ -90,9 +90,6 @@ def write_repack_resfile(resfile_path, neighbors, data_dir = None):
                 f.write( '%s %s PIKAA %s\n' % (res_id, chain, mutations[(res_id, chain)]) )
             else:
                 f.write( '%s %s NATAA\n' % (res_id, chain) )
-    if len(mutations) > 1:
-        print resfile_path, mutations
-        sys.exit(1)
 
 def neighbors_to_rosetta_num(neigbors, data_dir):
     numbering_map_path = os.path.join(data_dir, 'pdb2rosetta.resmap.json')
@@ -121,10 +118,9 @@ if __name__ == '__main__':
     settings_path = os.path.join(data_dir_path, 'settings.pickle')
 
     # This uses the version of Rosetta from your cluster template settings file
-    ppi_api_lib = imp.load_source('ppi_api', '../ddglib/ppi_api.py')
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
-    ppi_api = ppi_api_lib.get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database')
+    ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database')
 
     with open(job_dict_path, 'r') as f:
         original_job_dict = pickle.load(f)
@@ -133,10 +129,10 @@ if __name__ == '__main__':
     settings['output_dir'] = output_dir
     settings['tasks_per_process'] = 1
     settings['mem_free'] = '1.6G'
-    num_steps = 6 # Preminimization, backrub, repack wt, mutate, minimize repack wt, minimize mutant
+    num_steps = 8 # Preminimization, backrub, repack wt, mutate, minimize repack wt, minimize mutant, rescore wt, rescore mutant
     settings = cluster_template.convert_list_arguments_to_list(settings, num_steps)
     settings['appname_list'] = []
-    inner_jobs = 2 ### TMP, should be 100
+    inner_jobs = 100
     settings['numjobs'] = settings['numjobs'] * inner_jobs
 
     job_dicts = []
@@ -160,9 +156,8 @@ if __name__ == '__main__':
     )
     for prediction_id in original_job_dict:
         for n_struct in xrange(1, inner_jobs + 1):
-            inner_prediction_id = '%s/%d-%d-minimize' % (str(prediction_id), n_struct, len(job_dicts))
+            inner_prediction_id = '%s/%04d-%04d-minimize' % (str(prediction_id), n_struct, len(job_dicts))
             job_dict[inner_prediction_id] = copy.deepcopy( original_job_dict[prediction_id] )
-        break ### TMP
     settings['appname_list'].append( 'minimize_with_cst' )
     job_dicts.append( job_dict )
 
@@ -174,7 +169,7 @@ if __name__ == '__main__':
     r = Reporter('processing prediction ids for backrub information', entries = 'prediction ids')
     r.set_total_count( len(original_job_dict) )
     for prediction_id in original_job_dict:
-        pdb = job_dicts[0]['%s/%d-%d-minimize' % (str(prediction_id), 1, 0)]['input_file_list'][0]
+        pdb = job_dicts[0]['%s/%04d-%04d-minimize' % (str(prediction_id), 1, 0)]['input_file_list'][0]
         pdb_id = os.path.basename(pdb).split('.')[0].strip()
         pdb_ids_from_pred_ids[prediction_id] = pdb_id
         pdb_path = os.path.join(output_dir, pdb)
@@ -190,8 +185,8 @@ if __name__ == '__main__':
         repack_mutate_resfile_relpaths[prediction_id] = repack_mutate_resfile_relpath
         write_repack_resfile(repack_mutate_resfile_path, neighbors, data_dir = data_dir)
         for n_struct in xrange(1, inner_jobs + 1):
-            inner_prediction_id = '%s/%d-%d-backrub' % (str(prediction_id), n_struct, len(job_dicts))
-            minimize_inner_prediction_id = '%s/%d-%d-minimize' % (str(prediction_id), n_struct, len(job_dicts)-1)
+            inner_prediction_id = '%s/%04d-%04d-backrub' % (str(prediction_id), n_struct, len(job_dicts))
+            minimize_inner_prediction_id = '%s/%04d-%04d-minimize' % (str(prediction_id), n_struct, len(job_dicts)-1)
 
             inner_prediction_min_dir = os.path.join(output_dir, minimize_inner_prediction_id)
             pdb_id = os.path.basename(pdb).split('.')[0].strip()
@@ -203,7 +198,6 @@ if __name__ == '__main__':
 
             job_dict[inner_prediction_id]['-backrub:pivot_residues'] = pivot_residues
         r.increment_report()
-        break ### TMP
     r.done()
 
     settings['rosetta_args_list_list'][len(job_dicts)].extend( [
@@ -214,7 +208,7 @@ if __name__ == '__main__':
         '-extrachi_cutoff 0',
         '-out:prefix bkrb_',
         '-mute core.io.pdb.file_data',
-        '-backrub:ntrials 1', ### TMP for testing - should really be 50000!
+        '-backrub:ntrials 50000',
         '-mc_kt %.1f' % cfg.backrub_temp,
     ] )
     settings['appname_list'].append( 'backrub' )
@@ -233,8 +227,8 @@ if __name__ == '__main__':
         data_dir = os.path.join( os.path.join(output_dir, 'data'), '%d' % prediction_id )
         pdb_id = pdb_ids_from_pred_ids[prediction_id]
         for n_struct in xrange(1, inner_jobs + 1):
-            inner_prediction_id = '%s/%d-%d-repack_wt' % (str(prediction_id), n_struct, len(job_dicts))
-            backrub_inner_prediction_id = '%s/%d-%d-backrub' % (str(prediction_id), n_struct, len(job_dicts)-1)
+            inner_prediction_id = '%s/%04d-%04d-repack_wt' % (str(prediction_id), n_struct, len(job_dicts))
+            backrub_inner_prediction_id = '%s/%04d-%04d-backrub' % (str(prediction_id), n_struct, len(job_dicts)-1)
 
             inner_prediction_backrub_dir = os.path.join(output_dir, backrub_inner_prediction_id)
             backrubed_pdb = os.path.relpath(os.path.join(inner_prediction_backrub_dir, 'bkrb_min_cst.%s_0001_0001_last.pdb.gz' % pdb_id), output_dir)
@@ -243,7 +237,6 @@ if __name__ == '__main__':
                 backrubed_pdb
             ]
             job_dict[inner_prediction_id]['-resfile'] = repack_resfile_relpaths[prediction_id]
-        break ### TMP
 
     settings['rosetta_args_list_list'][len(job_dicts)].extend(
         repack_generic_args
@@ -260,8 +253,8 @@ if __name__ == '__main__':
         data_dir = os.path.join( os.path.join(output_dir, 'data'), '%d' % prediction_id )
         pdb_id = pdb_ids_from_pred_ids[prediction_id]
         for n_struct in xrange(1, inner_jobs + 1):
-            inner_prediction_id = '%s/%d-%d-mutate' % (str(prediction_id), n_struct, len(job_dicts))
-            backrub_inner_prediction_id = '%s/%d-%d-backrub' % (str(prediction_id), n_struct, len(job_dicts)-2)
+            inner_prediction_id = '%s/%04d-%04d-mutate' % (str(prediction_id), n_struct, len(job_dicts))
+            backrub_inner_prediction_id = '%s/%04d-%04d-backrub' % (str(prediction_id), n_struct, len(job_dicts)-2)
 
             inner_prediction_backrub_dir = os.path.join(output_dir, backrub_inner_prediction_id)
             backrubed_pdb = os.path.relpath(os.path.join(inner_prediction_backrub_dir, 'bkrb_min_cst.%s_0001_0001_last.pdb.gz' % pdb_id), output_dir)
@@ -270,7 +263,6 @@ if __name__ == '__main__':
                 backrubed_pdb
             ]
             job_dict[inner_prediction_id]['-resfile'] = repack_mutate_resfile_relpaths[prediction_id]
-        break ### TMP
 
     settings['rosetta_args_list_list'][len(job_dicts)].extend(
         repack_generic_args
@@ -287,8 +279,8 @@ if __name__ == '__main__':
         data_dir = os.path.join( os.path.join(output_dir, 'data'), '%d' % prediction_id )
         pdb_id = pdb_ids_from_pred_ids[prediction_id]
         for n_struct in xrange(1, inner_jobs + 1):
-            inner_prediction_id = '%s/%d-%d-minimize-repack_wt' % (str(prediction_id), n_struct, len(job_dicts))
-            repacked_inner_prediction_id = '%s/%d-%d-repack_wt' % (str(prediction_id), n_struct, len(job_dicts)-2)
+            inner_prediction_id = '%s/%04d-%04d-minimize-repack_wt' % (str(prediction_id), n_struct, len(job_dicts))
+            repacked_inner_prediction_id = '%s/%04d-%04d-repack_wt' % (str(prediction_id), n_struct, len(job_dicts)-2)
 
             inner_prediction_repacked_dir = os.path.join(output_dir, repacked_inner_prediction_id)
             repacked_pdb = os.path.relpath(os.path.join(inner_prediction_repacked_dir, 'repack-wt_bkrb_min_cst.%s_0001_0001_last_0001.pdb.gz' % pdb_id), output_dir)
@@ -296,7 +288,6 @@ if __name__ == '__main__':
             job_dict[inner_prediction_id]['input_file_list'] = [
                 repacked_pdb
             ]
-        break ### TMP
 
     settings['rosetta_args_list_list'][len(job_dicts)].extend(
         generic_min_args
@@ -310,8 +301,8 @@ if __name__ == '__main__':
         data_dir = os.path.join( os.path.join(output_dir, 'data'), '%d' % prediction_id )
         pdb_id = pdb_ids_from_pred_ids[prediction_id]
         for n_struct in xrange(1, inner_jobs + 1):
-            inner_prediction_id = '%s/%d-%d-minimize-mutate' % (str(prediction_id), n_struct, len(job_dicts))
-            repacked_inner_prediction_id = '%s/%d-%d-mutate' % (str(prediction_id), n_struct, len(job_dicts)-2)
+            inner_prediction_id = '%s/%04d-%04d-minimize-mutate' % (str(prediction_id), n_struct, len(job_dicts))
+            repacked_inner_prediction_id = '%s/%04d-%04d-mutate' % (str(prediction_id), n_struct, len(job_dicts)-2)
 
             inner_prediction_repacked_dir = os.path.join(output_dir, repacked_inner_prediction_id)
             repacked_pdb = os.path.relpath(os.path.join(inner_prediction_repacked_dir, 'mutate_bkrb_min_cst.%s_0001_0001_last_0001.pdb.gz' % pdb_id), output_dir)
@@ -319,7 +310,6 @@ if __name__ == '__main__':
             job_dict[inner_prediction_id]['input_file_list'] = [
                 repacked_pdb
             ]
-        break ### TMP
 
     settings['rosetta_args_list_list'][len(job_dicts)].extend(
         generic_min_args
@@ -328,34 +318,65 @@ if __name__ == '__main__':
     job_dicts.append( job_dict )
 
     # Rescore minimized wt by separating partners
-    # job_dict = {}
-    # chains_to_move_cache = {}
-    # score_fxn = 'talaris2013' ### Note WARNING
-    # for prediction_id in original_job_dict:
-    #     pdb_id = pdb_ids_from_pred_ids[prediction_id]
-    #     job_details = ppi_api.get_job_details(prediction_id)
-    #     substitution_parameters = json.loads(job_details['JSONParameters'])
-    #     chains_to_move = substitution_parameters['%%chainstomove%%']
-    #     chains_to_move_cache[prediction_id] = chains_to_move
-    #     for n_struct in xrange(1, inner_jobs + 1):
-    #         inner_prediction_id = '%s/%d-%d-rescore_sep_wt' % (str(prediction_id), n_struct, len(job_dicts))
-    #         finalminned_inner_prediction_id = '%s/%d-%d-minimize-repack_wt' % (str(prediction_id), n_struct, len(job_dicts)-2)
+    job_dict = {}
+    chains_to_move_cache = {}
+    score_fxn = 'talaris2013' ### Note WARNING
+    score_partners_xml_path = os.path.join( os.path.join(output_dir, 'data'), 'score_partners.xml' )
+    if not os.path.isfile(score_partners_xml_path):
+        shutil.copy('ddglib/score_partners.xml', score_partners_xml_path)
+    score_partners_xml_relpath = os.path.relpath(score_partners_xml_path, output_dir)
+    r = Reporter('getting database info for rescoring', entries = 'prediction ids')
+    r.set_total_count( len(original_job_dict) )
+    for prediction_id in original_job_dict:
+        pdb_id = pdb_ids_from_pred_ids[prediction_id]
+        job_details = ppi_api.get_job_details(prediction_id)
+        substitution_parameters = json.loads(job_details['JSONParameters'])
+        chains_to_move = substitution_parameters['%%chainstomove%%']
+        chains_to_move_cache[prediction_id] = chains_to_move
+        for n_struct in xrange(1, inner_jobs + 1):
+            inner_prediction_id = '%s/%04d-%04d-rescore_sep_wt' % (str(prediction_id), n_struct, len(job_dicts))
+            finalminned_inner_prediction_id = '%s/%04d-%04d-minimize-repack_wt' % (str(prediction_id), n_struct, len(job_dicts)-2)
 
-    #         inner_prediction_finalminned_dir = os.path.join(output_dir, finalminned_inner_prediction_id)
-    #         finalminned_pdb = os.path.relpath(os.path.join(inner_prediction_finalminned_dir, 'mutate_bkrb_min_cst.%s_0001_0001_last_0001.pdb.gz' % pdb_id), output_dir)
-    #         job_dict[inner_prediction_id] = {}
-    #         job_dict[inner_prediction_id]['input_file_list'] = [
-    #             finalminned_pdb
-    #         ]
-    #     break ### TMP
+            inner_prediction_finalminned_dir = os.path.join(output_dir, finalminned_inner_prediction_id)
+            finalminned_pdb = os.path.relpath(os.path.join(inner_prediction_finalminned_dir, 'min_cst.repack-wt_bkrb_min_cst_0001.pdb.gz'), output_dir)
+            job_dict[inner_prediction_id] = {}
+            job_dict[inner_prediction_id]['input_file_list'] = [
+                finalminned_pdb
+            ]
+            job_dict[inner_prediction_id]['-parser:script_vars'] = ['chainstomove=%s' % chains_to_move,  'currentscorefxn=%s' % score_fxn]
+            job_dict[inner_prediction_id]['-parser:protocol'] = score_partners_xml_relpath
+        r.increment_report()
+    r.done()
 
-    # settings['rosetta_args_list_list'][len(job_dicts)].extend(
-    #     generic_min_args
-    # )
-    # settings['appname_list'].append( 'minimize_with_cst' )
-    # job_dicts.append( job_dict )
+    settings['rosetta_args_list_list'][len(job_dicts)].extend( [
+        '-inout:dbms:database_name', 'output.db3',
+    ] )
+    settings['appname_list'].append( 'rosetta_scripts' )
+    job_dicts.append( job_dict )
 
-    print job_dicts ### TMP
+    # Rescore minimized wt by separating partners
+    job_dict = {}
+    for prediction_id in original_job_dict:
+        pdb_id = pdb_ids_from_pred_ids[prediction_id]
+        chains_to_move = chains_to_move_cache[prediction_id]
+        for n_struct in xrange(1, inner_jobs + 1):
+            inner_prediction_id = '%s/%04d-%04d-rescore_sep_mutant' % (str(prediction_id), n_struct, len(job_dicts))
+            finalminned_inner_prediction_id = '%s/%04d-%04d-minimize-mutate' % (str(prediction_id), n_struct, len(job_dicts)-2)
+
+            inner_prediction_finalminned_dir = os.path.join(output_dir, finalminned_inner_prediction_id)
+            finalminned_pdb = os.path.relpath(os.path.join(inner_prediction_finalminned_dir, 'min_cst.mutate_bkrb_min_cst_0001.pdb.gz'), output_dir)
+            job_dict[inner_prediction_id] = {}
+            job_dict[inner_prediction_id]['input_file_list'] = [
+                finalminned_pdb
+            ]
+            job_dict[inner_prediction_id]['-parser:script_vars'] = ['chainstomove=%s' % chains_to_move,  'currentscorefxn=%s' % score_fxn]
+            job_dict[inner_prediction_id]['-parser:protocol'] = score_partners_xml_relpath
+
+    settings['rosetta_args_list_list'][len(job_dicts)].extend( [
+        '-inout:dbms:database_name', 'output.db3',
+    ] )
+    settings['appname_list'].append( 'rosetta_scripts' )
+    job_dicts.append( job_dict )
 
     assert( len(job_dicts) == num_steps )
     ct = cluster_template.ClusterTemplate(num_steps, settings_dict = settings)
