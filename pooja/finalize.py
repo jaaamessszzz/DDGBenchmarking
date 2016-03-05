@@ -3,7 +3,7 @@ import sys
 import os
 import shutil
 import pprint
-import klab.cluster_template.parse_settings as parse_settings
+import klab.cluster_template.cluster_template as cluster_template
 import time
 import getpass
 import json
@@ -15,6 +15,7 @@ from klab.cluster_template.write_run_file import process as write_run_file
 from klab.Reporter import Reporter
 import cPickle as pickle
 import json
+import copy
 
 def from_pooja():
     #####
@@ -164,9 +165,18 @@ if __name__ == '__main__':
     settings_path = os.path.join(data_dir_path, 'settings.pickle')
 
     with open(job_dict_path, 'r') as f:
-        job_dict = pickle.load(f)
+        original_job_dict = pickle.load(f)
     with open(settings_path, 'r') as f:
         settings = pickle.load(f)
+    settings['output_dir'] = output_dir
+    settings['tasks_per_process'] = 1
+    settings['mem_free'] = '1.6G'
+    num_steps = 1
+    settings = cluster_template.convert_list_arguments_to_list(settings, num_steps)
+    settings['appname_list'] = []
+
+    job_dicts = []
+    job_dict = copy.deepcopy( original_job_dict )
 
     r = Reporter('processing prediction ids', entries = 'prediction ids')
     r.set_total_count( len(job_dict) )
@@ -186,10 +196,7 @@ if __name__ == '__main__':
         r.increment_report()
     r.done()
 
-    settings['output_dir'] = output_dir
-    settings['tasks_per_process'] = 1
-    settings['mem_free'] = '1.6G'
-    settings['rosetta_args_list'].extend( [
+    settings['rosetta_args_list_list'][len(job_dicts)].extend( [
         '-nstruct 50',
         '-ignore_unrecognized_res',
         '-ignore_zero_occupancy false',
@@ -200,9 +207,13 @@ if __name__ == '__main__':
         '-backrub:ntrials 50000',
         '-mc_kt %.1f' % cfg.backrub_temp,
     ] )
-    settings['appname'] = 'backrub'
+    settings['appname_list'].append( 'backrub' )
+    job_dicts.append( job_dict )
 
-    # print job_dict
-    # print settings
-    write_run_file(settings, database_run = False, job_dict = job_dict)
+    assert( len(job_dicts) == num_steps )
+    ct = cluster_template.ClusterTemplate(num_steps, settings_dict = settings)
+    for i, job_dict in enumerate(job_dicts):
+        ct.set_job_dict(job_dict, step_num = i)
+
+    ct.write_runs()
     print 'Job files written to directory:', os.path.abspath(output_dir)
