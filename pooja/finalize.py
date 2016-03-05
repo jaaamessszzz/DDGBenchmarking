@@ -4,6 +4,7 @@ import os
 import shutil
 import pprint
 import klab.cluster_template.cluster_template as cluster_template
+import klab.cluster_template.parse_settings as parse_settings
 import time
 import getpass
 import json
@@ -17,69 +18,7 @@ import cPickle as pickle
 import json
 import copy
 
-def from_pooja():
-    #####
-    #This script does 4 things. 1. It find neighbors (within an 8 angstrom shell of the mutation); 2. It generates resfiles and adds a list of neighbors to it; 3. It submits the initial minimization; and 4. It converts pdb numbers to rosetta numbers for the list of neighbor residues and saves it to a file called pivot_res.txt (The list written to this file will later be used for backrub)
-    #####
-
-    unique_pdb_num=[]
-    for elem in pdb_num:
-        if elem not in unique_pdb_num:
-            unique_pdb_num.append(elem)
-    #print unique_pdb_num
-
-    mutate_res=open("mutate.res", "w")
-    repack_res=open("repack.res", "w")
-    revert_res=open("revert.res", "w")
-
-    mutate_res.write("NATRO\nstart\n%s %s PIKAA %s\n" %(res_id, chain_id, mut_aa))
-    repack_res.write("NATRO\nstart\n")
-    revert_res.write("NATRO\nstart\n%s %s PIKAA %s\n" %(res_id, chain_id, wt_aa))
-
-    for i in neighbors:
-        repack_res.write(str(i)+"\n")
-        if i.split()[0] != res_id:
-            mutate_res.write(str(i)+"\n")
-            revert_res.write(str(i)+"\n")
-    mutate_res.close()
-    repack_res.close()
-    revert_res.close()
-    try:
-        os.mkdir("wildtype")
-        os.mkdir("mutation")
-    except:
-        pass
-    os.system("cp repack.res revert.res mutation/")
-    os.system("cp repack.res mutate.res wildtype/")
-
-    mutation_suffix="_"+str(json_mutation[1:])
-    os.system("qsub submit_minimize.py %s %s"%(PDBID[0], mutation_suffix))
-
-    sys.path.insert(0, '/netapp/home/psuresh2/DDG')
-
-    from tools.fs.fsio import read_file
-    from tools.rosetta.map_pdb_residues import get_pdb_contents_to_pose_residue_map
-
-    pdb_content = read_file('./%s'%sys.argv[1])
-    rosetta_scripts_binary = '/netapp/home/thompson/Rosetta/rosetta_2014.22/source/bin/rosetta_scripts.linuxgccrelease'
-    success, result = get_pdb_contents_to_pose_residue_map(pdb_content, rosetta_scripts_binary, pdb_id = None, extra_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res')
-    #pprint.pprint(result)
-
-    rosetta_num=[]
-    for i in range(len(unique_pdb_num)):
-        #print result[str(unique_pdb_num[i])]['pose_residue_id']
-        rosetta_num.append(result[str(unique_pdb_num[i])]['pose_residue_id'])
-
-    #print rosetta_num
-
-    pivot_residues=open("pivot_res.txt", "w")
-    res=str(" ".join([str(x) for x in rosetta_num]))
-    pivot_residues.write(res)
-
-    minimize_pdb=open("pdblist.txt", "w")
-    minimize_pdb.write("%s_0001.pdb\n%s%s_0001.pdb"%(str(PDBID[0]), str(PDBID[0]), str(mutation_suffix)))
-
-def find_neighbors(data_dir, pdb_path, neighbor_distance = 8.0):
+def read_mutations_resfile(data_dir):
     resfile = os.path.join(data_dir, 'mutations.resfile')
     mutations = []
     with open(resfile, 'r') as f:
@@ -91,6 +30,10 @@ def find_neighbors(data_dir, pdb_path, neighbor_distance = 8.0):
                 mutations.append( [pdb_resnum, chain, pikaa, mut_res] )
             elif line.startswith('start'):
                 post_start = True
+    return mutations
+
+def find_neighbors(data_dir, pdb_path, neighbor_distance = 8.0):
+    mutations = read_mutations_resfile(data_dir)
 
     open_filename = pdb_path
     parser = PDBParser(PERMISSIVE=1)
@@ -129,14 +72,27 @@ def find_neighbors(data_dir, pdb_path, neighbor_distance = 8.0):
 
     return neighbors
 
-def write_repack_resfile(resfile_path, neighbors):
+def write_repack_resfile(resfile_path, neighbors, data_dir = None):
+    if data_dir:
+        # Parse mutation resfile and add to result resfile
+        mutations = {(res_id, chain_id) : mut_aa for res_id, chain_id, pikaa, mut_aa in read_mutations_resfile(data_dir)}
+    else:
+        mutations = {}
+
     with open(resfile_path, 'w') as f:
         f.write('NATRO\nstart\n')
         for neighbor in sorted(list(neighbors)):
             res_tup, chain = neighbor
             het_flag, res_num, insertion_code = res_tup
             insertion_code = insertion_code.strip()
-            f.write( '%d%s %s NATAA\n' % (res_num, insertion_code, chain) )
+            res_id = '%d%s' % (res_num, insertion_code)
+            if (res_id, chain) in mutations:
+                f.write( '%s %s PIKAA %s\n' % (res_id, chain, mutations[(res_id, chain)]) )
+            else:
+                f.write( '%s %s NATAA\n' % (res_id, chain) )
+    if len(mutations) > 1:
+        print resfile_path, mutations
+        sys.exit(1)
 
 def neighbors_to_rosetta_num(neigbors, data_dir):
     numbering_map_path = os.path.join(data_dir, 'pdb2rosetta.resmap.json')
@@ -164,6 +120,12 @@ if __name__ == '__main__':
     job_dict_path = os.path.join(data_dir_path, 'blank_job_dict.pickle')
     settings_path = os.path.join(data_dir_path, 'settings.pickle')
 
+    # This uses the version of Rosetta from your cluster template settings file
+    ppi_api_lib = imp.load_source('ppi_api', '../ddglib/ppi_api.py')
+    settings = parse_settings.get_dict()
+    rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
+    ppi_api = ppi_api_lib.get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database')
+
     with open(job_dict_path, 'r') as f:
         original_job_dict = pickle.load(f)
     with open(settings_path, 'r') as f:
@@ -171,44 +133,229 @@ if __name__ == '__main__':
     settings['output_dir'] = output_dir
     settings['tasks_per_process'] = 1
     settings['mem_free'] = '1.6G'
-    num_steps = 1
+    num_steps = 6 # Preminimization, backrub, repack wt, mutate, minimize repack wt, minimize mutant
     settings = cluster_template.convert_list_arguments_to_list(settings, num_steps)
     settings['appname_list'] = []
+    inner_jobs = 2 ### TMP, should be 100
+    settings['numjobs'] = settings['numjobs'] * inner_jobs
 
     job_dicts = []
-    job_dict = copy.deepcopy( original_job_dict )
 
-    r = Reporter('processing prediction ids', entries = 'prediction ids')
-    r.set_total_count( len(job_dict) )
-    for prediction_id in job_dict:
-        assert( len(job_dict[prediction_id]['input_file_list']) == 1 )
-        pdb = job_dict[prediction_id]['input_file_list'][0]
+    generic_min_args = [
+        '-in:file:fullatom',
+        '-ignore_unrecognized_res',
+        '-fa_max_dis 9.0',
+        '-ddg::harmonic_ca_tether 0.5',
+        '-ddg::constraint_weight 1.0',
+        '-ddg::out_pdb_prefix min_cst',
+        '-ddg::sc_min_only false',
+        '-ignore_zero_occupancy false',
+    ]
+
+    # Preminimization step
+    print 'Adding minimization step\n'
+    job_dict = {}
+    settings['rosetta_args_list_list'][len(job_dicts)].extend(
+        generic_min_args
+    )
+    for prediction_id in original_job_dict:
+        for n_struct in xrange(1, inner_jobs + 1):
+            inner_prediction_id = '%s/%d-%d-minimize' % (str(prediction_id), n_struct, len(job_dicts))
+            job_dict[inner_prediction_id] = copy.deepcopy( original_job_dict[prediction_id] )
+        break ### TMP
+    settings['appname_list'].append( 'minimize_with_cst' )
+    job_dicts.append( job_dict )
+
+    # Backrub step
+    job_dict = {}
+    repack_resfile_relpaths = {} # For later step
+    repack_mutate_resfile_relpaths = {} # For later step
+    pdb_ids_from_pred_ids = {} # For later step
+    r = Reporter('processing prediction ids for backrub information', entries = 'prediction ids')
+    r.set_total_count( len(original_job_dict) )
+    for prediction_id in original_job_dict:
+        pdb = job_dicts[0]['%s/%d-%d-minimize' % (str(prediction_id), 1, 0)]['input_file_list'][0]
+        pdb_id = os.path.basename(pdb).split('.')[0].strip()
+        pdb_ids_from_pred_ids[prediction_id] = pdb_id
         pdb_path = os.path.join(output_dir, pdb)
         data_dir = os.path.join( os.path.join(output_dir, 'data'), '%d' % prediction_id )
         neighbors = find_neighbors(data_dir, pdb_path)
         repack_resfile_path = os.path.join(data_dir, 'repack.resfile')
         repack_resfile_relpath = os.path.relpath(repack_resfile_path, output_dir)
+        repack_resfile_relpaths[prediction_id] = repack_resfile_relpath
         pivot_residues = ' '.join( ['%d' % d for d in neighbors_to_rosetta_num(neighbors, data_dir)] ).strip()
-        job_dict[prediction_id]['-backrub:pivot_residues'] = pivot_residues
-        print job_dict[prediction_id]
         write_repack_resfile(repack_resfile_path, neighbors)
-        break
+        repack_mutate_resfile_path = os.path.join(data_dir, 'repack_and_mutate.resfile')
+        repack_mutate_resfile_relpath = os.path.relpath(repack_mutate_resfile_path, output_dir)
+        repack_mutate_resfile_relpaths[prediction_id] = repack_mutate_resfile_relpath
+        write_repack_resfile(repack_mutate_resfile_path, neighbors, data_dir = data_dir)
+        for n_struct in xrange(1, inner_jobs + 1):
+            inner_prediction_id = '%s/%d-%d-backrub' % (str(prediction_id), n_struct, len(job_dicts))
+            minimize_inner_prediction_id = '%s/%d-%d-minimize' % (str(prediction_id), n_struct, len(job_dicts)-1)
+
+            inner_prediction_min_dir = os.path.join(output_dir, minimize_inner_prediction_id)
+            pdb_id = os.path.basename(pdb).split('.')[0].strip()
+            minimized_pdb = os.path.relpath(os.path.join(inner_prediction_min_dir, 'min_cst.%s_0001.pdb.gz' % pdb_id), output_dir)
+            job_dict[inner_prediction_id] = {}
+            job_dict[inner_prediction_id]['input_file_list'] = [
+                minimized_pdb
+            ]
+
+            job_dict[inner_prediction_id]['-backrub:pivot_residues'] = pivot_residues
         r.increment_report()
+        break ### TMP
     r.done()
 
     settings['rosetta_args_list_list'][len(job_dicts)].extend( [
-        '-nstruct 50',
+        '-nstruct 1',
         '-ignore_unrecognized_res',
         '-ignore_zero_occupancy false',
         '-ex1', '-ex2',
         '-extrachi_cutoff 0',
         '-out:prefix bkrb_',
         '-mute core.io.pdb.file_data',
-        '-backrub:ntrials 50000',
+        '-backrub:ntrials 1', ### TMP for testing - should really be 50000!
         '-mc_kt %.1f' % cfg.backrub_temp,
     ] )
     settings['appname_list'].append( 'backrub' )
     job_dicts.append( job_dict )
+
+    repack_generic_args = [
+        '-ex1', '-ex2',
+        '-multi_cool_annealer 6',
+        '-ignore_zero_occupancy false',
+        '-ignore_unrecognized_res true',
+    ]
+
+    # Repack wildtype step
+    job_dict = {}
+    for prediction_id in original_job_dict:
+        data_dir = os.path.join( os.path.join(output_dir, 'data'), '%d' % prediction_id )
+        pdb_id = pdb_ids_from_pred_ids[prediction_id]
+        for n_struct in xrange(1, inner_jobs + 1):
+            inner_prediction_id = '%s/%d-%d-repack_wt' % (str(prediction_id), n_struct, len(job_dicts))
+            backrub_inner_prediction_id = '%s/%d-%d-backrub' % (str(prediction_id), n_struct, len(job_dicts)-1)
+
+            inner_prediction_backrub_dir = os.path.join(output_dir, backrub_inner_prediction_id)
+            backrubed_pdb = os.path.relpath(os.path.join(inner_prediction_backrub_dir, 'bkrb_min_cst.%s_0001_0001_last.pdb.gz' % pdb_id), output_dir)
+            job_dict[inner_prediction_id] = {}
+            job_dict[inner_prediction_id]['input_file_list'] = [
+                backrubed_pdb
+            ]
+            job_dict[inner_prediction_id]['-resfile'] = repack_resfile_relpaths[prediction_id]
+        break ### TMP
+
+    settings['rosetta_args_list_list'][len(job_dicts)].extend(
+        repack_generic_args
+    )
+    settings['rosetta_args_list_list'][len(job_dicts)].extend( [
+        '-out:prefix repack-wt_',
+    ] )
+    settings['appname_list'].append( 'fixbb' )
+    job_dicts.append( job_dict )
+
+    # Mutant repack step
+    job_dict = {}
+    for prediction_id in original_job_dict:
+        data_dir = os.path.join( os.path.join(output_dir, 'data'), '%d' % prediction_id )
+        pdb_id = pdb_ids_from_pred_ids[prediction_id]
+        for n_struct in xrange(1, inner_jobs + 1):
+            inner_prediction_id = '%s/%d-%d-mutate' % (str(prediction_id), n_struct, len(job_dicts))
+            backrub_inner_prediction_id = '%s/%d-%d-backrub' % (str(prediction_id), n_struct, len(job_dicts)-2)
+
+            inner_prediction_backrub_dir = os.path.join(output_dir, backrub_inner_prediction_id)
+            backrubed_pdb = os.path.relpath(os.path.join(inner_prediction_backrub_dir, 'bkrb_min_cst.%s_0001_0001_last.pdb.gz' % pdb_id), output_dir)
+            job_dict[inner_prediction_id] = {}
+            job_dict[inner_prediction_id]['input_file_list'] = [
+                backrubed_pdb
+            ]
+            job_dict[inner_prediction_id]['-resfile'] = repack_mutate_resfile_relpaths[prediction_id]
+        break ### TMP
+
+    settings['rosetta_args_list_list'][len(job_dicts)].extend(
+        repack_generic_args
+    )
+    settings['rosetta_args_list_list'][len(job_dicts)].extend( [
+        '-out:prefix mutate_',
+    ] )
+    settings['appname_list'].append( 'fixbb' )
+    job_dicts.append( job_dict )
+
+    # Minimize repacked wildtype step
+    job_dict = {}
+    for prediction_id in original_job_dict:
+        data_dir = os.path.join( os.path.join(output_dir, 'data'), '%d' % prediction_id )
+        pdb_id = pdb_ids_from_pred_ids[prediction_id]
+        for n_struct in xrange(1, inner_jobs + 1):
+            inner_prediction_id = '%s/%d-%d-minimize-repack_wt' % (str(prediction_id), n_struct, len(job_dicts))
+            repacked_inner_prediction_id = '%s/%d-%d-repack_wt' % (str(prediction_id), n_struct, len(job_dicts)-2)
+
+            inner_prediction_repacked_dir = os.path.join(output_dir, repacked_inner_prediction_id)
+            repacked_pdb = os.path.relpath(os.path.join(inner_prediction_repacked_dir, 'repack-wt_bkrb_min_cst.%s_0001_0001_last_0001.pdb.gz' % pdb_id), output_dir)
+            job_dict[inner_prediction_id] = {}
+            job_dict[inner_prediction_id]['input_file_list'] = [
+                repacked_pdb
+            ]
+        break ### TMP
+
+    settings['rosetta_args_list_list'][len(job_dicts)].extend(
+        generic_min_args
+    )
+    settings['appname_list'].append( 'minimize_with_cst' )
+    job_dicts.append( job_dict )
+
+    # Minimize repacked mutant step
+    job_dict = {}
+    for prediction_id in original_job_dict:
+        data_dir = os.path.join( os.path.join(output_dir, 'data'), '%d' % prediction_id )
+        pdb_id = pdb_ids_from_pred_ids[prediction_id]
+        for n_struct in xrange(1, inner_jobs + 1):
+            inner_prediction_id = '%s/%d-%d-minimize-mutate' % (str(prediction_id), n_struct, len(job_dicts))
+            repacked_inner_prediction_id = '%s/%d-%d-mutate' % (str(prediction_id), n_struct, len(job_dicts)-2)
+
+            inner_prediction_repacked_dir = os.path.join(output_dir, repacked_inner_prediction_id)
+            repacked_pdb = os.path.relpath(os.path.join(inner_prediction_repacked_dir, 'mutate_bkrb_min_cst.%s_0001_0001_last_0001.pdb.gz' % pdb_id), output_dir)
+            job_dict[inner_prediction_id] = {}
+            job_dict[inner_prediction_id]['input_file_list'] = [
+                repacked_pdb
+            ]
+        break ### TMP
+
+    settings['rosetta_args_list_list'][len(job_dicts)].extend(
+        generic_min_args
+    )
+    settings['appname_list'].append( 'minimize_with_cst' )
+    job_dicts.append( job_dict )
+
+    # Rescore minimized wt by separating partners
+    # job_dict = {}
+    # chains_to_move_cache = {}
+    # score_fxn = 'talaris2013' ### Note WARNING
+    # for prediction_id in original_job_dict:
+    #     pdb_id = pdb_ids_from_pred_ids[prediction_id]
+    #     job_details = ppi_api.get_job_details(prediction_id)
+    #     substitution_parameters = json.loads(job_details['JSONParameters'])
+    #     chains_to_move = substitution_parameters['%%chainstomove%%']
+    #     chains_to_move_cache[prediction_id] = chains_to_move
+    #     for n_struct in xrange(1, inner_jobs + 1):
+    #         inner_prediction_id = '%s/%d-%d-rescore_sep_wt' % (str(prediction_id), n_struct, len(job_dicts))
+    #         finalminned_inner_prediction_id = '%s/%d-%d-minimize-repack_wt' % (str(prediction_id), n_struct, len(job_dicts)-2)
+
+    #         inner_prediction_finalminned_dir = os.path.join(output_dir, finalminned_inner_prediction_id)
+    #         finalminned_pdb = os.path.relpath(os.path.join(inner_prediction_finalminned_dir, 'mutate_bkrb_min_cst.%s_0001_0001_last_0001.pdb.gz' % pdb_id), output_dir)
+    #         job_dict[inner_prediction_id] = {}
+    #         job_dict[inner_prediction_id]['input_file_list'] = [
+    #             finalminned_pdb
+    #         ]
+    #     break ### TMP
+
+    # settings['rosetta_args_list_list'][len(job_dicts)].extend(
+    #     generic_min_args
+    # )
+    # settings['appname_list'].append( 'minimize_with_cst' )
+    # job_dicts.append( job_dict )
+
+    print job_dicts ### TMP
 
     assert( len(job_dicts) == num_steps )
     ct = cluster_template.ClusterTemplate(num_steps, settings_dict = settings)
