@@ -49,16 +49,15 @@ def process_ddg_monomer_directory():
 
         elif processing_option == possible_options[2]:
             # To load into database rescoring cluster run result:
-            process_cluster_run(ppi_api, prediction_set_name, score_method_id, settings)
+            process_cluster_run(ppi_api, prediction_set_name, score_method_id, settings, output_dirs = [root_directory] )
 
         else:
             print 'ERROR: Argument 2 must be processing option. Choices:', possible_options
 
-def process_cluster_run(ppi_api, prediction_set_name, score_method_id, settings):
+def process_cluster_run(ppi_api, prediction_set_name, score_method_id, settings, output_dirs = []):
     #### Set this to be a list of all output directories containing rescored PDBs
     #### There will probably be multiple output directories created by the setup cluster rescore function, to split up files and prevent rsync from failing
     #### Example: output_dirs = ['/dbscratch/kyleb/tmp/cluster_run/DiPUBSComplexes1-%d' % x for x in xrange(1, 12)]
-    output_dirs = []
 
     # Leave these as is if your run is a normal one with results to be saved in PredictionPPIID (hack for one PUBS case)
     # This should be default argument for function below...but is not yet
