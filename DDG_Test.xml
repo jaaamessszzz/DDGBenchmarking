@@ -1,0 +1,34 @@
+<ROSETTASCRIPTS>
+    <SCOREFXNS>
+        <fa_talaris2014 weights=talaris2014/>
+    </SCOREFXNS>
+    <RESIDUE_SELECTORS>
+        <Neighborhood name=bubble resnums=1-162 distance=8/>
+    </RESIDUE_SELECTORS>
+    <TASKOPERATIONS>
+         <OperateOnResidueSubset name=subset selector=bubble >
+           <RestrictToRepackingRLT/>
+         </OperateOnResidueSubset>
+    </TASKOPERATIONS>
+    <FILTERS>
+    </FILTERS>
+    <MOVERS>
+        <MinMover name=minimize scorefxn=fa_talaris2014 chi=1 bb=1 type=dfpmin_armijo_nonmonotone tolerance=0.001 max_iter=500/>
+        <MutateResidue name=mutate target=44 new_res=SER preserve_atom_coords=0 />
+        <PackRotamersMover name=repack scorefxn=fa_talaris2014 task_operations=subset/>
+        <Backrub name=backrub pivot_residues=41,42,43,44,45,46,47/>
+        <ddG name=ddg scorefxn=fa_talaris2014/>
+        <GenericMonteCarlo name=loopbackrub mover_name=backrub scorefxn_name=fa_talaris2014 trials=100 drift=0/>
+    </MOVERS>
+    <APPLY_TO_POSE>
+    </APPLY_TO_POSE>
+    <PROTOCOLS>
+      <Add mover_name = minimize/>
+      <Add mover_name = mutate/>
+      <Add mover_name = repack/>
+      <Add mover_name = loopbackrub/>
+      <Add mover_name = minimize/>
+      <Add mover_name = ddg/>
+    </PROTOCOLS>
+    <OUTPUT />
+</ROSETTASCRIPTS>
