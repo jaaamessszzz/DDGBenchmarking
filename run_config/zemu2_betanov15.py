@@ -12,5 +12,7 @@ score_method_ids = [10]
 
 # Prediction set analysis
 prediction_set_credit = 'Kyle Barlow'
-take_lowests = [3, 10, 20, 30, 40, 50]
+take_lowests = [3, 50]
 expectn = 50
+use_existing_benchmark_data = False
+allow_missing_case_failures = True

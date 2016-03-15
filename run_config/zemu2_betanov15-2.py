@@ -8,7 +8,7 @@ extra_flags = ['-beta_nov15']
 
 # score_method_id = 7 # rescore with interface weights score method (this is probably best...need to benchmark more)
 # score_method_id = 8 # rescore with talaris weights score method
-score_method_ids = [9]
+score_method_ids = [10]
 
 # Prediction set analysis
 prediction_set_credit = 'Kyle Barlow'
