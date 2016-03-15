@@ -132,7 +132,8 @@ if __name__ == '__main__':
     num_steps = 8 # Preminimization, backrub, repack wt, mutate, minimize repack wt, minimize mutant, rescore wt, rescore mutant
     settings = cluster_template.convert_list_arguments_to_list(settings, num_steps)
     settings['appname_list'] = []
-    inner_jobs = 100
+    existing_jobs = 50 # Should be 0 if first run, otherwise is number of existing tasks
+    inner_jobs = cfg.inner_jobs
     settings['numjobs'] = settings['numjobs'] * inner_jobs
 
     job_dicts = []
