@@ -1,6 +1,7 @@
 import os, sys
 import shutil
 import pprint
+import json
 
 # Add parent directory to path
 # sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -156,6 +157,7 @@ if __name__ == '__main__':
 
         argdict = {
             'input_file_list' : [files_dict[substitution_parameters['%%input_pdb%%']]],
+            '%%chainstomove%%' : substitution_parameters['%%chainstomove%%'],
         }
         for file_name, file_location in files_dict.iteritems():
             if 'params' in file_name:
@@ -182,6 +184,14 @@ if __name__ == '__main__':
         print 'Settings and job dict dumped to:'
         print settings_pickle
         print job_dict_pickle
+        settings_json = os.path.join(output_data_dir, 'settings.json')
+        job_dict_json = os.path.join(output_data_dir, 'blank_job_dict.json')
+        with open(settings_json, 'w') as f:
+            json.dump(settings, f)
+        with open(job_dict_json, 'w') as f:
+            json.dump(job_dict, f)
+        print settings_json
+        print job_dict_json
         print
     else:
         print 'No tasks to process, not writing job files'
