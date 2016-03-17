@@ -124,6 +124,12 @@ if __name__ == '__main__':
 
     with open(job_dict_path, 'r') as f:
         original_job_dict = pickle.load(f)
+    # Remove anything not input file list
+    for key in original_job_dict:
+        inner_dict = original_job_dict[key]
+        for inner_key in sorted(inner_dict.keys()):
+            if inner_key != 'input_file_list':
+                del inner_dict[inner_key]
     with open(settings_path, 'r') as f:
         settings = pickle.load(f)
     settings['output_dir'] = output_dir
