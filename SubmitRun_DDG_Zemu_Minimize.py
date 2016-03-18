@@ -222,7 +222,7 @@ def bash(chaintomove, pdb_file):
     print PDBID
     subprocess.call(arg)    
     
-print 'Task return code:', return_code, '\n'
+#print 'Task return code:', return_code, '\n'
 
 time_end = roundTime()
 print 'Ending time:', time_end
