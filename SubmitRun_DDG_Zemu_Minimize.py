@@ -162,7 +162,7 @@ def bash(chaintomove, pdb_file):
            '/netapp/home/james.lucas/RosettaScripts/DDG_BackrubProtocol_Minimize.xml',
            '-ignore_unrecognized_res',
            '-out:path:pdb',
-           'netapp/home/james.lucas/DDG_Myfirstrun_Output/minimized/',
+           '/netapp/home/james.lucas/DDG_Myfirstrun_Output/minimized',
            '-parser:script_vars',
            'target=%s' %(target),
            'new_res=%s' %(new_res_three),
