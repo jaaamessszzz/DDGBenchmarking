@@ -1,0 +1,31 @@
+<ROSETTASCRIPTS>
+    <SCOREFXNS>
+        <fa_talaris2014 weights=talaris2014/>
+    </SCOREFXNS>
+    <RESIDUE_SELECTORS>
+        <Neighborhood name=bubble resnums=%%target%% distance=8/>
+    </RESIDUE_SELECTORS>
+    <TASKOPERATIONS>
+         <OperateOnResidueSubset name=subset selector=bubble >
+           <RestrictToRepackingRLT/>
+         </OperateOnResidueSubset>
+    </TASKOPERATIONS>
+    <FILTERS>
+    </FILTERS>
+    <MOVERS>
+        <MinMover name=minimize scorefxn=fa_talaris2014 chi=1 bb=1 type=dfpmin_armijo_nonmonotone tolerance=0.001 max_iter=500/>
+        <MutateResidue name=mutate target=%%target%% new_res=%%new_res%% preserve_atom_coords=0 />
+        <PackRotamersMover name=repack scorefxn=fa_talaris2014 task_operations=subset/>
+        <Backrub name=backrub pivot_residues = %%pivot_residues%%/>
+        <ddG name=ddg scorefxn=fa_talaris2014/>
+    </MOVERS>
+    <APPLY_TO_POSE>
+    </APPLY_TO_POSE>
+    <PROTOCOLS>
+      <Add mover_name = mutate/>
+      <Add mover_name = repack/>
+      <Add mover_name = minimize/>
+      <Add mover_name = ddg/>
+    </PROTOCOLS>
+    <OUTPUT />
+</ROSETTASCRIPTS>
