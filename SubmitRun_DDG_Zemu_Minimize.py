@@ -63,8 +63,59 @@ print 'Task id:', sge_task_id
     
 import json
 import re
-from finalize_JL import find_neighbors
-from finalize_JL import read_mutations_resfile
+
+def read_mutations_resfile(data_dir):
+    resfile = os.path.join(data_dir, 'mutations.resfile')
+    mutations = []
+    with open(resfile, 'r') as f:
+        post_start = False
+        for line in f:
+            if post_start:
+                line = line.strip()
+                pdb_resnum, chain, pikaa, mut_res = line.split()
+                mutations.append( [pdb_resnum, chain, pikaa, mut_res] )
+            elif line.startswith('start'):
+                post_start = True
+    return mutations
+
+def find_neighbors(data_dir, pdb_path, neighbor_distance = 8.0):
+    mutations = read_mutations_resfile(data_dir)
+
+    open_filename = pdb_path
+    parser = PDBParser(PERMISSIVE=1)
+
+    open_strct = parser.get_structure('Open', open_filename)
+
+    # There should only be one model in PDB file
+    num_models = 0
+    for model in open_strct.get_models():
+        num_models += 1
+    assert( num_models == 1 )
+
+    chain_list = [chain.get_id() for chain in open_strct[0].get_chains()]
+    neighbors = set()
+    for mutation in mutations:
+        res_id, chain_id, pikaa, mut_aa = mutation
+        mut_chain = str(chain_id)
+        try:
+            mut_pos = int( res_id )
+            mut_insertion_code = ' '
+        except ValueError:
+            mut_pos = int( res_id[:-1] )
+            mut_insertion_code = res_id[-1]
+
+        mut_residue = open_strct[0][mut_chain][(' ', mut_pos, mut_insertion_code)]
+        for chain in chain_list:
+            for residue in [res.get_id() for res in open_strct[0][chain].get_residues()]:
+                try:
+                    # Kyle note - might be good to do something else for consistency, since not all residues have CB
+                    dist = mut_residue['CB'] - open_strct[0][chain][residue]['CB']
+                    if dist < neighbor_distance:
+                        neighbors.add( (residue, chain) )
+                except KeyError:
+                    pass
+
+    return neighbors
 
 #Parses dataset .json file and outputs chain to move and input PDB file directory
 def json_parser():
