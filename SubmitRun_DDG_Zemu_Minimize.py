@@ -71,7 +71,7 @@ from finalize_JL import read_mutations_resfile
 def json_parser():
     
 ####asdf = open("~/ddg-zemu-runs/160315-kyleb_james-backrub-rscript/data/blank_job_dict.json")
-    asdf = open("/kortemmelab/home/james.lucas/ddg-zemu-runs/160315-kyleb_james-backrub-rscript/data/blank_job_dict.json")
+    asdf = open("/netapp/home/james.lucas/160315-kyleb_james-backrub-rscript/data/blank_job_dict.json")
     jsonfile = json.load(asdf)
     
     print jsonfile
@@ -83,7 +83,7 @@ def json_parser():
 
 #Finds neighbors within 8A and adds position and Chain information to a pandas dataframe
 def neighbors_list(pdb_filepath, pdb_file):
-    neighbors = find_neighbors("/kortemmelab/home/james.lucas/ddg-zemu-runs/160315-kyleb_james-backrub-rscript/"+pdb_filepath, "/kortemmelab/home/james.lucas/ddg-zemu-runs/160315-kyleb_james-backrub-rscript/"+pdb_file, 8)
+    neighbors = find_neighbors("/netapp/home/james.lucas/160315-kyleb_james-backrub-rscript/"+pdb_filepath, "/netapp/home/james.lucas/160315-kyleb_james-backrub-rscript/"+pdb_file, 8)
     info = pd.DataFrame(columns=('Residue', 'Chain'))
     hold = pd.DataFrame(columns=('Residue', 'Chain'))
 
@@ -107,7 +107,7 @@ def neighbors_list(pdb_filepath, pdb_file):
 
 #Reads resfile and returns mutation position+chain and type
 def resfile_stuff(pdb_filepath):
-    resfile = read_mutations_resfile("/kortemmelab/home/james.lucas/ddg-zemu-runs/160315-kyleb_james-backrub-rscript/"+pdb_filepath)
+    resfile = read_mutations_resfile("/netapp/home/james.lucas/160315-kyleb_james-backrub-rscript/"+pdb_filepath)
     for i in resfile:
         position = i[0]
         chain = i[1]
@@ -157,20 +157,20 @@ def bash(chaintomove, pdb_file):
 #Local Testing - Minimization
     arg = ['~/rosetta_src_2016.08.58479_bundle/main/source/bin/rosetta_scripts.linuxgccrelease',
            '-s',
-           '/kortemmelab/home/james.lucas/ddg-zemu-runs/160315-kyleb_james-backrub-rscript/%s/%s.pdb' %(data_dir, PDBID),
+           '/netapp/home/james.lucas/160315-kyleb_james-backrub-rscript/%s/%s.pdb' %(data_dir, PDBID),
            '-parser:protocol',
-           '/kortemmelab/home/james.lucas/DDG_BackrubProtocol_Minimize.xml',
+           '/netapp/home/james.lucas/RosettaScripts/DDG_BackrubProtocol_Minimize.xml',
            '-ignore_unrecognized_res',
            '-out:path:pdb',
-           '/kortemmelab/home/james.lucas/DDG_Myfirstrun_Output/minimized/',
+           'netapp/home/james.lucas/DDG_Myfirstrun_Output/minimized/',
            '-parser:script_vars',
            'target=%s' %(target),
            'new_res=%s' %(new_res_three),
            'pivot_residues=%s' %(pivot_residues),
            '-no_nstruct_label'
           ] 
-
-subprocess.call(arg)    
+    print PDBID
+    subprocess.call(arg)    
     
 print 'Task return code:', return_code, '\n'
 
