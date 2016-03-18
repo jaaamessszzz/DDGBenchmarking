@@ -16,6 +16,7 @@ import sys
 print "Python version:", sys.version
 print "Hostname:", socket.gethostname()
 
+from Bio.PDB import *
 from datetime import *
 import os
 import subprocess
