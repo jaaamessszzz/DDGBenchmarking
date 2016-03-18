@@ -135,25 +135,17 @@ def json_parser():
 #Finds neighbors within 8A and adds position and Chain information to a pandas dataframe
 def neighbors_list(pdb_filepath, pdb_file):
     neighbors = find_neighbors("/netapp/home/james.lucas/160315-kyleb_james-backrub-rscript/"+pdb_filepath, "/netapp/home/james.lucas/160315-kyleb_james-backrub-rscript/"+pdb_file, 8)
-    info = pd.DataFrame(columns=('Residue', 'Chain'))
-    hold = pd.DataFrame(columns=('Residue', 'Chain'))
-
+    pivotlist = ''
     for i in neighbors:
         string_parse = re.sub("[(),']",'', str(i))
         for s in string_parse.split():
             if s.isdigit():
-                hold.loc[0,'Residue'] = s
+                pivotlist = pivotlist + s
             else:
-                hold.loc[0,'Chain'] = s
-                info = info.append(hold)
-            
-    info = info.set_index('Chain')
-    info = info.sort('Residue',ascending=True)
-    pivotlist = ''
-    for indx, info in info.iterrows():
-        pivotlist = pivotlist + ',' + info['Residue'] + indx
+                pivotlist = pivotlist + s + ','
+                
     ####ADD... turn all data in info dataframe into comma delimited <resnum><chain> pairs
-    pivotlist = pivotlist[1:]
+    pivotlist = pivotlist[:-1]
     return pivotlist
 
 #Reads resfile and returns mutation position+chain and type
