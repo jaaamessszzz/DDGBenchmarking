@@ -124,8 +124,6 @@ def json_parser():
 ####asdf = open("~/ddg-zemu-runs/160315-kyleb_james-backrub-rscript/data/blank_job_dict.json")
     asdf = open("/netapp/home/james.lucas/160315-kyleb_james-backrub-rscript/data/blank_job_dict.json")
     jsonfile = json.load(asdf)
-    
-    print jsonfile
     key = sorted(jsonfile.keys())[sge_task_id]
     chaintomove = jsonfile[key]["%%chainstomove%%"]
     directory = jsonfile[key]['input_file_list'][0]
@@ -197,8 +195,8 @@ def bash(chaintomove, pdb_file):
         
 ####All the variables and stuff for printing out the bash script
     
-#Local Testing - Minimization
-    arg = ['~/rosetta_src_2016.08.58479_bundle/main/source/bin/rosetta_scripts.linuxgccrelease',
+#Cluster Usage - Minimization
+    arg = ['/netapp/home/james.lucas/rosetta_src_2016.08.58479_bundle/main/source/bin/rosetta_scripts.linuxgccrelease',
            '-s',
            '/netapp/home/james.lucas/160315-kyleb_james-backrub-rscript/%s/%s.pdb' %(data_dir, PDBID),
            '-parser:protocol',
