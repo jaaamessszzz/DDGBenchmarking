@@ -59,7 +59,7 @@ if os.environ.has_key("JOB_ID"):
 
 print 'Starting time:', time_start
 print 'Job id:', job_id
-print 'Task id:', task_id
+print 'Task id:', sge_task_id
     
 import json
 import re
