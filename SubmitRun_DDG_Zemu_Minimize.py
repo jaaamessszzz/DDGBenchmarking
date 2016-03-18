@@ -222,6 +222,10 @@ def bash(chaintomove, pdb_file):
     print PDBID
     subprocess.call(arg)    
     
+#ACTION!!!
+chaintomove, pdb_file = json_parser()
+bash(chaintomove, pdb_file)
+
 #print 'Task return code:', return_code, '\n'
 
 time_end = roundTime()
