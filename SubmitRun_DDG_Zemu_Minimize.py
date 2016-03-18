@@ -63,7 +63,6 @@ print 'Task id:', sge_task_id
     
 import json
 import re
-import pandas as pd
 from finalize_JL import find_neighbors
 from finalize_JL import read_mutations_resfile
 
