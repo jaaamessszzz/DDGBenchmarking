@@ -158,7 +158,7 @@ def resfile_stuff(pdb_filepath):
 #Prints CMD input with PDBID, associated mutation, and pivot residues
 def bash(chaintomove, pdb_file):
     #Working Directory
-    workingdir = '/netapp/home/james.lucas/DDG_Myfirstrun_Output/'
+    workingdir = '/netapp/home/james.lucas/DDG_Zemu_Backrub_Output/'
     #Removes PDB file from path, saves in variable data_dir
     pdb_file_parse = re.sub("/",' ', str(pdb_file))
     data, filenum, pdbtemp = pdb_file_parse.split()
