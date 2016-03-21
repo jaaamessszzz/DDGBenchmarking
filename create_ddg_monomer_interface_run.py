@@ -21,20 +21,13 @@ from klab.fs.fsio import write_file
 
 job_output_directory = 'job_output'
 
-
-if __name__ == '__main__':
-    assert( len(sys.argv) > 1 )
-    cfg = importlib.import_module(sys.argv[1], package=None)
-
-    prediction_set_id = cfg.prediction_set_id
-    protocol_name = cfg.protocol_name
-
-    suppress_warnings = True
-
+def main(prediction_ids = None, memory_free='3.0G', cfg = None):
     # This uses the version of Rosetta from your cluster template settings file
     settings = parse_settings.get_dict()
     rosetta_scripts_path = settings['local_rosetta_installation_path'] + '/source/bin/' + 'rosetta_scripts' + settings['local_rosetta_binary_type']
     ppi_api = get_interface_with_config_file(rosetta_scripts_path = rosetta_scripts_path, rosetta_database_path = '/home/kyleb/rosetta/working_branches/alascan/database')
+
+    t1, t2 = None, None
 
     # Read the keep_hetatm_lines optional setting
     keep_hetatm_lines = False
@@ -44,43 +37,61 @@ if __name__ == '__main__':
     try: keep_all_lines = cfg.keep_all_lines
     except: colortext.warning('Note: keep_all_lines is not specified in {0}. Defaulting to {1}.'.format(sys.argv[1], keep_all_lines))
 
-    t1, t2 = None, None
-    if not ppi_api.prediction_set_exists(prediction_set_id):
-        print 'Creating new prediction set:', prediction_set_id
-        t1 = time.time()
-        ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, allow_existing_prediction_set = False, description = cfg.prediction_set_description)
+    prediction_set_id = cfg.prediction_set_id
 
-        # Populate the prediction set with jobs from a (tagged subset of a) user dataset
-        print 'Created PredictionSet:', prediction_set_id
-        ppi_api.add_prediction_run(prediction_set_id, cfg.user_dataset_name, keep_all_lines = keep_all_lines, keep_hetatm_lines = keep_hetatm_lines, tagged_subset = cfg.tagged_subset, extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True, suppress_warnings = suppress_warnings)
-        t2 = time.time()
+    if prediction_ids == None:
+        assert( len(sys.argv) > 1 )
+        cfg = importlib.import_module(sys.argv[1], package=None)
 
-    existing_job = False
-    end_job_name  = '%s_%s' % (getpass.getuser(), prediction_set_id)
-    if not os.path.exists(job_output_directory):
-        os.makedirs(job_output_directory)
+        protocol_name = cfg.protocol_name
 
-    for d in os.listdir(job_output_directory):
-        if os.path.isdir(os.path.join(job_output_directory, d)) and end_job_name in d:
-            print 'Found existing job:', d
-            job_name = d
-            existing_job = True
-    if not existing_job:
-        job_name = '%s-%s' % (time.strftime("%y%m%d"), end_job_name)
-    
-        ppi_api.add_development_protocol_command_lines(
-            prediction_set_id, protocol_name, 'minimize_with_cst', ''
-        )
-        # 2x because bugs
-        ppi_api.add_development_protocol_command_lines(
-            prediction_set_id, protocol_name, 'minimize_with_cst', ''
-        )
+        suppress_warnings = True
 
-    output_dir = os.path.join(job_output_directory, job_name )
+        if not ppi_api.prediction_set_exists(prediction_set_id):
+            print 'Creating new prediction set:', prediction_set_id
+            t1 = time.time()
+            ppi_api.add_prediction_set(prediction_set_id, halted = True, priority = 7, allow_existing_prediction_set = False, description = cfg.prediction_set_description)
+
+            # Populate the prediction set with jobs from a (tagged subset of a) user dataset
+            print 'Created PredictionSet:', prediction_set_id
+            ppi_api.add_prediction_run(prediction_set_id, cfg.user_dataset_name, keep_all_lines = keep_all_lines, keep_hetatm_lines = keep_hetatm_lines, tagged_subset = cfg.tagged_subset, extra_rosetta_command_flags = '-ignore_zero_occupancy false -ignore_unrecognized_res', show_full_errors = True, suppress_warnings = suppress_warnings)
+            t2 = time.time()
+
+        existing_job = False
+        end_job_name  = '%s_%s' % (getpass.getuser(), prediction_set_id)
+        if not os.path.exists(job_output_directory):
+            os.makedirs(job_output_directory)
+
+        for d in os.listdir(job_output_directory):
+            if os.path.isdir(os.path.join(job_output_directory, d)) and end_job_name in d:
+                print 'Found existing job:', d
+                job_name = d
+                existing_job = True
+        if not existing_job:
+            job_name = '%s-%s' % (time.strftime("%y%m%d"), end_job_name)
+
+            ppi_api.add_development_protocol_command_lines(
+                prediction_set_id, protocol_name, 'minimize_with_cst', ''
+            )
+            # 2x because bugs
+            ppi_api.add_development_protocol_command_lines(
+                prediction_set_id, protocol_name, 'minimize_with_cst', ''
+            )
+
+        prediction_ids = sorted(ppi_api.get_prediction_ids(prediction_set_id))
+        output_dir = os.path.join(job_output_directory, job_name )
+    else:
+        # Prediction_ids passed in
+        job_name = '%s-%s_%s-rerun' % (time.strftime("%y%m%d"), getpass.getuser(), prediction_set_id)
+
+        output_dir = os.path.join(job_output_directory, job_name )
+        if os.path.isdir(output_dir):
+            shutil.rmtree(output_dir)
+        existing_job = False
 
     settings['scriptname'] = prediction_set_id + '_run'
     settings['tasks_per_process'] = 5
-    settings['mem_free'] = '3.0G'
+    settings['mem_free'] = memory_free
     settings['output_dir'] = output_dir
     settings['rosetta_args_list'] = [
         '-in:file:fullatom',
@@ -93,6 +104,7 @@ if __name__ == '__main__':
         '-ddg::sc_min_only false',
     ]
     settings['rosetta_args_list'].extend(cfg.extra_flags)
+    print settings['rosetta_args_list']
 
     # Now get run settings from database and save to pickle file
     job_dict = {}
@@ -101,7 +113,6 @@ if __name__ == '__main__':
     if not os.path.isdir(output_data_dir):
         os.makedirs(output_data_dir)
 
-    prediction_ids = sorted(ppi_api.get_prediction_ids(prediction_set_id))
     if t1 != None and t2 != None and len(prediction_ids) != 0:
         print('Time taken for {0} predictions: {1}s ({2}s per prediction).'.format(len(prediction_ids), t2-t1, (t2-t1)/len(prediction_ids)))
     print('File cache statistics:')
@@ -200,3 +211,5 @@ if __name__ == '__main__':
     else:
         print 'No tasks to process, not writing job files'
 
+if __name__ == '__main__':
+    main()
