@@ -220,6 +220,7 @@ def bash(chaintomove, pdb_file):
     outfile_path = os.path.join(workingdir, 'rosetta.out')
     rosetta_outfile = open(outfile_path, 'w')
     print 'Running RosettaScript...'
+    print arg
     rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=workingdir)
     rosetta_outfile.close()
     
