@@ -213,15 +213,17 @@ def bash(chaintomove, pdb_file):
            'target=%s' %(target),
            'new_res=%s' %(new_res_three),
            'pivot_residues=%s' %(pivot_residues),
-           '-no_nstruct_label'
+           'chain=%s' %(chain),
+           '-nstruct 100'
           ] 
     print 'Working on: %s %s%s' %(PDBID, target, new_res_three)
     
-    outfile_path = os.path.join(workingdir, 'rosetta.out')
+    outfile_path = os.path.join(workingdir+filenum, 'rosetta.out')
     rosetta_outfile = open(outfile_path, 'w')
     print 'Running RosettaScript...'
-    print arg
-    rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=workingdir)
+    rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=workingdir+filenum)
+    return_code = rosetta_process.wait()
+    print 'Task return code:', return_code, '\n'
     rosetta_outfile.close()
     
     #subprocess.call(arg)    
@@ -229,8 +231,6 @@ def bash(chaintomove, pdb_file):
 #ACTION!!!
 chaintomove, pdb_file = json_parser()
 bash(chaintomove, pdb_file)
-
-#print 'Task return code:', return_code, '\n'
 
 time_end = roundTime()
 print 'Ending time:', time_end
