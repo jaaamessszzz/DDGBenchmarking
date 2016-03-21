@@ -127,7 +127,7 @@ def json_parser():
     key = sorted(jsonfile.keys())[sge_task_id]
     chaintomove = jsonfile[key]["%%chainstomove%%"]
     directory = jsonfile[key]['input_file_list'][0]
-
+    
     return chaintomove, directory
 
 #Finds neighbors within 8A and adds position and Chain information to a pandas dataframe
@@ -157,12 +157,16 @@ def resfile_stuff(pdb_filepath):
     
 #Prints CMD input with PDBID, associated mutation, and pivot residues
 def bash(chaintomove, pdb_file):
-
+    #Working Directory
+    workingdir = '/netapp/home/james.lucas/DDG_Myfirstrun_Output/'
     #Removes PDB file from path, saves in variable data_dir
     pdb_file_parse = re.sub("/",' ', str(pdb_file))
     data, filenum, pdbtemp = pdb_file_parse.split()
     data_dir = data + "/" + filenum
     PDBID = pdbtemp[:-4]
+    
+    #Makes a folder for data dumping
+    os.mkdir(workingdir + filenum)
         
     #Dictionary: 1- to 3-letter code
     res_dict = {
@@ -203,7 +207,7 @@ def bash(chaintomove, pdb_file):
            '/netapp/home/james.lucas/RosettaScripts/DDG_BackrubProtocol_Minimize.xml',
            '-ignore_unrecognized_res',
            '-out:path:pdb',
-           '/netapp/home/james.lucas/DDG_Myfirstrun_Output/minimized',
+           workingdir + %filenum,
            '-parser:script_vars',
            'target=%s' %(target),
            'new_res=%s' %(new_res_three),
@@ -211,7 +215,13 @@ def bash(chaintomove, pdb_file):
            '-no_nstruct_label'
           ] 
     print PDBID
-    subprocess.call(arg)    
+    
+    outfile_path = os.path.join(workingdir, 'rosetta.out')
+    rosetta_outfile = open(outfile_path, 'w')
+    rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=workingdir)
+    rosetta_outfile.close()
+    
+    #subprocess.call(arg)    
     
 #ACTION!!!
 chaintomove, pdb_file = json_parser()
