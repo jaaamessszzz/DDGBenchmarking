@@ -3,7 +3,7 @@
         <fa_talaris2014 weights=talaris2014/>
     </SCOREFXNS>
     <RESIDUE_SELECTORS>
-        <Neighborhood name=bubble resnums=1-162 distance=8/>
+        <Neighborhood name=bubble resnums=%%target%% distance=8/>
     </RESIDUE_SELECTORS>
     <TASKOPERATIONS>
          <OperateOnResidueSubset name=subset selector=bubble >
@@ -14,19 +14,25 @@
     </FILTERS>
     <MOVERS>
         <MinMover name=minimize scorefxn=fa_talaris2014 chi=1 bb=1 type=dfpmin_armijo_nonmonotone tolerance=0.001 max_iter=500/>
-        <MutateResidue name=mutate target=44 new_res=SER preserve_atom_coords=0 />
+        <MutateResidue name=mutate target=%%target%% new_res=%%new_res%% preserve_atom_coords=0 />
         <PackRotamersMover name=repack scorefxn=fa_talaris2014 task_operations=subset/>
-        <Backrub name=backrub pivot_residues=41,42,43,44,45,46,47/>
+        <Backrub name=backrub pivot_residues = %%pivot_residues%%/>
         <ddG name=ddg scorefxn=fa_talaris2014/>
-        <GenericMonteCarlo name=loopbackrub mover_name=backrub scorefxn_name=fa_talaris2014 trials=100 drift=0/>
+        <SavePoseMover name=savepose restore_pose=0 reference_name=backrubpdb/>
+        <SavePoseMover name=restorepose restore_pose=1 reference_name=backrubpdb/>
     </MOVERS>
     <APPLY_TO_POSE>
     </APPLY_TO_POSE>
     <PROTOCOLS>
       <Add mover_name = minimize/>
+      <Add mover_name = backrub/>
+      <Add mover_name = savepose/>
+      <Add mover_name = repack/>
+      <Add mover_name = minimize/>
+      <Add mover_name = ddg/>
+      <Add mover_name = restorepose/>  
       <Add mover_name = mutate/>
       <Add mover_name = repack/>
-      <Add mover_name = loopbackrub/>
       <Add mover_name = minimize/>
       <Add mover_name = ddg/>
     </PROTOCOLS>
