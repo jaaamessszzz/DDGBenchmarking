@@ -166,6 +166,7 @@ def bash(chaintomove, pdb_file):
     PDBID = pdbtemp[:-4]
     
     #Makes a folder for data dumping
+    print 'Making directory %s%s...' %(workingdir, filenum)
     os.mkdir(workingdir + filenum)
         
     #Dictionary: 1- to 3-letter code
@@ -214,10 +215,11 @@ def bash(chaintomove, pdb_file):
            'pivot_residues=%s' %(pivot_residues),
            '-no_nstruct_label'
           ] 
-    print PDBID
+    print 'Working on: %s %s%s' %(PDBID, target, new_res_three)
     
     outfile_path = os.path.join(workingdir, 'rosetta.out')
     rosetta_outfile = open(outfile_path, 'w')
+    print 'Running RosettaScript...'
     rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=workingdir)
     rosetta_outfile.close()
     
