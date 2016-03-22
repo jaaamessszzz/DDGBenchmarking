@@ -124,7 +124,7 @@ def json_parser():
 ####asdf = open("~/ddg-zemu-runs/160315-kyleb_james-backrub-rscript/data/blank_job_dict.json")
     asdf = open("/netapp/home/james.lucas/160315-kyleb_james-backrub-rscript/data/blank_job_dict.json")
     jsonfile = json.load(asdf)
-    key = sorted(jsonfile.keys())[sge_task_id]
+    key = sorted(jsonfile.keys())[sge_task_id-1]
     chaintomove = jsonfile[key]["%%chainstomove%%"]
     directory = jsonfile[key]['input_file_list'][0]
     
