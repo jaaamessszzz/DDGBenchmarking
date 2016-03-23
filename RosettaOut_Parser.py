@@ -48,8 +48,12 @@ def parse_rosetta_out(workingdir):
                         structID = structID +1
                 else:
                     continue
+            print str(i) + ": " + str(structID - 1) + " structures completed"
     return fattydict
 
-my_working_directory = '/Users/jameslucas/Kortemme_Rotation/output/'
+my_working_directory = '/netapp/home/james.lucas/DDG_Zemu_Backrub_Output'
 parsed_dict = parse_rosetta_out(my_working_directory)
-print parsed_dict
+os.chdir(my_working_directory)
+
+open("DDG_Data.json", "w").write(
+    json.dumps(parsed_dict, sort_keys=True,separators=(',', ': ')))
