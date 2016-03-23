@@ -30,6 +30,7 @@ def parse_rosetta_out(workingdir):
                             currentline = currentline + 1
                         sumscore = linecache.getline(filename, line[0] + linecounter + 2)
                         parsed_sumscore = sumscore.split()
+                        print parsed_sumscore
                         fattydict[i]['WT_' + str(structID)][parsed_sumscore[0]] = parsed_sumscore[2]
                         counter = counter + 1
                     else:
@@ -44,6 +45,7 @@ def parse_rosetta_out(workingdir):
                             currentline = currentline + 1
                         sumscore = linecache.getline(filename, line[0] + linecounter + 2)
                         parsed_sumscore = sumscore.split()
+                        print parsed_sumscore
                         fattydict[i]['Mutant_' + str(structID)][parsed_sumscore[0]] = parsed_sumscore[2]
                         counter = counter + 1
                         structID = structID +1
