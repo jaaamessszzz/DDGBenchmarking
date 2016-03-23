@@ -3,6 +3,7 @@
 import os
 import shutil
 import json
+import re
 
 jsoninfo = json.load(open("/netapp/home/james.lucas/PDB_REDO/blank_job_dict_updated.json"))
 source = '/netapp/home/james.lucas/160322-james-backrub-rscript-full/data/'
