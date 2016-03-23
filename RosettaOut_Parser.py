@@ -68,7 +68,7 @@ def parse_rosetta_out(workingdir):
     return fattydict, unfinished
 
 my_working_directory = '/netapp/home/james.lucas/DDG_Zemu_Backrub_Output/'
-parsed_dict, unfinised_jobs = parse_rosetta_out(my_working_directory)
+parsed_dict, unfinished_jobs = parse_rosetta_out(my_working_directory)
 
 print unfinished_jobs
 os.chdir(my_working_directory)
