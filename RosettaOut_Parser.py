@@ -52,7 +52,7 @@ def parse_rosetta_out(workingdir):
             print str(i) + ": " + str(structID - 1) + " structures completed"
     return fattydict
 
-my_working_directory = '/netapp/home/james.lucas/DDG_Zemu_Backrub_Output'
+my_working_directory = '/netapp/home/james.lucas/DDG_Zemu_Backrub_Output/'
 parsed_dict = parse_rosetta_out(my_working_directory)
 os.chdir(my_working_directory)
 
