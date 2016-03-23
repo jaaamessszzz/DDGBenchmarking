@@ -10,6 +10,7 @@ import json
 
 def parse_rosetta_out(workingdir):
     fattydict = {}
+    unfinished = {}
     for i in os.listdir(workingdir):
         if os.path.isdir(workingdir + i):
             print i
@@ -57,10 +58,19 @@ def parse_rosetta_out(workingdir):
                 else:
                     continue
             print str(i) + ": " + str(structID - 1) + " structures completed"
-    return fattydict
+            
+            #Keeps track of unfinished jobs
+            if structID - 1 < 100:
+                unfinished[i] = structID - 1
+            else:
+                continue
+                
+    return fattydict, unfinished
 
 my_working_directory = '/netapp/home/james.lucas/DDG_Zemu_Backrub_Output/'
-parsed_dict = parse_rosetta_out(my_working_directory)
+parsed_dict, unfinised_jobs = parse_rosetta_out(my_working_directory)
+
+print unfinished_jobs
 os.chdir(my_working_directory)
 
 open("DDG_Data.json", "w").write(
