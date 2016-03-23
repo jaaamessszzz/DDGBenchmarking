@@ -6,6 +6,7 @@
 
 import os
 import linecache
+import json
 
 def parse_rosetta_out(workingdir):
     fattydict = {}
