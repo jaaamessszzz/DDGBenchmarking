@@ -39,9 +39,8 @@ def parse_rosetta_out(workingdir):
                         while linecounter < 15:
                             scores = linecache.getline(filename, currentline)
                             parsed_scores = scores.split()
-                            print parsed_scores[0]
-                            print parsed_scores[1]
-                            fattydict[i]['Mutant_' + str(structID)][parsed_scores[0]] = parsed_scores[1]
+                            print parsed_scores
+#                            fattydict[i]['Mutant_' + str(structID)][parsed_scores[0]] = parsed_scores[1]
                             linecounter = linecounter + 1
                             currentline = currentline + 1
                         sumscore = linecache.getline(filename, line[0] + 17)
