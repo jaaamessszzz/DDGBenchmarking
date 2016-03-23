@@ -12,6 +12,7 @@ def parse_rosetta_out(workingdir):
     fattydict = {}
     for i in os.listdir(workingdir):
         if os.path.isdir(workingdir + i):
+            print i
             fattydict[i] = {}
             structID = 1
             counter = 0
