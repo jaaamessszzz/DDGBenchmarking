@@ -25,6 +25,7 @@ def parse_rosetta_out(workingdir):
                         while linecache.getline(filename, currentline).strip() != '-----------------------------------------':
                             scores = linecache.getline(filename, currentline)
                             parsed_scores = scores.split()
+                            print parsed_scores
                             fattydict[i]['WT_' + str(structID)][parsed_scores[0]] = parsed_scores[1]
                             linecounter = linecounter + 1
                             currentline = currentline + 1
@@ -40,6 +41,7 @@ def parse_rosetta_out(workingdir):
                         while linecache.getline(filename, currentline).strip() != '-----------------------------------------':
                             scores = linecache.getline(filename, currentline)
                             parsed_scores = scores.split()
+                            print parsed_scores
                             fattydict[i]['Mutant_' + str(structID)][parsed_scores[0]] = parsed_scores[1]
                             linecounter = linecounter + 1
                             currentline = currentline + 1
