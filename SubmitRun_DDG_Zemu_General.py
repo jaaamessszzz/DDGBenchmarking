@@ -161,7 +161,6 @@ def bash(chaintomove, inputdir, outputdir):
     pivot_residues = neighbors_list(filenum_dir, inputdir)
     resfile_relpath = os.path.relpath(filenum_dir, predIDoutdir)
     pdb_relpath = os.path.relpath(inputdir, predIDoutdir)
-    print pdb_relpath
     
     targetlist = ''
     for i in target:
@@ -174,7 +173,7 @@ def bash(chaintomove, inputdir, outputdir):
            '-s',
            pdb_relpath,
            '-parser:protocol',
-           'DDG_Test.xml',
+           '../../DDG_Test.xml',
            '-ignore_unrecognized_res',
            '-parser:script_vars',
            'target=%s' %(targetlist),
