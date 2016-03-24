@@ -5,8 +5,8 @@
 #$ -l h_rt=240:00:00
 #$ -t 1-850
 #$ -l arch=linux-x64
-#$ -l mem_free=1.1G
-#$ -l netapp=1G,scratch=1G
+#$ -l mem_free=8G
+#$ -l netapp=2G,scratch=1G
 
 # Make sure you set task number above to be correct!!!
 
@@ -119,8 +119,8 @@ def find_neighbors(filenum_dir, pdb_path, neighbor_distance = 8.0):
     return neighbors
 
 #Parses dataset .json file and outputs chain to move and input PDB file directory
-def json_parser(workingdir):
-    jsonload = open(workingdir + "/data/blank_job_dict.json")
+def json_parser():
+    jsonload = open("data/blank_job_dict.json")
     jsonfile = json.load(jsonload)
     key = sorted(jsonfile.keys())[sge_task_id-1]
     chaintomove = jsonfile[key]["%%chainstomove%%"]
@@ -129,8 +129,8 @@ def json_parser(workingdir):
     return chaintomove, inputdir
 
 #Finds neighbors within 8A and adds position and Chain information to a pandas dataframe
-def neighbors_list(pdb_filepath, pdb_file, workingdir):
-    neighbors = find_neighbors(workingdir + pdb_filepath, workingdir + pdb_file, 8)
+def neighbors_list(pdb_filepath, pdb_file):
+    neighbors = find_neighbors(pdb_filepath, pdb_file, 8)
     pivotlist = ''
     for i in neighbors:
         string_parse = re.sub("[(),']",'', str(i))
@@ -145,17 +145,15 @@ def neighbors_list(pdb_filepath, pdb_file, workingdir):
     return pivotlist
 
 #Reads resfile and returns mutation position+chain and type
-def resfile_stuff(pdb_filepath, workingdir):
-    resfile = read_mutations_resfile(workingdir + pdb_filepath)
+def resfile_stuff(pdb_filepath):
+    resfile = read_mutations_resfile(pdb_filepath)
     position = []
-    chain = []
     for i in resfile:
         position.append(i[0])
-        chain.append(i[1])
-    return position, chain
+    return position
     
 #Prints CMD input with PDBID, associated mutation, and pivot residues
-def bash(chaintomove, workingdir, inputdir, outputdir):
+def bash(chaintomove, inputdir, outputdir):
     #Removes PDB file from path, saves in variable filenum_dir
     inputdir_parse = re.sub("/",' ', str(inputdir))
     data, filenum, pdbtemp = inputdir_parse.split()
@@ -167,9 +165,10 @@ def bash(chaintomove, workingdir, inputdir, outputdir):
     os.mkdir(outputdir + filenum)
   
     #Assigns function output to variables for bash input (pivot_residues, target, resfile_relpath)
-    target, chain = resfile_stuff(data_dir)
+    target = resfile_stuff(data_dir)
     pivot_residues = neighbors_list(filenum_dir, inputdir)
-    resfile_relpath = os.path.relpath(workingdir + filenum_dir)
+    resfile_relpath = os.path.relpath(filenum_dir, outputdir+filenum)
+    pdb_relpath = os.path.relpath(inputdir, outputdir+filenum)
     
     targetlist = ''
     for i in target:
@@ -178,17 +177,17 @@ def bash(chaintomove, workingdir, inputdir, outputdir):
     
     arg = ['/netapp/home/james.lucas/rosetta_src_2016.08.58479_bundle/main/source/bin/rosetta_scripts.linuxgccrelease',
            '-s',
-           workingdir + inputdir,
+           pdb_relpath,
            '-parser:protocol',
-           workingdir + 'DDG_Test.xml',
+           'DDG_Test.xml',
            '-ignore_unrecognized_res',
            '-out:path:pdb',
            outputdir + filenum,
            '-parser:script_vars',
            'target=%s' %(targetlist),
-           'resfile_relpath=%s' %(resfile_relpath)
+           'resfile_relpath=%s' %(resfile_relpath),
            'pivot_residues=%s' %(pivot_residues),
-           'chain=%s' %(chain),
+           'chain=%s' %(chaintomove),
            '-nstruct 100'
           ] 
     print 'Working on: %s %s' %(filenum, PDBID)
@@ -202,12 +201,11 @@ def bash(chaintomove, workingdir, inputdir, outputdir):
     rosetta_outfile.close()    
 
 #Define paths
-workingdir = '/netapp/home/james.lucas/160322-james-backrub-rscript-full/'
-outputdir = workingdir + 'output/'
+outputdir = 'output/'
 
 #ACTION!!!
-chaintomove, inputdir = json_parser(workingdir)
-bash(chaintomove, workingdir, inputdir, outputdir)
+chaintomove, inputdir = json_parser()
+bash(chaintomove, inputdir, outp utdir)
 
 time_end = roundTime()
 print 'Ending time:', time_end
@@ -224,3 +222,9 @@ for line in out.split(os.linesep):
         ram_usage = float(m.group(1))
         ram_usage_type = m.group(2)
         print 'Max virtual memory usage: %.1f%s' % (ram_usage, ram_usage_type)
+        
+error_out = 'SubmitRun_DDG_Zemu_General.py.e' + job_id + '.' + sge_task_id
+output_out = 'SubmitRun_DDG_Zemu_General.py.o' + job_id + '.' + sge_task_id
+
+os.shutil.move(error_out , outputdir + filenum + '/' + error_out)
+os.shutil.move(output_out , outputdir + filenum + '/' + output_out)
