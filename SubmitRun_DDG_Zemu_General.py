@@ -27,6 +27,7 @@ import inspect
 import gzip
 import tempfile
 import re
+import json
 
 def roundTime(dt=None, roundTo=1):
     """
@@ -61,9 +62,6 @@ if os.environ.has_key("JOB_ID"):
 print 'Starting time:', time_start
 print 'Job id:', job_id
 print 'Task id:', sge_task_id
-    
-import json
-import re
 
 def read_mutations_resfile(filenum_dir):
     resfile = os.path.join(filenum_dir, 'mutations.resfile')
@@ -132,16 +130,8 @@ def json_parser():
 def neighbors_list(pdb_filepath, pdb_file):
     neighbors = find_neighbors(pdb_filepath, pdb_file, 8)
     pivotlist = ''
-    print neighbors
     for i in neighbors:
-        string_parse = re.sub("[(),']",'', str(i))
-        for s in string_parse.split():
-            if s.isdigit():
-                pivotlist = pivotlist + s
-            else:
-                pivotlist = pivotlist + s + ','
-                
-    ####ADD... turn all data in info dataframe into comma delimited <resnum><chain> pairs
+        pivotlist = pivotlist + i[0][1] + i[1] + ','
     pivotlist = pivotlist[:-1]
     return pivotlist
 
@@ -177,6 +167,8 @@ def bash(chaintomove, inputdir, outputdir):
         targetlist = targetlist + i + ','
     targetlist = targetlist[:-1]
     
+    print os.getcwd()
+    
     arg = ['/netapp/home/james.lucas/rosetta_src_2016.08.58479_bundle/main/source/bin/rosetta_scripts.linuxgccrelease',
            '-s',
            pdb_relpath,
@@ -201,13 +193,16 @@ def bash(chaintomove, inputdir, outputdir):
     return_code = rosetta_process.wait()
     print 'Task return code:', return_code, '\n'
     rosetta_outfile.close()    
+    
+    return filenum
 
 #Define paths
 outputdir = 'output/'
 
 #ACTION!!!
 chaintomove, inputdir = json_parser()
-bash(chaintomove, inputdir, outputdir)
+filenum = bash(chaintomove, inputdir, outputdir)
+
 
 time_end = roundTime()
 print 'Ending time:', time_end
