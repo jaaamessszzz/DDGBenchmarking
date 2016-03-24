@@ -150,16 +150,17 @@ def bash(chaintomove, inputdir, outputdir):
     data, filenum, pdbtemp = inputdir_parse.split()
     filenum_dir = data + "/" + filenum
     PDBID = pdbtemp[:-4]
+    predIDoutdir = outputdir + filenum
     
     #Makes a folder for data dumping
     print 'Making directory %s%s...' %(outputdir, filenum)
-    os.makedirs(outputdir + filenum)
+    os.makedirs(predIDoutdir)
   
     #Assigns function output to variables for bash input (pivot_residues, target, resfile_relpath)
     target = resfile_stuff(filenum_dir)
     pivot_residues = neighbors_list(filenum_dir, inputdir)
-    resfile_relpath = os.path.relpath(filenum_dir, outputdir+filenum)
-    pdb_relpath = os.path.relpath(inputdir, outputdir+filenum)
+    resfile_relpath = os.path.relpath(filenum_dir, predIDoutdir)
+    pdb_relpath = os.path.relpath(inputdir, predIDoutdir)
     print pdb_relpath
     
     targetlist = ''
@@ -173,23 +174,22 @@ def bash(chaintomove, inputdir, outputdir):
            '-s',
            pdb_relpath,
            '-parser:protocol',
-           os.getcwd() + '/DDG_Test.xml',
+           'DDG_Test.xml',
            '-ignore_unrecognized_res',
-           '-out:path:pdb',
-           outputdir + filenum,
            '-parser:script_vars',
            'target=%s' %(targetlist),
            'resfile_relpath=%s' %(resfile_relpath),
            'pivot_residues=%s' %(pivot_residues),
            'chain=%s' %(chaintomove),
            '-nstruct 100'
-          ] 
+          ]
+    
     print 'Working on: %s %s' %(filenum, PDBID)
     
-    outfile_path = os.path.join(outputdir+filenum, 'rosetta.out')
+    outfile_path = os.path.join(predIDoutdir, 'rosetta.out')
     rosetta_outfile = open(outfile_path, 'w')
     print 'Running RosettaScript...'
-    rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=outputdir+filenum)
+    rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=predIDoutdir)
     return_code = rosetta_process.wait()
     print 'Task return code:', return_code, '\n'
     rosetta_outfile.close()    
