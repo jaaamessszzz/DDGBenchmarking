@@ -162,7 +162,7 @@ def bash(chaintomove, inputdir, outputdir):
     
     #Makes a folder for data dumping
     print 'Making directory %s%s...' %(outputdir, filenum)
-    os.mkdir(outputdir + filenum)
+    os.makedirs(outputdir + filenum)
   
     #Assigns function output to variables for bash input (pivot_residues, target, resfile_relpath)
     target = resfile_stuff(data_dir)
