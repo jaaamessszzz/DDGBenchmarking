@@ -14,7 +14,6 @@
     <FILTERS>
     </FILTERS>
     <MOVERS>
-        <GenericMonteCarlo name=MC mover_name=backrub scorefxn_name=fa_talaris2014 trials=1000 temperature=1.6 recover_low=0 preapply=0/>
         <MinMover name=minimize scorefxn=fa_talaris2014 chi=1 bb=1 type=dfpmin_armijo_nonmonotone tolerance=0.001 max_iter=500/>
         <PackRotamersMover name=repack scorefxn=fa_talaris2014 task_operations=subset/>
         <PackRotamersMover name=mutate scorefxn=fa_talaris2014 task_operations=readres/>
@@ -22,12 +21,13 @@
         <ddG name=ddg scorefxn=fa_talaris2014 chain_name="%%chain%%"/>
         <SavePoseMover name=savepose restore_pose=0 reference_name=backrubpdb/>
         <SavePoseMover name=restorepose restore_pose=1 reference_name=backrubpdb/>
+        <GenericMonteCarlo name=montecarlo mover_name=backrub scorefxn_name=fa_talaris2014 trials=1000 temperature=1.6 recover_low=0 preapply=0/>
     </MOVERS>
     <APPLY_TO_POSE>
     </APPLY_TO_POSE>
     <PROTOCOLS>
       <Add mover_name = minimize/>
-      <Add mover_name = MC/>
+      <Add mover_name = montecarlo/>
       <Add mover_name = savepose/>
       <Add mover_name = repack/>
       <Add mover_name = minimize/>
