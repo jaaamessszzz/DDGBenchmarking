@@ -131,7 +131,7 @@ def neighbors_list(pdb_filepath, pdb_file):
     neighbors = find_neighbors(pdb_filepath, pdb_file, 8)
     pivotlist = ''
     for i in neighbors:
-        pivotlist = pivotlist + i[0][1] + i[1] + ','
+        pivotlist = pivotlist + str(i[0][1]) + str(i[1]) + ','
     pivotlist = pivotlist[:-1]
     return pivotlist
 
