@@ -165,7 +165,7 @@ def bash(chaintomove, inputdir, outputdir):
     os.makedirs(outputdir + filenum)
   
     #Assigns function output to variables for bash input (pivot_residues, target, resfile_relpath)
-    target = resfile_stuff(data_dir)
+    target = resfile_stuff(filenum_dir)
     pivot_residues = neighbors_list(filenum_dir, inputdir)
     resfile_relpath = os.path.relpath(filenum_dir, outputdir+filenum)
     pdb_relpath = os.path.relpath(inputdir, outputdir+filenum)
