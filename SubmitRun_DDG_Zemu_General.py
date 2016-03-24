@@ -170,6 +170,7 @@ def bash(chaintomove, inputdir, outputdir):
     resfile_relpath = os.path.relpath(filenum_dir, outputdir+filenum)
     pdb_relpath = os.path.relpath(inputdir, outputdir+filenum)
     
+    
     targetlist = ''
     for i in target:
         targetlist = targetlist + i + ','
@@ -179,7 +180,7 @@ def bash(chaintomove, inputdir, outputdir):
            '-s',
            pdb_relpath,
            '-parser:protocol',
-           'DDG_Test.xml',
+           os.getcwd() + '/DDG_Test.xml',
            '-ignore_unrecognized_res',
            '-out:path:pdb',
            outputdir + filenum,
@@ -223,8 +224,8 @@ for line in out.split(os.linesep):
         ram_usage_type = m.group(2)
         print 'Max virtual memory usage: %.1f%s' % (ram_usage, ram_usage_type)
         
-error_out = 'SubmitRun_DDG_Zemu_General.py.e' + job_id + '.' + sge_task_id
-output_out = 'SubmitRun_DDG_Zemu_General.py.o' + job_id + '.' + sge_task_id
+error_out = 'SubmitRun_DDG_Zemu_General.py.e' + str(job_id) + '.' + str(sge_task_id)
+output_out = 'SubmitRun_DDG_Zemu_General.py.o' + str(job_id) + '.' + str(sge_task_id)
 
 os.shutil.move(error_out , outputdir + filenum)
 os.shutil.move(output_out , outputdir + filenum)
