@@ -132,6 +132,7 @@ def json_parser():
 def neighbors_list(pdb_filepath, pdb_file):
     neighbors = find_neighbors(pdb_filepath, pdb_file, 8)
     pivotlist = ''
+    print neighbors
     for i in neighbors:
         string_parse = re.sub("[(),']",'', str(i))
         for s in string_parse.split():
@@ -169,7 +170,7 @@ def bash(chaintomove, inputdir, outputdir):
     pivot_residues = neighbors_list(filenum_dir, inputdir)
     resfile_relpath = os.path.relpath(filenum_dir, outputdir+filenum)
     pdb_relpath = os.path.relpath(inputdir, outputdir+filenum)
-    
+    print pdb_relpath
     
     targetlist = ''
     for i in target:
@@ -227,5 +228,5 @@ for line in out.split(os.linesep):
 error_out = 'SubmitRun_DDG_Zemu_General.py.e' + str(job_id) + '.' + str(sge_task_id)
 output_out = 'SubmitRun_DDG_Zemu_General.py.o' + str(job_id) + '.' + str(sge_task_id)
 
-os.shutil.move(error_out , outputdir + filenum)
-os.shutil.move(output_out , outputdir + filenum)
+shutil.move(error_out , outputdir + filenum)
+shutil.move(output_out , outputdir + filenum)
