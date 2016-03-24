@@ -205,7 +205,7 @@ outputdir = 'output/'
 
 #ACTION!!!
 chaintomove, inputdir = json_parser()
-bash(chaintomove, inputdir, outp utdir)
+bash(chaintomove, inputdir, outputdir)
 
 time_end = roundTime()
 print 'Ending time:', time_end
@@ -226,5 +226,5 @@ for line in out.split(os.linesep):
 error_out = 'SubmitRun_DDG_Zemu_General.py.e' + job_id + '.' + sge_task_id
 output_out = 'SubmitRun_DDG_Zemu_General.py.o' + job_id + '.' + sge_task_id
 
-os.shutil.move(error_out , outputdir + filenum + '/' + error_out)
-os.shutil.move(output_out , outputdir + filenum + '/' + output_out)
+os.shutil.move(error_out , outputdir + filenum)
+os.shutil.move(output_out , outputdir + filenum)
