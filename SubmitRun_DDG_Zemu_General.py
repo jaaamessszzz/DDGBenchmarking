@@ -126,7 +126,7 @@ def json_parser():
     
     return chaintomove, inputdir
 
-#Finds neighbors within 8A and adds position and Chain information to a pandas dataframe
+#Finds neighbors within 8A and adds position and Chain information to a list
 def neighbors_list(pdb_filepath, pdb_file):
     neighbors = find_neighbors(pdb_filepath, pdb_file, 8)
     pivotlist = ''
@@ -140,7 +140,7 @@ def resfile_stuff(pdb_filepath):
     resfile = read_mutations_resfile(pdb_filepath)
     position = []
     for i in resfile:
-        position.append(i[0])
+        position.append(i[0] + i[1])
     return position
     
 #Prints CMD input with PDBID, associated mutation, and pivot residues
