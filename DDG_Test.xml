@@ -2,15 +2,12 @@
     <SCOREFXNS>
         <fa_talaris2014 weights=talaris2014/>
     </SCOREFXNS>
-    <TASKOPERATIONS>
-        <ReadResfile name=readres filename="%%resfile_relpath%%/mutations_repack.resfile"/>
-    </TASKOPERATIONS>
     <RESIDUE_SELECTORS>
-        <Task name=resselector packable=1 task_operations=readres/>
-        <Neighborhood name=bubble selector=resselector distance=8/>
+        <Neighborhood name=bubble resnums=8 distance=8/>
         <Not name=everythingelse selector=bubble/>
     </RESIDUE_SELECTORS>
     <TASKOPERATIONS>
+        <ReadResfile name=readres filename="%%resfile_relpath%%/mutations_repack.resfile"/>
         <OperateOnResidueSubset name=repackonly selector=bubble>
             <RestrictToRepackingRLT/>
         </OperateOnResidueSubset>
