@@ -21,8 +21,8 @@
     </FILTERS>
     <MOVERS>
         <MinMover name=minimize scorefxn=fa_talaris2014 chi=1 bb=1 type=dfpmin_armijo_nonmonotone tolerance=0.001 max_iter=500/>
-        <PackRotamersMover name=repack scorefxn=fa_talaris2014 task_operations=repackonly,norepack/>
-        <PackRotamersMover name=mutate scorefxn=fa_talaris2014 task_operations=readres,norepack/>
+        <PackRotamersMover name=repack scorefxn=fa_talaris2014 task_operations="repackonly,norepack"/>
+        <PackRotamersMover name=mutate scorefxn=fa_talaris2014 task_operations="readres,norepack"/>
         <Backrub name=backrub pivot_residues="%%pivot_residues%%"/>
         <ddG name=ddg scorefxn=fa_talaris2014 chain_name="%%chain%%"/>
         <SavePoseMover name=savepose restore_pose=0 reference_name=backrubpdb/>
