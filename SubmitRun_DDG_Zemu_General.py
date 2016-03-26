@@ -5,7 +5,7 @@
 #$ -l h_rt=240:00:00
 #$ -t 1-850
 #$ -l arch=linux-x64
-#$ -l mem_free=8G
+#$ -l mem_free=4G
 #$ -l netapp=2G,scratch=1G
 
 # Make sure you set task number above to be correct!!!
@@ -64,7 +64,7 @@ print 'Job id:', job_id
 print 'Task id:', sge_task_id
 
 def read_mutations_resfile(filenum_dir):
-    resfile = os.path.join(filenum_dir, 'mutations.resfile')
+    resfile = os.path.join(filenum_dir, 'mutations_repack.resfile')
     mutations = []
     with open(resfile, 'r') as f:
         post_start = False
