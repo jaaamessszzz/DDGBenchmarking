@@ -176,7 +176,6 @@ def bash(chaintomove, inputdir, outputdir):
            '../../DDG_Test.xml',
            '-ignore_unrecognized_res',
            '-parser:script_vars',
-           'target=%s' %(targetlist),
            'resfile_relpath=%s' %(resfile_relpath),
            'pivot_residues=%s' %(pivot_residues),
            'chain=%s' %(chaintomove),
