@@ -169,11 +169,11 @@ def bash(chaintomove, inputdir, outputdir):
     
     print os.getcwd()
     
-    arg = ['/netapp/home/james.lucas/rosetta_src_2016.08.58479_bundle/main/source/bin/rosetta_scripts.linuxgccrelease',
+    arg = ['/netapp/home/james.lucas/Rosetta/main/source/bin/rosetta_scripts.linuxgccrelease',
            '-s',
            pdb_relpath,
            '-parser:protocol',
-           '../../DDG_Test.xml',
+           '../../RosettaScripts/DDG_Test.xml',
            '-ignore_unrecognized_res',
            '-parser:script_vars',
            'resfile_relpath=%s' %(resfile_relpath),
