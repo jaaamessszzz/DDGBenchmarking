@@ -1,0 +1,49 @@
+<ROSETTASCRIPTS>
+    <SCOREFXNS>
+        <fa_talaris2014 weights=talaris2014/>
+    </SCOREFXNS>
+    <TASKOPERATIONS>
+        <ReadResfile name=readres filename="%%resfile_relpath%%/mutations_repack.resfile"/>
+    </TASKOPERATIONS>
+    <RESIDUE_SELECTORS>
+        <Task name=resselector packable=1 task_operations=readres/>
+        <Neighborhood name=bubble selector=resselector distance=8/>
+        <Not name=everythingelse selector=bubble/>
+    </RESIDUE_SELECTORS>
+    <TASKOPERATIONS>
+        <OperateOnResidueSubset name=repackonly selector=bubble>
+            <RestrictToRepackingRLT/>
+        </OperateOnResidueSubset>
+        <OperateOnResidueSubset name=norepack selector=everythingelse>
+            <PreventRepackingRLT/>
+        </OperateOnResidueSubset>
+    </TASKOPERATIONS>
+    <FILTERS>
+    </FILTERS>
+    <MOVERS>
+        <MinMover name=minimize scorefxn=fa_talaris2014 chi=1 bb=1 type=dfpmin_armijo_nonmonotone tolerance=0.001 max_iter=500/>
+        <PackRotamersMover name=repack scorefxn=fa_talaris2014 task_operations="repackonly,norepack"/>
+        <PackRotamersMover name=mutate scorefxn=fa_talaris2014 task_operations="readres,norepack"/>
+        <Backrub name=backrub pivot_residues="%%pivot_residues%%"/>
+        <ddG name=ddg scorefxn=fa_talaris2014 chain_name="%%chain%%"/>
+        <SavePoseMover name=savepose restore_pose=0 reference_name=backrubpdb/>
+        <SavePoseMover name=restorepose restore_pose=1 reference_name=backrubpdb/>
+        <GenericMonteCarlo name=montecarlo mover_name=backrub scorefxn_name=fa_talaris2014 trials=1000 temperature=1.6 recover_low=0 preapply=0/>
+    </MOVERS>
+    <APPLY_TO_POSE>
+    </APPLY_TO_POSE>
+    <PROTOCOLS>
+      <Add mover_name = minimize/>
+      <Add mover_name = montecarlo/>
+      <Add mover_name = savepose/>
+      <Add mover_name = repack/>
+      <Add mover_name = minimize/>
+      <Add mover_name = ddg/>
+      <Add mover_name = restorepose/>
+      <Add mover_name = mutate/>
+      <Add mover_name = repack/>
+      <Add mover_name = minimize/>
+      <Add mover_name = ddg/>
+    </PROTOCOLS>
+    <OUTPUT />
+</ROSETTASCRIPTS>
