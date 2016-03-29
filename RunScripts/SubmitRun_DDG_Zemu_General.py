@@ -3,7 +3,7 @@
 #$ -cwd
 #$ -r yes
 #$ -l h_rt=240:00:00
-#$ -t 1-850
+#$ -t 1-1240
 #$ -l arch=linux-x64
 #$ -l mem_free=4.5G
 #$ -l netapp=2G,scratch=1G
