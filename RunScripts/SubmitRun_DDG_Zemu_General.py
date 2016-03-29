@@ -173,7 +173,7 @@ def bash(chaintomove, inputdir, outputdir):
            '-s',
            pdb_relpath,
            '-parser:protocol',
-           '../../RosettaScripts/DDG_Test.xml',
+           '../../../RosettaScripts/DDG_Test.xml',
            '-ignore_unrecognized_res',
            '-parser:script_vars',
            'resfile_relpath=%s' %(resfile_relpath),
