@@ -5,7 +5,7 @@
 #$ -l h_rt=240:00:00
 #$ -t 1-1240
 #$ -l arch=linux-x64
-#$ -l mem_free=4.5G
+#$ -l mem_free=1.9G
 #$ -l netapp=2G,scratch=1G
 
 # Make sure you set task number above to be correct!!!
