@@ -5,10 +5,10 @@ import shutil
 import json
 import re
 
-jsoninfo = json.load(open("/netapp/home/james.lucas/PDB_REDO/blank_job_dict_updated.json"))
+jsoninfo = json.load(open("/netapp/home/james.lucas/PDB_REDO_Stripped/blank_job_dict_updated.json"))
 source = '/netapp/home/james.lucas/160322-james-backrub-rscript-full/data/'
 dest = '/netapp/home/james.lucas/Zemu-PDB_REDO_Dataset/data/'
-PDB_REDO = '/netapp/home/james.lucas/PDB_REDO/'
+PDB_REDO = '/netapp/home/james.lucas/PDB_REDO_Stripped/'
 for i in jsoninfo:
     parsed = re.sub("/", ' ', jsoninfo[i]["input_file_list"][0])
     data, filenum, pdbfile = parsed.split()
