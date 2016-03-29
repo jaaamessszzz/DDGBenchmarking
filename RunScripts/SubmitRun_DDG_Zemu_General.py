@@ -5,7 +5,7 @@
 #$ -l h_rt=240:00:00
 #$ -t 1-850
 #$ -l arch=linux-x64
-#$ -l mem_free=4G
+#$ -l mem_free=4.5G
 #$ -l netapp=2G,scratch=1G
 
 # Make sure you set task number above to be correct!!!
@@ -187,7 +187,11 @@ def bash(chaintomove, inputdir, outputdir):
     outfile_path = os.path.join(predIDoutdir, 'rosetta.out')
     rosetta_outfile = open(outfile_path, 'w')
     print 'Running RosettaScript...'
-    rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=predIDoutdir)
+    try:
+        rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=predIDoutdir)
+    except OSError:
+        print arg, rosetta_outfile, predIDoutdir
+        raise
     return_code = rosetta_process.wait()
     print 'Task return code:', return_code, '\n'
     rosetta_outfile.close()    
