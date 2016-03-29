@@ -28,7 +28,7 @@
         <ddG name=ddg scorefxn=fa_talaris2014 chain_name="%%chain%%"/>
         <SavePoseMover name=savepose restore_pose=0 reference_name=backrubpdb/>
         <SavePoseMover name=restorepose restore_pose=1 reference_name=backrubpdb/>
-        <GenericMonteCarlo name=montecarlo mover_name=backrub scorefxn_name=fa_talaris2014 trials=1000 temperature=1.6 recover_low=0 preapply=0/>
+        <GenericMonteCarlo name=montecarlo mover_name=backrub scorefxn_name=fa_talaris2014 trials=50000 temperature=1.6 recover_low=0 preapply=0/>
     </MOVERS>
     <APPLY_TO_POSE>
     </APPLY_TO_POSE>
