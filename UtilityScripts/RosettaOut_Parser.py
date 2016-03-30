@@ -13,7 +13,6 @@ def parse_rosetta_out(workingdir):
     unfinished = {}
     for i in os.listdir(workingdir):
         if os.path.isdir(workingdir + i):
-            print i
             fattydict[i] = {}
             structID = 1
             counter = 0
@@ -52,9 +51,12 @@ def parse_rosetta_out(workingdir):
                             parsed_sumscore = sumscore.split()
                             fattydict[i]['Mutant_' + str(structID)][parsed_sumscore[0]] = parsed_sumscore[2]
                             counter = counter + 1
-                            structID = structID +1
                         except:
                             print "Oops, something went wrong here..."
+                elif line[1].find("reported success in") > 1:
+                    timeline = line[1].split()
+                    fattydict[i]['Runtime_' + str(structID)] = timeline[5]
+                    structID = structID +1
                 else:
                     continue
             print str(i) + ": " + str(structID - 1) + " structures completed"
@@ -74,5 +76,4 @@ parsed_dict, unfinished_jobs = parse_rosetta_out(my_working_directory)
 print unfinished_jobs
 os.chdir(my_working_directory)
 
-open("DDG_Data.json", "w").write(
-    json.dumps(parsed_dict, sort_keys=True,separators=(',', ': ')))
+open("DDG_Data.json", "w").write(json.dumps(parsed_dict, sort_keys=True,separators=(',', ': ')))
