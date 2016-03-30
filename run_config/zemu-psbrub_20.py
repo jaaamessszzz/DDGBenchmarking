@@ -15,5 +15,5 @@ score_method_ids = [8]
 prediction_set_credit = 'Kyle Barlow'
 take_lowests = [3, 50]#, 10, 20, 30, 40, 50]
 expectn = 40
-use_existing_benchmark_data = False
+use_existing_benchmark_data = True
 allow_missing_case_failures = True
