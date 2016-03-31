@@ -10,7 +10,7 @@ import re
 from klab.cluster_template.write_run_file import process as write_run_file
 from klab.benchmarking.analysis.ddg_binding_affinity_analysis import DBBenchmarkRun as BindingAffinityBenchmarkRun
 from ddglib.ppi_api import get_interface_with_config_file
-from ddglib.ddg_monomer_ppi_api import get_interface as get_interface_factory
+from ddglib.ppi_api import get_interface as get_interface_factory
 import datetime
 import importlib
 import tempfile
