@@ -78,7 +78,7 @@ def parse_rosetta_out(workingdir, verbose = True):
             continue
         r.increment_report()
     r.done()
-                
+
     return fattydict, unfinished
 
 def main():
