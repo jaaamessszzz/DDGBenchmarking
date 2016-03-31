@@ -1,0 +1,6 @@
+.idea/*
+*.pyc
+testanalysis/*
+pw
+job_output/*
+ddgdb.pw
