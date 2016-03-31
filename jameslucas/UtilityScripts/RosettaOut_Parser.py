@@ -8,15 +8,19 @@ import os
 import linecache
 import json
 
-def parse_rosetta_out(workingdir):
+def parse_rosetta_out(workingdir, verbose = True):
     fattydict = {}
     unfinished = {}
     for i in os.listdir(workingdir):
-        if os.path.isdir(workingdir + i):
+        task_dir = os.path.join(workingdir, i)
+        if os.path.isdir( task_dir ):
             fattydict[i] = {}
             structID = 1
             counter = 0
-            filename = workingdir + i + "/rosetta.out"
+            filename = os.path.join(task_dir, "rosetta.out")
+            if not os.path.isfile( filename ):
+                print 'Missing output file:', filename
+                continue
             for line in enumerate(open(filename, 'r')):
                 if line[1].find("fa_atr") == 1:
                     if counter % 2 == 0:
@@ -59,7 +63,8 @@ def parse_rosetta_out(workingdir):
                     structID = structID +1
                 else:
                     continue
-            print str(i) + ": " + str(structID - 1) + " structures completed"
+            if verbose:
+                print str(i) + ": " + str(structID - 1) + " structures completed"
             
             #Keeps track of unfinished jobs
             if structID - 1 < 100:
@@ -69,11 +74,15 @@ def parse_rosetta_out(workingdir):
                 
     return fattydict, unfinished
 
-my_working_directory = str(os.getcwd() + '/')
-print my_working_directory
-parsed_dict, unfinished_jobs = parse_rosetta_out(my_working_directory)
+def main():
+    my_working_directory = str(os.getcwd() + '/')
+    print my_working_directory
+    parsed_dict, unfinished_jobs = parse_rosetta_out(my_working_directory)
 
-print unfinished_jobs
-os.chdir(my_working_directory)
+    print unfinished_jobs
+    os.chdir(my_working_directory)
 
-open("DDG_Data.json", "w").write(json.dumps(parsed_dict, sort_keys=True,separators=(',', ': ')))
+    open("DDG_Data.json", "w").write(json.dumps(parsed_dict, sort_keys=True,separators=(',', ': ')))
+
+if __name__ == '__main__':
+    main()
