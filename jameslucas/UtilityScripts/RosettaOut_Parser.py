@@ -18,7 +18,11 @@ def parse_rosetta_out(workingdir, verbose = True):
     r.set_total_count( len(task_dirs) )
 
     for task_dir in task_dirs:
-        i = os.path.basename(task_dir)
+        try:
+            i = long(os.path.basename(task_dir))
+        except ValueError:
+            print 'Directory %s is not a number' % i
+            continue
         fattydict[i] = {}
         structID = 1
         counter = 0
@@ -29,42 +33,35 @@ def parse_rosetta_out(workingdir, verbose = True):
         for line in enumerate(open(filename, 'r')):
             if line[1].find("fa_atr") == 1:
                 if counter % 2 == 0:
-                    linecounter = 0
-                    currentline = line[0] + 1
-                    fattydict[i]['WT_' + str(structID)] = {}
-                    try:
-                        while linecache.getline(filename, currentline).strip() != '-----------------------------------------':
-                            scores = linecache.getline(filename, currentline)
-                            parsed_scores = scores.split()
-                            fattydict[i]['WT_' + str(structID)][parsed_scores[0]] = parsed_scores[1]
-                            linecounter = linecounter + 1
-                            currentline = currentline + 1
-                        sumscore = linecache.getline(filename, line[0] + linecounter + 2)
-                        parsed_sumscore = sumscore.split()
-                        fattydict[i]['WT_' + str(structID)][parsed_sumscore[0]] = parsed_sumscore[2]
-                        counter = counter + 1
-                    except:
-                        print "Oops, something went wrong here..."
+                    struct_type = 'WT'
                 else:
-                    linecounter = 0
-                    currentline = line[0] + 1
-                    fattydict[i]['Mutant_' + str(structID)] = {}
-                    try:
-                        while linecache.getline(filename, currentline).strip() != '-----------------------------------------':
-                            scores = linecache.getline(filename, currentline)
-                            parsed_scores = scores.split()
-                            fattydict[i]['Mutant_' + str(structID)][parsed_scores[0]] = parsed_scores[1]
-                            linecounter = linecounter + 1
-                            currentline = currentline + 1
-                        sumscore = linecache.getline(filename, line[0] + linecounter + 2)
-                        parsed_sumscore = sumscore.split()
-                        fattydict[i]['Mutant_' + str(structID)][parsed_sumscore[0]] = parsed_sumscore[2]
-                        counter = counter + 1
-                    except:
-                        print "Oops, something went wrong here..."
+                    struct_type = 'Mutant'
+
+                linecounter = 0
+                currentline = line[0] + 1
+
+                if structID not in fattydict[i]:
+                    fattydict[i][structID] = {}
+                fattydict[i][structID][struct_type] = {}
+                try:
+                    while linecache.getline(filename, currentline).strip() != '-----------------------------------------':
+                        scores = linecache.getline(filename, currentline)
+                        parsed_scores = scores.split()
+                        fattydict[i][structID][struct_type][parsed_scores[0]] = parsed_scores[1]
+                        linecounter = linecounter + 1
+                        currentline = currentline + 1
+                    sumscore = linecache.getline(filename, line[0] + linecounter + 2)
+                    parsed_sumscore = sumscore.split()
+                    fattydict[i][structID][struct_type][parsed_sumscore[0]] = parsed_sumscore[2]
+                    counter = counter + 1
+                except:
+                    print "Oops, something went wrong here..."
+
             elif line[1].find("reported success in") > 1:
                 timeline = line[1].split()
-                fattydict[i]['Runtime_' + str(structID)] = timeline[5]
+                if structID not in fattydict[i]:
+                    fattydict[i][structID] = {}
+                fattydict[i][structID]['Runtime'] = timeline[5]
                 structID = structID +1
             else:
                 continue
