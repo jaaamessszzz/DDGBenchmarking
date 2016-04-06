@@ -8,7 +8,7 @@ def unzip(donefolder):
         targetzip = zipfile.ZipFile(file, mode = 'r')
         targetzip.extractall(path = file[:-4])
                                    
-os.chdir('/home/james.lucas/Rotation/done')                                   
-#os.chdir('/netapp/home/james.lucas/160322-james-backrub-rscript-full/output/done')
+#os.chdir('/home/james.lucas/Rotation/done')                                   
+os.chdir('/netapp/home/james.lucas/160322-james-backrub-rscript-full/output/done')
 asdf = os.getcwd()
 unzip(asdf)
