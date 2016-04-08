@@ -57,7 +57,7 @@ if os.environ.has_key("JOB_ID"):
 
 print 'Starting time:', time_start
 print 'Job id:', job_id
-print 'Task id:', task_id
+print 'Task id:', sge_task_id
     
 # Run task (example code include below)
 
@@ -134,3 +134,10 @@ for line in out.split(os.linesep):
         ram_usage = float(m.group(1))
         ram_usage_type = m.group(2)
         print 'Max virtual memory usage: %.1f%s' % (ram_usage, ram_usage_type)
+
+#moves output and error files to output directory
+error_out = 'Min_lbfgs_RScript.py.e' + str(job_id) + '.' + str(sge_task_id)
+output_out = 'Min_lbfgs_RScript.py.o' + str(job_id) + '.' + str(sge_task_id)
+
+shutil.move(error_out , outputdir + filenum)
+shutil.move(output_out , outputdir + filenum)
