@@ -90,7 +90,7 @@ def minimize(inputdir, outputdir):
            '-s',
            pdb_relpath,
            '-parser:protocol',
-           '../../../MinimizationMethods/Minimization_lbfgs_armijo_nonmonotone.xml',
+           '../../../DDGBenchmarks_Test/MinimizationMethods/Minimization_lbfgs_armijo_nonmonotone.xml',
            '-ignore_unrecognized_res',
            '-nstruct 100'
           ]
@@ -114,7 +114,7 @@ def minimize(inputdir, outputdir):
     return filenum
 
 inputdir = json_parser()
-outputdir = 'output/'
+outputdir = '../../MinimizationMethods/output/'
 minimize(inputdir, outputdir)
 
 #End Pasted Stuff
