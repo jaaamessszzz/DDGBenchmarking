@@ -24,6 +24,7 @@ import inspect
 import gzip
 import tempfile
 import re
+import json
 
 def roundTime(dt=None, roundTo=1):
     """
@@ -89,7 +90,7 @@ def minimize(inputdir, outputdir):
            '-s',
            pdb_relpath,
            '-parser:protocol',
-           '../../../DDGBenchmarks_Test/MinimizationMethods/Minimization_lbfgs_armijo_nonmonotone.xml',
+           '../../../Minimization_lbfgs_armijo_nonmonotone.xml',
            '-ignore_unrecognized_res',
            '-nstruct 100'
           ]
