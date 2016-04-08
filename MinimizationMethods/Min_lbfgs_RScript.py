@@ -91,7 +91,7 @@ def minimize(inputdir, outputdir):
            '-s',
            pdb_relpath,
            '-parser:protocol',
-           '../../../Minimization_lbfgs_armijo_nonmonotone.xml',
+           '../../Minimization_lbfgs_armijo_nonmonotone.xml',
            '-ignore_unrecognized_res',
            '-nstruct 100'
           ]
@@ -117,8 +117,7 @@ def minimize(inputdir, outputdir):
 datadir = '/netapp/home/james.lucas/160322-james-backrub-rscript-full/'
 inputdir = json_parser(datadir)
 outputdir = os.path.relpath('/netapp/home/james.lucas/MinimizationMethods/output/', datadir)
-minimize(inputdir, outputdir)
-
+filenum = minimize(inputdir, outputdir)
 #End Pasted Stuff
 
 time_end = roundTime()
