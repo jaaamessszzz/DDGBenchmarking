@@ -76,7 +76,7 @@ def minimize(inputdir, outputdir):
     data, filenum, pdbtemp = inputdir_parse.split()
     filenum_dir = data + "/" + filenum
     PDBID = pdbtemp[:-4]
-    predIDoutdir = outputdir + '/' + filenum
+    predIDoutdir = os.join (outputdir, filenum)
     
     #Makes a folder for data dumping
     print 'Making directory %s%s...' %(outputdir, filenum)
@@ -91,7 +91,7 @@ def minimize(inputdir, outputdir):
            '-s',
            pdb_relpath,
            '-parser:protocol',
-           '../../Minimization_lbfgs_armijo_nonmonotone.xml',
+           '../../../DDGBenchmarks/MinimizationMethods/Minimization_lbfgs_armijo_nonmonotone.xml',
            '-ignore_unrecognized_res',
            '-nstruct 100'
           ]
@@ -140,5 +140,5 @@ for line in out.split(os.linesep):
 error_out = 'Min_lbfgs_RScript.py.e' + str(job_id) + '.' + str(sge_task_id)
 output_out = 'Min_lbfgs_RScript.py.o' + str(job_id) + '.' + str(sge_task_id)
 
-shutil.move(error_out , outputdir + filenum)
-shutil.move(output_out , outputdir + filenum)
+shutil.move(error_out , os.join(outputdir, filenum))
+shutil.move(output_out , os.join(outputdir, filenum))
