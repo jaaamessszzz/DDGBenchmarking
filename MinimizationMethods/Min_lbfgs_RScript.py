@@ -76,7 +76,7 @@ def minimize(inputdir, outputdir):
     data, filenum, pdbtemp = inputdir_parse.split()
     filenum_dir = data + "/" + filenum
     PDBID = pdbtemp[:-4]
-    predIDoutdir = os.join (outputdir, filenum)
+    predIDoutdir = os.path.join (outputdir, filenum)
     
     #Makes a folder for data dumping
     print 'Making directory %s%s...' %(outputdir, filenum)
@@ -140,5 +140,5 @@ for line in out.split(os.linesep):
 error_out = 'Min_lbfgs_RScript.py.e' + str(job_id) + '.' + str(sge_task_id)
 output_out = 'Min_lbfgs_RScript.py.o' + str(job_id) + '.' + str(sge_task_id)
 
-shutil.move(error_out , os.join(outputdir, filenum))
-shutil.move(output_out , os.join(outputdir, filenum))
+shutil.move(error_out , os.path.join(outputdir, filenum))
+shutil.move(output_out , os.path.join(outputdir, filenum))
