@@ -84,14 +84,14 @@ def minimize(inputdir, outputdir):
   
     #Assigns function output to variables for bash input (resfile_relpath)
     pdb_relpath = os.path.relpath('/netapp/home/james.lucas/160322-james-backrub-rscript-full/%s' %inputdir, predIDoutdir)
-    
+    xml_relpath = os.path.relpath('/netapp/home/james.lucas/DDGBenchmarks_Test/MinimizationMethods/', os.getcwd())
     print os.getcwd()
     
     arg = ['/netapp/home/james.lucas/Rosetta/main/source/bin/rosetta_scripts.linuxgccrelease',
            '-s',
            pdb_relpath,
            '-parser:protocol',
-           '../../../DDGBenchmarks/MinimizationMethods/Minimization_lbfgs_armijo_nonmonotone.xml',
+           os.path.join(xml_relpath, 'Minimization_lbfgs_armijo_nonmonotone.xml'),
            '-ignore_unrecognized_res',
            '-nstruct 100'
           ]
