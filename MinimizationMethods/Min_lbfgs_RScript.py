@@ -58,7 +58,8 @@ if os.environ.has_key("JOB_ID"):
 
 print 'Starting time:', time_start
 print 'Job id:', job_id
-print 'Task id:', sge_task_id    
+print 'Task id:', sge_task_id
+print os.getcwd()
 # Run task (example code include below)
 
 #Parses dataset .json file and outputs chain to move and input PDB file directory
@@ -66,7 +67,7 @@ def json_parser(datadir):
     jsonload = open("%sdata/blank_job_dict.json" %datadir)
     jsonfile = json.load(jsonload)
     key = sorted(jsonfile.keys())[sge_task_id-1]
-    inputdir = datadir + jsonfile[key]['input_file_list'][0]
+    inputdir = jsonfile[key]['input_file_list'][0]
     return inputdir
 
 def minimize(inputdir, outputdir):
