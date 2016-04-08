@@ -63,10 +63,10 @@ print 'Task id:', sge_task_id
 
 #Parses dataset .json file and outputs chain to move and input PDB file directory
 def json_parser(datadir):
-    jsonload = open("%s/data/blank_job_dict.json" %datadir)
+    jsonload = open("%sdata/blank_job_dict.json" %datadir)
     jsonfile = json.load(jsonload)
     key = sorted(jsonfile.keys())[sge_task_id-1]
-    inputdir = jsonfile[key]['input_file_list'][0]
+    inputdir = datadir + jsonfile[key]['input_file_list'][0]
     return inputdir
 
 def minimize(inputdir, outputdir):
@@ -113,9 +113,9 @@ def minimize(inputdir, outputdir):
     
     return filenum
 
-datadir = '/netapp/home/james.lucas/160322-james-backrub-rscript-full'
+datadir = '/netapp/home/james.lucas/160322-james-backrub-rscript-full/'
 inputdir = json_parser(datadir)
-outputdir = os.path.relpath('/netapp/home/james.lucas/DDGBenchmarks_Test/MinimizationMethods/output/', inputdir)
+outputdir = os.path.relpath('/netapp/home/james.lucas/MinimizationMethods/output/', datadir)
 minimize(inputdir, outputdir)
 
 #End Pasted Stuff
