@@ -82,7 +82,7 @@ def minimize(inputdir, outputdir):
     os.makedirs(predIDoutdir)
   
     #Assigns function output to variables for bash input (resfile_relpath)
-    pdb_relpath = os.path.relpath(inputdir, predIDoutdir)
+    pdb_relpath = os.path.relpath('/netapp/home/james.lucas/160322-james-backrub-rscript-full/%s' %inputdir, predIDoutdir)
     
     print os.getcwd()
     
