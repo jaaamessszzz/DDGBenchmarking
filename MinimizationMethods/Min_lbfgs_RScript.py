@@ -97,6 +97,7 @@ def minimize(inputdir, outputdir):
           ]
     
     print 'Working on: %s %s' %(filenum, PDBID)
+    print ' '.join(arg)
     
     outfile_path = os.path.join(predIDoutdir, 'rosetta.out')
     rosetta_outfile = open(outfile_path, 'w')
