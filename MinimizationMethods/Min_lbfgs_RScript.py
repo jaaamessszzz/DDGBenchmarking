@@ -76,7 +76,7 @@ def minimize(inputdir, outputdir):
     data, filenum, pdbtemp = inputdir_parse.split()
     filenum_dir = data + "/" + filenum
     PDBID = pdbtemp[:-4]
-    predIDoutdir = outputdir + filenum
+    predIDoutdir = outputdir + '/' + filenum
     
     #Makes a folder for data dumping
     print 'Making directory %s%s...' %(outputdir, filenum)
