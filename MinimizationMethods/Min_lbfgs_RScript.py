@@ -57,13 +57,12 @@ if os.environ.has_key("JOB_ID"):
 
 print 'Starting time:', time_start
 print 'Job id:', job_id
-print 'Task id:', sge_task_id
-    
+print 'Task id:', sge_task_id    
 # Run task (example code include below)
 
 #Parses dataset .json file and outputs chain to move and input PDB file directory
-def json_parser():
-    jsonload = open("data/blank_job_dict.json")
+def json_parser(datadir):
+    jsonload = open("%s/data/blank_job_dict.json" %datadir)
     jsonfile = json.load(jsonload)
     key = sorted(jsonfile.keys())[sge_task_id-1]
     inputdir = jsonfile[key]['input_file_list'][0]
@@ -113,7 +112,8 @@ def minimize(inputdir, outputdir):
     
     return filenum
 
-inputdir = json_parser()
+datadir = '/netapp/home/james.lucas/160322-james-backrub-rscript-full'
+inputdir = json_parser(datadir)
 outputdir = '../../MinimizationMethods/output/'
 minimize(inputdir, outputdir)
 
