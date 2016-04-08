@@ -114,7 +114,7 @@ def minimize(inputdir, outputdir):
 
 datadir = '/netapp/home/james.lucas/160322-james-backrub-rscript-full'
 inputdir = json_parser(datadir)
-outputdir = '../../MinimizationMethods/output/'
+outputdir = os.path.relpath('/netapp/home/james.lucas/DDGBenchmarks_Test/MinimizationMethods/output/', inputdir)
 minimize(inputdir, outputdir)
 
 #End Pasted Stuff
