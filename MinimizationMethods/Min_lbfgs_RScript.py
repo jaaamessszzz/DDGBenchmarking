@@ -74,7 +74,7 @@ def minimize(inputdir, outputdir):
     #Removes PDB file from path, saves in variable filenum_dir
     inputdir_parse = re.sub("/",' ', str(inputdir))
     data, filenum, pdbtemp = inputdir_parse.split()
-    filenum_dir = data + "/" + filenum
+    filenum_dir = os.path.join (data, filenum)
     PDBID = pdbtemp[:-4]
     predIDoutdir = os.path.join (outputdir, filenum)
     
@@ -117,7 +117,7 @@ def minimize(inputdir, outputdir):
 
 datadir = '/netapp/home/james.lucas/160322-james-backrub-rscript-full/'
 inputdir = json_parser(datadir)
-outputdir = os.path.relpath('/netapp/home/james.lucas/MinimizationMethods/output/', datadir)
+outputdir = '/netapp/home/james.lucas/MinimizationMethods/output/'
 filenum = minimize(inputdir, outputdir)
 #End Pasted Stuff
 
