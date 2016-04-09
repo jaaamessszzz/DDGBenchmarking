@@ -80,8 +80,11 @@ def minimize(inputdir, outputdir):
     
     #Makes a folder for data dumping
     print 'Making directory %s%s...' %(outputdir, filenum)
-    os.makedirs(predIDoutdir)
-  
+    try:
+        os.makedirs(predIDoutdir)
+    except:
+        '%s already exists!' % predIDoutdir
+        
     #Assigns function output to variables for bash input (resfile_relpath)
     pdb_relpath = os.path.relpath('/netapp/home/james.lucas/160322-james-backrub-rscript-full/%s' %inputdir, predIDoutdir)
     xml_relpath = os.path.relpath('/netapp/home/james.lucas/DDGBenchmarks_Test/MinimizationMethods/', os.getcwd())
@@ -91,7 +94,7 @@ def minimize(inputdir, outputdir):
            '-s',
            pdb_relpath,
            '-parser:protocol',
-           os.path.join(xml_relpath, 'Minimization_lbfgs_armijo_nonmonotone.xml'),
+           '/netapp/home/james.lucas/DDGBenchmarks_Test/MinimizationMethods/Minimization_lbfgs_armijo_nonmonotone.xml',
            '-ignore_unrecognized_res',
            '-nstruct 100'
           ]
