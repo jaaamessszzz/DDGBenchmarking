@@ -1,0 +1,68 @@
+\contentsline {chapter}{\numberline {1}All data comparison}{5}{chapter.1}
+\contentsline {section}{\numberline {1.1}Case comparison tables}{6}{section.1.1}
+\contentsline {section}{\numberline {1.2}All data plots}{11}{section.1.2}
+\contentsline {chapter}{\numberline {2}topx\_50-prediction\_set\_id\_zemu-psbrub\_1.6-score\_method\_Rescore-Talaris2014}{12}{chapter.2}
+\contentsline {section}{\numberline {2.1}Data tables}{13}{section.2.1}
+\contentsline {subsection}{\numberline {2.1.1}Breakdown by volume}{13}{subsection.2.1.1}
+\contentsline {subsection}{\numberline {2.1.2}Separating out mutations involving glycine or proline.}{14}{subsection.2.1.2}
+\contentsline {subsection}{\numberline {2.1.3}Number of mutations}{17}{subsection.2.1.3}
+\contentsline {subsection}{\numberline {2.1.4}Entire dataset using a scaling factor of 1/0.917 to improve the fraction correct metric.}{18}{subsection.2.1.4}
+\contentsline {subsection}{\numberline {2.1.5}Entire dataset}{19}{subsection.2.1.5}
+\contentsline {section}{\numberline {2.2}Main plots}{22}{section.2.2}
+\contentsline {section}{\numberline {2.3}Adjustments}{28}{section.2.3}
+\contentsline {section}{\numberline {2.4}Residue context}{34}{section.2.4}
+\contentsline {section}{\numberline {2.5}Residue types}{39}{section.2.5}
+\contentsline {section}{\numberline {2.6}Chain properties}{43}{section.2.6}
+\contentsline {section}{\numberline {2.7}Errors / debugging}{46}{section.2.7}
+\contentsline {chapter}{\numberline {3}topx\_1-prediction\_set\_id\_zemu-values-score\_method\_zemu-paper}{47}{chapter.3}
+\contentsline {section}{\numberline {3.1}Data tables}{48}{section.3.1}
+\contentsline {subsection}{\numberline {3.1.1}Breakdown by volume}{48}{subsection.3.1.1}
+\contentsline {subsection}{\numberline {3.1.2}Separating out mutations involving glycine or proline.}{49}{subsection.3.1.2}
+\contentsline {subsection}{\numberline {3.1.3}Number of mutations}{52}{subsection.3.1.3}
+\contentsline {subsection}{\numberline {3.1.4}Entire dataset using a scaling factor of 1/1.274 to improve the fraction correct metric.}{53}{subsection.3.1.4}
+\contentsline {subsection}{\numberline {3.1.5}Entire dataset}{54}{subsection.3.1.5}
+\contentsline {section}{\numberline {3.2}Main plots}{57}{section.3.2}
+\contentsline {section}{\numberline {3.3}Adjustments}{63}{section.3.3}
+\contentsline {section}{\numberline {3.4}Residue context}{69}{section.3.4}
+\contentsline {section}{\numberline {3.5}Residue types}{74}{section.3.5}
+\contentsline {section}{\numberline {3.6}Chain properties}{78}{section.3.6}
+\contentsline {section}{\numberline {3.7}Errors / debugging}{81}{section.3.7}
+\contentsline {chapter}{\numberline {4}topx\_3-prediction\_set\_id\_zemu-psbrub\_1.6-score\_method\_Rescore-Talaris2014}{82}{chapter.4}
+\contentsline {section}{\numberline {4.1}Data tables}{83}{section.4.1}
+\contentsline {subsection}{\numberline {4.1.1}Breakdown by volume}{83}{subsection.4.1.1}
+\contentsline {subsection}{\numberline {4.1.2}Separating out mutations involving glycine or proline.}{84}{subsection.4.1.2}
+\contentsline {subsection}{\numberline {4.1.3}Number of mutations}{87}{subsection.4.1.3}
+\contentsline {subsection}{\numberline {4.1.4}Entire dataset using a scaling factor of 1/1.465 to improve the fraction correct metric.}{88}{subsection.4.1.4}
+\contentsline {subsection}{\numberline {4.1.5}Entire dataset}{89}{subsection.4.1.5}
+\contentsline {section}{\numberline {4.2}Main plots}{92}{section.4.2}
+\contentsline {section}{\numberline {4.3}Adjustments}{98}{section.4.3}
+\contentsline {section}{\numberline {4.4}Residue context}{104}{section.4.4}
+\contentsline {section}{\numberline {4.5}Residue types}{109}{section.4.5}
+\contentsline {section}{\numberline {4.6}Chain properties}{113}{section.4.6}
+\contentsline {section}{\numberline {4.7}Errors / debugging}{116}{section.4.7}
+\contentsline {chapter}{\numberline {5}topx\_10-prediction\_set\_id\_james-backrub-rscript-full-score\_method\_Unrescored-Talaris}{117}{chapter.5}
+\contentsline {section}{\numberline {5.1}Data tables}{118}{section.5.1}
+\contentsline {subsection}{\numberline {5.1.1}Breakdown by volume}{118}{subsection.5.1.1}
+\contentsline {subsection}{\numberline {5.1.2}Separating out mutations involving glycine or proline.}{119}{subsection.5.1.2}
+\contentsline {subsection}{\numberline {5.1.3}Number of mutations}{122}{subsection.5.1.3}
+\contentsline {subsection}{\numberline {5.1.4}Entire dataset using a scaling factor of 1/1.991 to improve the fraction correct metric.}{123}{subsection.5.1.4}
+\contentsline {subsection}{\numberline {5.1.5}Entire dataset}{124}{subsection.5.1.5}
+\contentsline {section}{\numberline {5.2}Main plots}{127}{section.5.2}
+\contentsline {section}{\numberline {5.3}Adjustments}{133}{section.5.3}
+\contentsline {section}{\numberline {5.4}Residue context}{139}{section.5.4}
+\contentsline {section}{\numberline {5.5}Residue types}{144}{section.5.5}
+\contentsline {section}{\numberline {5.6}Chain properties}{148}{section.5.6}
+\contentsline {section}{\numberline {5.7}Errors / debugging}{151}{section.5.7}
+\contentsline {chapter}{\numberline {6}topx\_3-prediction\_set\_id\_james-backrub-rscript-full-score\_method\_Unrescored-Talaris}{152}{chapter.6}
+\contentsline {section}{\numberline {6.1}Data tables}{153}{section.6.1}
+\contentsline {subsection}{\numberline {6.1.1}Breakdown by volume}{153}{subsection.6.1.1}
+\contentsline {subsection}{\numberline {6.1.2}Separating out mutations involving glycine or proline.}{154}{subsection.6.1.2}
+\contentsline {subsection}{\numberline {6.1.3}Number of mutations}{157}{subsection.6.1.3}
+\contentsline {subsection}{\numberline {6.1.4}Entire dataset using a scaling factor of 1/5.645 to improve the fraction correct metric.}{158}{subsection.6.1.4}
+\contentsline {subsection}{\numberline {6.1.5}Entire dataset}{159}{subsection.6.1.5}
+\contentsline {section}{\numberline {6.2}Main plots}{162}{section.6.2}
+\contentsline {section}{\numberline {6.3}Adjustments}{168}{section.6.3}
+\contentsline {section}{\numberline {6.4}Residue context}{174}{section.6.4}
+\contentsline {section}{\numberline {6.5}Residue types}{179}{section.6.5}
+\contentsline {section}{\numberline {6.6}Chain properties}{183}{section.6.6}
+\contentsline {section}{\numberline {6.7}Errors / debugging}{186}{section.6.7}

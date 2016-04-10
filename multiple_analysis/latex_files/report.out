@@ -1,0 +1,68 @@
+\BOOKMARK [0][-]{chapter.1}{All data comparison}{}% 1
+\BOOKMARK [1][-]{section.1.1}{Case comparison tables}{chapter.1}% 2
+\BOOKMARK [1][-]{section.1.2}{All data plots}{chapter.1}% 3
+\BOOKMARK [0][-]{chapter.2}{topx\13750-prediction\137set\137id\137zemu-psbrub\1371.6-score\137method\137Rescore-Talaris2014}{}% 4
+\BOOKMARK [1][-]{section.2.1}{Data tables}{chapter.2}% 5
+\BOOKMARK [2][-]{subsection.2.1.1}{Breakdown by volume}{section.2.1}% 6
+\BOOKMARK [2][-]{subsection.2.1.2}{Separating out mutations involving glycine or proline.}{section.2.1}% 7
+\BOOKMARK [2][-]{subsection.2.1.3}{Number of mutations}{section.2.1}% 8
+\BOOKMARK [2][-]{subsection.2.1.4}{Entire dataset using a scaling factor of 1/0.917 to improve the fraction correct metric.}{section.2.1}% 9
+\BOOKMARK [2][-]{subsection.2.1.5}{Entire dataset}{section.2.1}% 10
+\BOOKMARK [1][-]{section.2.2}{Main plots}{chapter.2}% 11
+\BOOKMARK [1][-]{section.2.3}{Adjustments}{chapter.2}% 12
+\BOOKMARK [1][-]{section.2.4}{Residue context}{chapter.2}% 13
+\BOOKMARK [1][-]{section.2.5}{Residue types}{chapter.2}% 14
+\BOOKMARK [1][-]{section.2.6}{Chain properties}{chapter.2}% 15
+\BOOKMARK [1][-]{section.2.7}{Errors / debugging}{chapter.2}% 16
+\BOOKMARK [0][-]{chapter.3}{topx\1371-prediction\137set\137id\137zemu-values-score\137method\137zemu-paper}{}% 17
+\BOOKMARK [1][-]{section.3.1}{Data tables}{chapter.3}% 18
+\BOOKMARK [2][-]{subsection.3.1.1}{Breakdown by volume}{section.3.1}% 19
+\BOOKMARK [2][-]{subsection.3.1.2}{Separating out mutations involving glycine or proline.}{section.3.1}% 20
+\BOOKMARK [2][-]{subsection.3.1.3}{Number of mutations}{section.3.1}% 21
+\BOOKMARK [2][-]{subsection.3.1.4}{Entire dataset using a scaling factor of 1/1.274 to improve the fraction correct metric.}{section.3.1}% 22
+\BOOKMARK [2][-]{subsection.3.1.5}{Entire dataset}{section.3.1}% 23
+\BOOKMARK [1][-]{section.3.2}{Main plots}{chapter.3}% 24
+\BOOKMARK [1][-]{section.3.3}{Adjustments}{chapter.3}% 25
+\BOOKMARK [1][-]{section.3.4}{Residue context}{chapter.3}% 26
+\BOOKMARK [1][-]{section.3.5}{Residue types}{chapter.3}% 27
+\BOOKMARK [1][-]{section.3.6}{Chain properties}{chapter.3}% 28
+\BOOKMARK [1][-]{section.3.7}{Errors / debugging}{chapter.3}% 29
+\BOOKMARK [0][-]{chapter.4}{topx\1373-prediction\137set\137id\137zemu-psbrub\1371.6-score\137method\137Rescore-Talaris2014}{}% 30
+\BOOKMARK [1][-]{section.4.1}{Data tables}{chapter.4}% 31
+\BOOKMARK [2][-]{subsection.4.1.1}{Breakdown by volume}{section.4.1}% 32
+\BOOKMARK [2][-]{subsection.4.1.2}{Separating out mutations involving glycine or proline.}{section.4.1}% 33
+\BOOKMARK [2][-]{subsection.4.1.3}{Number of mutations}{section.4.1}% 34
+\BOOKMARK [2][-]{subsection.4.1.4}{Entire dataset using a scaling factor of 1/1.465 to improve the fraction correct metric.}{section.4.1}% 35
+\BOOKMARK [2][-]{subsection.4.1.5}{Entire dataset}{section.4.1}% 36
+\BOOKMARK [1][-]{section.4.2}{Main plots}{chapter.4}% 37
+\BOOKMARK [1][-]{section.4.3}{Adjustments}{chapter.4}% 38
+\BOOKMARK [1][-]{section.4.4}{Residue context}{chapter.4}% 39
+\BOOKMARK [1][-]{section.4.5}{Residue types}{chapter.4}% 40
+\BOOKMARK [1][-]{section.4.6}{Chain properties}{chapter.4}% 41
+\BOOKMARK [1][-]{section.4.7}{Errors / debugging}{chapter.4}% 42
+\BOOKMARK [0][-]{chapter.5}{topx\13710-prediction\137set\137id\137james-backrub-rscript-full-score\137method\137Unrescored-Talaris}{}% 43
+\BOOKMARK [1][-]{section.5.1}{Data tables}{chapter.5}% 44
+\BOOKMARK [2][-]{subsection.5.1.1}{Breakdown by volume}{section.5.1}% 45
+\BOOKMARK [2][-]{subsection.5.1.2}{Separating out mutations involving glycine or proline.}{section.5.1}% 46
+\BOOKMARK [2][-]{subsection.5.1.3}{Number of mutations}{section.5.1}% 47
+\BOOKMARK [2][-]{subsection.5.1.4}{Entire dataset using a scaling factor of 1/1.991 to improve the fraction correct metric.}{section.5.1}% 48
+\BOOKMARK [2][-]{subsection.5.1.5}{Entire dataset}{section.5.1}% 49
+\BOOKMARK [1][-]{section.5.2}{Main plots}{chapter.5}% 50
+\BOOKMARK [1][-]{section.5.3}{Adjustments}{chapter.5}% 51
+\BOOKMARK [1][-]{section.5.4}{Residue context}{chapter.5}% 52
+\BOOKMARK [1][-]{section.5.5}{Residue types}{chapter.5}% 53
+\BOOKMARK [1][-]{section.5.6}{Chain properties}{chapter.5}% 54
+\BOOKMARK [1][-]{section.5.7}{Errors / debugging}{chapter.5}% 55
+\BOOKMARK [0][-]{chapter.6}{topx\1373-prediction\137set\137id\137james-backrub-rscript-full-score\137method\137Unrescored-Talaris}{}% 56
+\BOOKMARK [1][-]{section.6.1}{Data tables}{chapter.6}% 57
+\BOOKMARK [2][-]{subsection.6.1.1}{Breakdown by volume}{section.6.1}% 58
+\BOOKMARK [2][-]{subsection.6.1.2}{Separating out mutations involving glycine or proline.}{section.6.1}% 59
+\BOOKMARK [2][-]{subsection.6.1.3}{Number of mutations}{section.6.1}% 60
+\BOOKMARK [2][-]{subsection.6.1.4}{Entire dataset using a scaling factor of 1/5.645 to improve the fraction correct metric.}{section.6.1}% 61
+\BOOKMARK [2][-]{subsection.6.1.5}{Entire dataset}{section.6.1}% 62
+\BOOKMARK [1][-]{section.6.2}{Main plots}{chapter.6}% 63
+\BOOKMARK [1][-]{section.6.3}{Adjustments}{chapter.6}% 64
+\BOOKMARK [1][-]{section.6.4}{Residue context}{chapter.6}% 65
+\BOOKMARK [1][-]{section.6.5}{Residue types}{chapter.6}% 66
+\BOOKMARK [1][-]{section.6.6}{Chain properties}{chapter.6}% 67
+\BOOKMARK [1][-]{section.6.7}{Errors / debugging}{chapter.6}% 68
