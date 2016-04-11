@@ -1,6 +1,4 @@
-Mutate step repack with soft repulsive (find soft version of talaris)
-Add 1+/1- for pivot resdiues in backrub mover
-Minimize with constraints
+Mutate step + repack with soft repulsive (find soft version of talaris)
 
 <ROSETTASCRIPTS>
     <SCOREFXNS>
@@ -29,14 +27,16 @@ Minimize with constraints
     <MOVERS>
         <AddConstraintsToCurrentConformationMover name=addcst use_distance_cst=1 coord_dev=1.0 min_seq_sep=0 max_distance=8 cst_weight=1.0 />
         <ClearConstraintsMover name=clearcst />
-        <MinMover name=minimize scorefxn=fa_talaris2014 chi=1 bb=1 type=dfpmin_armijo_nonmonotone tolerance=0.001 max_iter=500/>
+        <MinMover name=minimize scorefxn=fa_talaris2014 chi=1 bb=1 type=dfpmin_armijo_nonmonotone tolerance=0.000001 max_iter=5000/>
         <PackRotamersMover name=repack scorefxn=fa_talaris2014 task_operations="repackonly,norepack"/>
         <PackRotamersMover name=mutate scorefxn=fa_talaris2014 task_operations="readres,norepack"/>
-        <Backrub name=backrub pivot_residues="%%pivot_residues%%"/>
         <ddG name=ddg scorefxn=fa_talaris2014 chain_name="%%chain%%"/>
         <SavePoseMover name=savepose restore_pose=0 reference_name=backrubpdb/>
         <SavePoseMover name=restorepose restore_pose=1 reference_name=backrubpdb/>
-        <GenericMonteCarlo name=montecarlo mover_name=backrub scorefxn_name=fa_talaris2014 trials=10000 temperature=1.6 recover_low=0 preapply=0/>
+        <MetropolisHastings name=MCbackrub scorefxn=talaris2014 temperature=1.6 trials=10000>
+            <Backrub name=backrub pivot_residues="%%pivot_residues%%"/>
+            <Sidechain name=sidechain task_operations="repackonly,norepack" prob_uniform=1/>
+        </MetropolisHastings>
         <DumpPdb name=dumppdb fname=WT.pdb tag_time=1/>
     </MOVERS>
     <APPLY_TO_POSE>
@@ -45,16 +45,19 @@ Minimize with constraints
       <Add mover_name = addcst/>
       <Add mover_name = minimize/>
       <Add mover_name = clearcst/>
-      <Add mover_name = montecarlo/>
+      <Add mover_name = MCbackrub/>
       <Add mover_name = savepose/>
       <Add mover_name = repack/>
+      <Add mover_name = addcst/>
       <Add mover_name = minimize/>
+      <Add mover_name = clearcst/>
       <Add mover_name = ddg/>
       <Add mover_name = dumppdb/>
       <Add mover_name = restorepose/>
       <Add mover_name = mutate/>
-      <Add mover_name = repack/>
+      <Add mover_name = addcst/>
       <Add mover_name = minimize/>
+      <Add mover_name = clearcst/>
       <Add mover_name = ddg/>
     </PROTOCOLS>
     <OUTPUT />
