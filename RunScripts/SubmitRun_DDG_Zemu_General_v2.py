@@ -208,7 +208,8 @@ def bash(chaintomove, inputdir, outputdir):
            'resfile_relpath=%s' %(resfile_relpath),
            'pivot_residues=%s' %(pivot_residues),
            'chain=%s' %(chaintomove),
-           '-nstruct 100'
+           '-nstruct 100',
+           '-mute protocols.canonical_sampling.MetropolisHastingsMover'
           ]
     
     print 'Working on: %s %s' %(filenum, PDBID)
@@ -228,7 +229,7 @@ def bash(chaintomove, inputdir, outputdir):
     return filenum
 
 #Define paths
-outputdir = 'output/'
+outputdir = 'DDG_Zemu_v2_output/'
 
 #ACTION!!!
 chaintomove, inputdir = json_parser()
@@ -251,8 +252,11 @@ for line in out.split(os.linesep):
         ram_usage_type = m.group(2)
         print 'Max virtual memory usage: %.1f%s' % (ram_usage, ram_usage_type)
         
-error_out = 'SubmitRun_DDG_Zemu_General.py.e' + str(job_id) + '.' + str(sge_task_id)
-output_out = 'SubmitRun_DDG_Zemu_General.py.o' + str(job_id) + '.' + str(sge_task_id)
+error_out = 'SubmitRun_DDG_Zemu_General_v2.py.e' + str(job_id) + '.' + str(sge_task_id)
+output_out = 'SubmitRun_DDG_Zemu_General_v2.py.o' + str(job_id) + '.' + str(sge_task_id)
 
-shutil.move(error_out , outputdir + filenum)
-shutil.move(output_out , outputdir + filenum)
+try:
+    shutil.move(error_out , os.path.join(outputdir, filenum))
+    shutil.move(output_out , os.path.join(outputdir, filenum))
+except:
+    print 'No error or out file!'
