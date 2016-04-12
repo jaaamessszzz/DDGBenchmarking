@@ -96,7 +96,7 @@ def minimize(inputdir, outputdir):
            '-parser:protocol',
            '/netapp/home/james.lucas/DDGBenchmarks_Test/MinimizationMethods/Minimization_lbfgs_armijo_nonmonotone_cst.xml',
            '-ignore_unrecognized_res',
-           '-nstruct 100'
+           '-nstruct 10'
           ]
     
     print 'Working on: %s %s' %(filenum, PDBID)

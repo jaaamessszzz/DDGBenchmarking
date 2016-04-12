@@ -94,7 +94,7 @@ def minimize(inputdir, outputdir):
            '-s',
            pdb_relpath,
            '-ignore_unrecognized_res',
-           '-nstruct 100'
+           '-nstruct 10'
           ]
     
     print 'Working on: %s %s' %(filenum, PDBID)
