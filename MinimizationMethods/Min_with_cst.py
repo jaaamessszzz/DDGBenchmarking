@@ -93,6 +93,8 @@ def minimize(inputdir, outputdir):
     arg = ['/netapp/home/james.lucas/Rosetta/main/source/bin/minimize_with_cst.linuxgccrelease',
            '-s',
            pdb_relpath,
+           '-ddg:out_pdb_prefix',
+           'Min_with_cst_',
            '-ignore_unrecognized_res',
            '-nstruct 10'
           ]
