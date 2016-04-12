@@ -2,6 +2,7 @@
     <SCOREFXNS>
         <fa_talaris2014 weights=talaris2014>
             <Reweight scoretype="atom_pair_constraint" weight=1.0/>
+            <Reweight scoretype="mm_bend" weight=1.0/>
         </fa_talaris2014>
         <beta_nov15_soft weights=beta_nov15_soft/>
     </SCOREFXNS>
@@ -24,7 +25,7 @@
     <FILTERS>
     </FILTERS>
     <MOVERS>
-        <Backrub name=backrub pivot_residues="%%pivot_residues%%" preserve_detailed_balance=1 require_mm_bend=0/>
+        <Backrub name=backrub pivot_residues="%%pivot_residues%%" preserve_detailed_balance=1/>
         <Sidechain name=sidechain preserve_detailed_balance=1 task_operations="repackonly,norepack" prob_uniform=1/>
         <AddConstraintsToCurrentConformationMover name=addcst use_distance_cst=1 coord_dev=1.0 min_seq_sep=0 max_distance=8 cst_weight=1.0 />
         <ClearConstraintsMover name=clearcst />
