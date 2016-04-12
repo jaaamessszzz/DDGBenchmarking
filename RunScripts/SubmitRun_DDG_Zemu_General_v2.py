@@ -208,7 +208,7 @@ def bash(chaintomove, inputdir, outputdir):
            'resfile_relpath=%s' %(resfile_relpath),
            'pivot_residues=%s' %(pivot_residues),
            'chain=%s' %(chaintomove),
-           '-nstruct 100',
+           '-nstruct 50',
            '-mute protocols.canonical_sampling.MetropolisHastingsMover'
           ]
     
