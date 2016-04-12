@@ -32,16 +32,9 @@
         <MinMover name=minimize scorefxn=fa_talaris2014 chi=1 bb=1 type=dfpmin_armijo_nonmonotone tolerance=0.000001 max_iter=5000/>
         <PackRotamersMover name=repack scorefxn=beta_nov15_soft task_operations="repackonly,norepack"/>
         <PackRotamersMover name=mutate scorefxn=beta_nov15_soft task_operations="readres,norepack"/>
-        <MetropolisHastings name=MCbacksidecombo scorefxn=talaris2014 temperature=1.6 trials=10000>
-            <Add mover_name=backrub/>
-            <Add mover_name=sidechain/>
-        </MetropolisHastings>
-        <MetropolisHastings name=MCbackrub scorefxn=talaris2014 temperature=1.6 trials=10000>
-            <Add mover_name=backrub/>
-        </MetropolisHastings>
-        <MetropolisHastings name=MCsidechain scorefxn=talaris2014 temperature=1.6 trials=10000>
-            <Add mover_name=sidechain/>
-        </MetropolisHastings>
+        <MetropolisHastings name=MC scorefxn=talaris2014 temperature=1.6 trials=10000>
+            <Add mover_name=backrub sampling_weight=0.75/>
+            <Add mover_name=sidechain sampling_weight=0.25/>
         <RandomMover name=MCrandom movers="MCbackrub,MCsidechain,MCbacksidecombo" weights="0.5625,0.25,0.1825"/>
         <ddG name=ddg scorefxn=fa_talaris2014 chain_name="%%chain%%"/>
         <SavePoseMover name=savepose restore_pose=0 reference_name=backrubpdb/>
@@ -54,7 +47,7 @@
       <Add mover_name = addcst/>
       <Add mover_name = minimize/>
       <Add mover_name = clearcst/>
-      <Add mover_name = MCrandom/>
+      <Add mover_name = MC/>
       <Add mover_name = savepose/>
       <Add mover_name = repack/>
       <Add mover_name = addcst/>
