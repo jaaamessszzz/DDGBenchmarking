@@ -24,20 +24,24 @@
     <FILTERS>
     </FILTERS>
     <MOVERS>
-        <Backrub name=backrub pivot_residues="%%pivot_residues%%"/>
-        <Sidechain name=sidechain preserve_detailed_balance=0 task_operations="repackonly,norepack" prob_uniform=1/>
+        <Backrub name=backrub pivot_residues="%%pivot_residues%%" preserve_detailed_balance=1/>
+        <Sidechain name=sidechain preserve_detailed_balance=1 task_operations="repackonly,norepack" prob_uniform=1/>
         <AddConstraintsToCurrentConformationMover name=addcst use_distance_cst=1 coord_dev=1.0 min_seq_sep=0 max_distance=8 cst_weight=1.0 />
         <ClearConstraintsMover name=clearcst />
         <MinMover name=minimize scorefxn=fa_talaris2014 chi=1 bb=1 type=dfpmin_armijo_nonmonotone tolerance=0.000001 max_iter=5000/>
         <PackRotamersMover name=repack scorefxn=beta_nov15_soft task_operations="repackonly,norepack"/>
         <PackRotamersMover name=mutate scorefxn=beta_nov15_soft task_operations="readres,norepack"/>
-        <ParsedProtocol name=backsidecombo mode=sequence>
+        <MetropolisHastings name=MCbacksidecombo scorefxn=talaris2014 temperature=1.6 trials=10000>
             <Add mover_name=backrub/>
             <Add mover_name=sidechain/>
-        </ParsedProtocol>
+        </MetropolisHastings>
         <MetropolisHastings name=MCbackrub scorefxn=talaris2014 temperature=1.6 trials=10000>
-            <RandomMover name=random movers="backrub,sidechain,backsidecombo" weights="0.5625,0.25,0.1825"/>
-        </MetropolisHastings>    
+            <Add mover_name=backrub/>
+        </MetropolisHastings>
+        <MetropolisHastings name=MCsidechain scorefxn=talaris2014 temperature=1.6 trials=10000>
+            <Add mover_name=sidechain/>
+        </MetropolisHastings>
+        <RandomMover name=MCrandom movers="MCbackrub,MCsidechain,MCbacksidecombo" weights="0.5625,0.25,0.1825"/>
         <ddG name=ddg scorefxn=fa_talaris2014 chain_name="%%chain%%"/>
         <SavePoseMover name=savepose restore_pose=0 reference_name=backrubpdb/>
         <SavePoseMover name=restorepose restore_pose=1 reference_name=backrubpdb/>
@@ -49,7 +53,7 @@
       <Add mover_name = addcst/>
       <Add mover_name = minimize/>
       <Add mover_name = clearcst/>
-      <Add mover_name = MCbackrub/>
+      <Add mover_name = MCrandom/>
       <Add mover_name = savepose/>
       <Add mover_name = repack/>
       <Add mover_name = addcst/>
