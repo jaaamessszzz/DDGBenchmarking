@@ -36,7 +36,7 @@
             <Add mover_name=asdf/>
         </ParsedProtocol>
         <MetropolisHastings name=MCbackrub scorefxn=talaris2014 temperature=1.6 trials=10000>
-            <RandomMover name=random movers="backrub, asdf, backsidecombo" weights="0.5625, 0.25, 0.1825"/>
+            <RandomMover name=random movers="backrub, backsidecombo, asdf" weights="0.5625, 0.1825, 0.25"/>
         </MetropolisHastings>    
         <ddG name=ddg scorefxn=fa_talaris2014 chain_name="%%chain%%"/>
         <SavePoseMover name=savepose restore_pose=0 reference_name=backrubpdb/>
