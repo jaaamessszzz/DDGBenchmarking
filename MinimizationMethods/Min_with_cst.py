@@ -141,6 +141,8 @@ for line in out.split(os.linesep):
 #moves output and error files to output directory
 error_out = 'Min_lbfgs_RScript.py.e' + str(job_id) + '.' + str(sge_task_id)
 output_out = 'Min_lbfgs_RScript.py.o' + str(job_id) + '.' + str(sge_task_id)
-
-shutil.move(error_out , os.path.join(outputdir, filenum))
+try:
+    shutil.move(error_out , os.path.join(outputdir, filenum))
+except:
+    print 'No error out file!'
 shutil.move(output_out , os.path.join(outputdir, filenum))
