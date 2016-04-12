@@ -118,7 +118,7 @@ def minimize(inputdir, outputdir):
 
 datadir = '/netapp/home/james.lucas/160322-james-backrub-rscript-full/'
 inputdir = json_parser(datadir)
-outputdir = '/netapp/home/james.lucas/MinimizationMethods/output-Min_dfpmin/'
+outputdir = '/netapp/home/james.lucas/MinimizationMethods/output-Min_with_cst/'
 filenum = minimize(inputdir, outputdir)
 #End Pasted Stuff
 
@@ -139,8 +139,8 @@ for line in out.split(os.linesep):
         print 'Max virtual memory usage: %.1f%s' % (ram_usage, ram_usage_type)
 
 #moves output and error files to output directory
-error_out = 'Min_with_cst.py.e' + str(job_id) + '.' + str(sge_task_id)
-output_out = 'Min_with_cst.py.o' + str(job_id) + '.' + str(sge_task_id)
+error_out = 'Min_with_cst_RScript.py.e' + str(job_id) + '.' + str(sge_task_id)
+output_out = 'Min_with_cst_RScript.py.o' + str(job_id) + '.' + str(sge_task_id)
 try:
     shutil.move(error_out , os.path.join(outputdir, filenum))
 except:

@@ -120,7 +120,7 @@ def minimize(inputdir, outputdir):
 
 datadir = '/netapp/home/james.lucas/160322-james-backrub-rscript-full/'
 inputdir = json_parser(datadir)
-outputdir = '/netapp/home/james.lucas/MinimizationMethods/output-Min_dfpmin/'
+outputdir = '/netapp/home/james.lucas/MinimizationMethods/output-Min_dfpmin_cst/'
 filenum = minimize(inputdir, outputdir)
 #End Pasted Stuff
 
