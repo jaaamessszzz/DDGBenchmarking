@@ -77,6 +77,57 @@ def read_mutations_resfile(filenum_dir):
                 post_start = True
     return mutations
 
+#From Kyle's Finalize.py
+def find_neighbors(filenum_dir, pdb_path, neighbor_distance = 8.0):
+    mutations = read_mutations_resfile(filenum_dir)
+    parser = PDBParser(PERMISSIVE=1)
+    open_strct = parser.get_structure('Open', pdb_path)
+
+    # There should only be one model in PDB file
+    num_models = 0
+    for model in open_strct.get_models():
+        num_models += 1
+    assert( num_models == 1 )
+
+    chain_list = [chain.get_id() for chain in open_strct[0].get_chains()]
+    neighbors = set()
+    for mutation in mutations:
+        res_id, chain_id, pikaa, mut_aa = mutation
+        mut_chain = str(chain_id)
+        try:
+            mut_pos = int( res_id )
+            mut_insertion_code = ' '
+        except ValueError:
+            mut_pos = int( res_id[:-1] )
+            mut_insertion_code = res_id[-1]
+
+        mut_residue = open_strct[0][mut_chain][(' ', mut_pos, mut_insertion_code)]
+        for chain in chain_list:
+            for residue in [res.get_id() for res in open_strct[0][chain].get_residues()]:
+                try:
+                    dist = mut_residue['CB'] - open_strct[0][chain][residue]['CB']
+                    if dist < neighbor_distance:
+                        neighbors.add( (residue, chain) )
+                except KeyError:
+                    try:
+                        dist = mut_residue['CA'] - open_strct[0][chain][residue]['CA']
+                        if dist < neighbor_distance:
+                            neighbors.add( (residue, chain) )
+                    except KeyError:
+                        pass
+
+    return neighbors
+
+#Parses dataset .json file and outputs chain to move and input PDB file directory
+def json_parser():
+    jsonload = open("data/blank_job_dict.json")
+    jsonfile = json.load(jsonload)
+    key = sorted(jsonfile.keys())[sge_task_id-1]
+    chaintomove = jsonfile[key]["%%chainstomove%%"]
+    inputdir = jsonfile[key]['input_file_list'][0]
+    
+    return chaintomove, inputdir
+
 #Finds neighbors within 8A and adds position and Chain information to a list
 def neighbors_list(pdb_filepath, pdb_file):
     neighbors = find_neighbors(pdb_filepath, pdb_file, 8)
@@ -105,54 +156,6 @@ def neighbors_list(pdb_filepath, pdb_file):
     
     #Adds +1/-1 residues for items in pivotlist
     #Dirty AF but it works
-    
-    for chain in chain_list:
-        for residue in [res.get_id() for res in res_list]:
-            if residue[2] != ' ':
-                all_residues.add(str(residue[1]) + str(residue[2]) + str(chain))
-            else:
-                all_residues.add(str(residue[1]) + str(chain.get_id()))
-    
-    pivotlist_alpha = set()
-    pivotlist_alpha = pivotlist.intersection(all_residues)
-    
-    pivotlist_final = ''
-    for i in pivotlist_alpha:
-        pivotlist_final = pivotlist_final + '%s,' %i
-    
-    pivotlist_final = pivotlist_final[:-1]
-
-    return pivotlist_final
-
-#Parses dataset .json file and outputs chain to move and input PDB file directory
-def json_parser():
-    jsonload = open("data/blank_job_dict.json")
-    jsonfile = json.load(jsonload)
-    key = sorted(jsonfile.keys())[sge_task_id-1]
-    chaintomove = jsonfile[key]["%%chainstomove%%"]
-    inputdir = jsonfile[key]['input_file_list'][0]
-    
-    return chaintomove, inputdir
-
-#Finds neighbors within 8A and adds position and Chain information to a list
-def neighbors_list(pdb_filepath, pdb_file):
-    neighbors = find_neighbors(pdb_filepath, pdb_file, 8)
-    #Generating pivotlist with sets
-    pivotlist = set()
-    for i in neighbors:
-        pivotlist.add(str(i[0][1]) + str(i[1]))
-        pivotlist.add(str(i[0][1] + 1) + str(i[1]))
-        pivotlist.add(str(i[0][1] - 1) + str(i[1]))
-    parser = PDBParser()
-    
-    #Adds +1/-1 residues for items in pivotlist
-    #Dirty AF but it works
-    
-    structure = parser.get_structure('myPDB', pdb_file)
-    chain_list = Selection.unfold_entities(structure, 'C')
-    res_list = Selection.unfold_entities(chain_list, 'R')
-    
-    all_residues = set()
     
     for chain in chain_list:
         for residue in [res.get_id() for res in res_list]:
