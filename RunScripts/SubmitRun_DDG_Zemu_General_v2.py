@@ -3,7 +3,7 @@
 #$ -cwd
 #$ -r yes
 #$ -l h_rt=240:00:00
-#$ -t 1-1240
+#$ -t 1-707
 #$ -l arch=linux-x64
 #$ -l mem_free=1.9G
 #$ -l netapp=2G,scratch=1G
@@ -77,44 +77,52 @@ def read_mutations_resfile(filenum_dir):
                 post_start = True
     return mutations
 
-def find_neighbors(filenum_dir, pdb_path, neighbor_distance = 8.0):
-    mutations = read_mutations_resfile(filenum_dir)
+#Finds neighbors within 8A and adds position and Chain information to a list
+def neighbors_list(pdb_filepath, pdb_file):
+    neighbors = find_neighbors(pdb_filepath, pdb_file, 8)
+    
+    parser = PDBParser()
+    structure = parser.get_structure('TEST', pdb_file)
+    chain_list = Selection.unfold_entities(structure, 'C')
+    res_list = Selection.unfold_entities(chain_list, 'R')
+    
+    all_residues = set()
+    
+    #Generating pivotlist with sets
+    pivotlist = set()
+    
+    print res_list[0].get_full_id()
+    
+    for i in neighbors:
+        pivotlist.add(str(i[0][1]) + str(i[1]))
+        for res in res_list:
+            if str(res.get_full_id()[2]) == str(i[1]):
+                if str(res.get_full_id()[3][1]) == str(i[0][1]-1):
+                      pivotlist.add(str(i[0][1] - 1) + str(i[1]))
+            if str(res.get_full_id()[2]) == str(i[1]):
+                if str(res.get_full_id()[3][1]) == str(i[0][1]+1):
+                    pivotlist.add(str(i[0][1] + 1) + str(i[1]))
+    
+    #Adds +1/-1 residues for items in pivotlist
+    #Dirty AF but it works
+    
+    for chain in chain_list:
+        for residue in [res.get_id() for res in res_list]:
+            if residue[2] != ' ':
+                all_residues.add(str(residue[1]) + str(residue[2]) + str(chain))
+            else:
+                all_residues.add(str(residue[1]) + str(chain.get_id()))
+    
+    pivotlist_alpha = set()
+    pivotlist_alpha = pivotlist.intersection(all_residues)
+    
+    pivotlist_final = ''
+    for i in pivotlist_alpha:
+        pivotlist_final = pivotlist_final + '%s,' %i
+    
+    pivotlist_final = pivotlist_final[:-1]
 
-    open_filename = pdb_path
-    parser = PDBParser(PERMISSIVE=1)
-
-    open_strct = parser.get_structure('Open', open_filename)
-
-    # There should only be one model in PDB file
-    num_models = 0
-    for model in open_strct.get_models():
-        num_models += 1
-    assert( num_models == 1 )
-
-    chain_list = [chain.get_id() for chain in open_strct[0].get_chains()]
-    neighbors = set()
-    for mutation in mutations:
-        res_id, chain_id, pikaa, mut_aa = mutation
-        mut_chain = str(chain_id)
-        try:
-            mut_pos = int( res_id )
-            mut_insertion_code = ' '
-        except ValueError:
-            mut_pos = int( res_id[:-1] )
-            mut_insertion_code = res_id[-1]
-
-        mut_residue = open_strct[0][mut_chain][(' ', mut_pos, mut_insertion_code)]
-        for chain in chain_list:
-            for residue in [res.get_id() for res in open_strct[0][chain].get_residues()]:
-                try:
-                    # Kyle note - might be good to do something else for consistency, since not all residues have CB
-                    dist = mut_residue['CB'] - open_strct[0][chain][residue]['CB']
-                    if dist < neighbor_distance:
-                        neighbors.add( (residue, chain) )
-                except KeyError:
-                    pass
-
-    return neighbors
+    return pivotlist_final
 
 #Parses dataset .json file and outputs chain to move and input PDB file directory
 def json_parser():
@@ -140,7 +148,7 @@ def neighbors_list(pdb_filepath, pdb_file):
     #Adds +1/-1 residues for items in pivotlist
     #Dirty AF but it works
     
-    structure = parser.get_structure('TEST', 'data/59648/1TM1_EI.pdb')
+    structure = parser.get_structure('myPDB', pdb_file)
     chain_list = Selection.unfold_entities(structure, 'C')
     res_list = Selection.unfold_entities(chain_list, 'R')
     
@@ -202,7 +210,7 @@ def bash(chaintomove, inputdir, outputdir):
            '-s',
            pdb_relpath,
            '-parser:protocol',
-           '../../../RosettaScripts/DDG_Test.xml',
+           '../../../DDGBenchmarks_Test/RosettaScripts/DDG_Protocol_v1.xml',
            '-ignore_unrecognized_res',
            '-parser:script_vars',
            'resfile_relpath=%s' %(resfile_relpath),
