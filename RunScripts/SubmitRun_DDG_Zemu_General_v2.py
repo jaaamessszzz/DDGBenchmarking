@@ -140,7 +140,7 @@ def neighbors_list(pdb_filepath, pdb_file):
     #Adds +1/-1 residues for items in pivotlist
     #Dirty AF but it works
     
-    structure = parser.get_structure('TEST', 'data/59648/1TM1_EI.pdb')
+    structure = parser.get_structure('myPDB', pdb_file)
     chain_list = Selection.unfold_entities(structure, 'C')
     res_list = Selection.unfold_entities(chain_list, 'R')
     
