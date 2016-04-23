@@ -32,7 +32,7 @@
         <MinMover name=minimize scorefxn=fa_talaris2014 chi=1 bb=1 type=lbfgs_armijo_nonmonotone tolerance=0.000001 max_iter=5000/>
         <PackRotamersMover name=repack scorefxn=beta_nov15_soft task_operations="repackonly,norepack"/>
         <PackRotamersMover name=mutate scorefxn=beta_nov15_soft task_operations="readres,norepack"/>
-        <MetropolisHastings name=MC scorefxn=fa_talaris2014 temperature=1.6 trials=10000>
+        <MetropolisHastings name=MC scorefxn=fa_talaris2014 temperature=1.6 trials=1000>
             <Add mover_name=backrub sampling_weight=0.75/>
             <Add mover_name=sidechain sampling_weight=0.25/>
         </MetropolisHastings>
