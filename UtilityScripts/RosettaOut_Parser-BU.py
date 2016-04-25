@@ -38,7 +38,14 @@ def parse_rosetta_out(workingdir, verbose = True):
         
         temp_dict = {}
         temp_dict['WT'] = {}
+        temp_dict['WT']["Unbound Scores"] = {}
+        temp_dict['WT']["Bound Scores"] = {}
+        temp_dict['WT']["Total Scores"] = {}
         temp_dict['Mutant'] = {}
+        temp_dict['Mutant']["Unbound Scores"] = {}
+        temp_dict['Mutant']["Bound Scores"] = {}
+        temp_dict['Mutant']["Total Scores"] = {}
+        
         score_list = ["fa_atr",
                       "fa_rep",
                       "fa_sol",
@@ -56,6 +63,20 @@ def parse_rosetta_out(workingdir, verbose = True):
                       "yhh_planarity",
                       "ref"]
         
+        #Determine which scoretype to enter under the StructID dict
+        Unbound_scores = False
+        Bound_scores = False
+        Total_scores = False
+
+        def return_scoretype(Unbound_scores, Bound_scores, Total_scores):
+            if Unbound_scores == True:
+                return "Unbound Scores"
+            if Bound_scores == True:
+                return "Bound Scores"
+            if Total_scores == True:
+                return "Total Scores"
+            
+        #Goes through line-by-line and decides what to add to dict and where
         for line in enumerate(open(filename, 'r')): #Just realized I don't need to enumerate things anymore... sorry future me
             #WT or Mutant scores for current structID
             if counter % 2 == 0:
@@ -63,36 +84,19 @@ def parse_rosetta_out(workingdir, verbose = True):
             else:
                 struct_type = 'Mutant'
                 
-            #Determine which scoretype to enter
-            Unbound_scores = False
-            Bound_scores = False
-            Total_scores = False
-            
-            def return_scoretype(Unbound_scores, Bound_scores, Total_scores):
-                if Unbound_scores == True:
-                    return "Unbound Scores"
-                if Unbound_scores == True:
-                    return "Bound Scores"
-                if Unbound_scores == True:
-                    return "Total Scores"
-            
-            if line[1].split()[0].strip() == "Unbound Scores":
+            if line[1].split()[0] == "Unbound":
                 Unbound_scores = True
                 Bound_scores = False
                 Total_scores = False
-            if line[1].split()[0].strip() == "Bound Scores":
+            if line[1].split()[0] == "Bound":
                 Unbound_scores = False
                 Bound_scores = True
                 Total_scores = False
-            if line[1].split()[0].strip() == "Scores":
+            if line[1].split()[0] == "Scores":
                 Unbound_scores = False
                 Bound_scores = False
                 Total_scores = True
                 
-            ###Troubleshooting
-            print line
-            print line[1].split()[0].strip() == "Unbound Scores"    
-            
             #Looks for scoretype as first phrase in line, adds score to dict if present
             for score in score_list:
                 if score in line[1].split()[0]:
@@ -105,10 +109,21 @@ def parse_rosetta_out(workingdir, verbose = True):
                 counter = counter + 1
                 if counter % 2 == 0:
                     if len(temp_dict['Mutant']) != 0:
+                        #Add to fattydict and reset variables
                         fattydict[i]['structIDs'][structID] = temp_dict
                         temp_dict = {}
                         temp_dict['Mutant'] = {}
                         temp_dict['WT'] = {}
+                        temp_dict['WT']["Unbound Scores"] = {}
+                        temp_dict['WT']["Bound Scores"] = {}
+                        temp_dict['WT']["Total Scores"] = {}
+                        temp_dict['Mutant'] = {}
+                        temp_dict['Mutant']["Unbound Scores"] = {}
+                        temp_dict['Mutant']["Bound Scores"] = {}
+                        temp_dict['Mutant']["Total Scores"] = {}
+                        Unbound_scores = False
+                        Bound_scores = False
+                        Total_scores = False
 
             if "reported success in" in line[1]:
                 timeline = line[1].split()
@@ -147,23 +162,52 @@ def parse_rosetta_out(workingdir, verbose = True):
                         else:
                             print "Memory usage not measured in MB or GB!"
                         fattydict[i]['Max virtual memory usage:'] = float(mem_usage)
-
+        
+        #Sort both mutant and WT bound energy scores
+        mutant_score_list = []
+        wt_score_list = []
+        
+        for structure_ids in fattydict[i]['structIDs']:
+            wt_score_list.append( ( sum( fattydict[i]['structIDs'][structure_ids]['WT']["Bound Scores"].itervalues() ), structure_ids ) )
+            mutant_score_list.append( ( sum( fattydict[i]['structIDs'][structure_ids]['Mutant']["Bound Scores"].itervalues() ), structure_ids ) )
+            
+        wt_score_list = sorted(wt_score_list)
+        mutant_score_list = sorted(mutant_score_list)
+            
+        #Add new interface energy terms under each stuctID based on sorting 
+        for structure_ids in fattydict[i]['structIDs']:
+            
+            for energy_term in fattydict[i]['structIDs'][structure_ids]['WT']['Total Scores']:
+                fattydict[i]['structIDs'][structure_ids]['WT'][energy_term] = fattydict[i]['structIDs'][wt_score_list[int(structure_ids) - 1][1]]['WT']["Total Scores"][energy_term]
+                
+            for energy_term in fattydict[i]['structIDs'][structure_ids]['Mutant']['Total Scores']:
+                fattydict[i]['structIDs'][structure_ids]['Mutant'][energy_term] = fattydict[i]['structIDs'][mutant_score_list[int(structure_ids) - 1][1]]['Mutant']["Total Scores"][energy_term]
+            
+        #Pop (Unbound_scores, Bound_scores, Total_scores)
+        for structure_ids in fattydict[i]['structIDs']:
+            fattydict[i]['structIDs'][structure_ids]['WT'].pop('Unbound Scores')
+            fattydict[i]['structIDs'][structure_ids]['WT'].pop('Bound Scores')
+            fattydict[i]['structIDs'][structure_ids]['WT'].pop('Total Scores')
+            fattydict[i]['structIDs'][structure_ids]['Mutant'].pop('Unbound Scores')
+            fattydict[i]['structIDs'][structure_ids]['Mutant'].pop('Bound Scores')
+            fattydict[i]['structIDs'][structure_ids]['Mutant'].pop('Total Scores')
+            
         #Keeps track of unfinished jobs
         if structID - 1 < 50: ###Change for each run!!!!
             unfinished[i] = structID - 1
         else:
             continue
-
-        r.increment_report()
+            
+    r.increment_report()
     r.done()
-
+        
     return fattydict, unfinished
 
 def main():
     my_working_directory = str(os.getcwd() + '/')
     print my_working_directory
     parsed_dict, unfinished_jobs = parse_rosetta_out(my_working_directory)
-                    
+    print parsed_dict
     #os.chdir(my_working_directory)
 
     #open("DDG_Data.json", "w").write(json.dumps(parsed_dict, sort_keys=True,separators=(',', ': ')))
