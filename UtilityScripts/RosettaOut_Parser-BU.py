@@ -56,23 +56,52 @@ def parse_rosetta_out(workingdir, verbose = True):
                       "yhh_planarity",
                       "ref"]
         
-        print i
-        
-        for line in enumerate(open(filename, 'r')):
+        for line in enumerate(open(filename, 'r')): #Just realized I don't need to enumerate things anymore... sorry future me
             #WT or Mutant scores for current structID
             if counter % 2 == 0:
                 struct_type = 'WT'
             else:
                 struct_type = 'Mutant'
+                
+            #Determine which scoretype to enter
+            Unbound_scores = False
+            Bound_scores = False
+            Total_scores = False
+            
+            def return_scoretype(Unbound_scores, Bound_scores, Total_scores):
+                if Unbound_scores == True:
+                    return "Unbound Scores"
+                if Unbound_scores == True:
+                    return "Bound Scores"
+                if Unbound_scores == True:
+                    return "Total Scores"
+            
+            if line[1].split()[0].strip() == "Unbound Scores":
+                Unbound_scores = True
+                Bound_scores = False
+                Total_scores = False
+            if line[1].split()[0].strip() == "Bound Scores":
+                Unbound_scores = False
+                Bound_scores = True
+                Total_scores = False
+            if line[1].split()[0].strip() == "Scores":
+                Unbound_scores = False
+                Bound_scores = False
+                Total_scores = True
+                
+            ###Troubleshooting
+            print line
+            print line[1].split()[0].strip() == "Unbound Scores"    
+            
             #Looks for scoretype as first phrase in line, adds score to dict if present
             for score in score_list:
                 if score in line[1].split()[0]:
                     parsed_scores = line[1].split()
-                    temp_dict[struct_type][parsed_scores[0]] = float( parsed_scores[1] )
+                    temp_dict[struct_type][return_scoretype(Unbound_scores, Bound_scores, Total_scores)][parsed_scores[0]] = float( parsed_scores[1] )
                 
             if "Sum ddg: " in line[1]:
                 parsed_sumscore = line[1].split()
-                temp_dict[struct_type][parsed_sumscore[0]] = float( parsed_sumscore[2] )
+                temp_dict[struct_type][return_scoretype(Unbound_scores, Bound_scores, Total_scores)][parsed_sumscore[0]] = float( parsed_sumscore[2] )
                 counter = counter + 1
                 if counter % 2 == 0:
                     if len(temp_dict['Mutant']) != 0:
@@ -85,10 +114,10 @@ def parse_rosetta_out(workingdir, verbose = True):
                 timeline = line[1].split()
                 fattydict[i]['structIDs'][structID]['Runtime'] = float( timeline[5] )
                 structID = structID + 1
-
+                        
         if verbose:
             print str(i) + ": " + str(structID - 1) + " structures completed"
-
+        
         #Parse output file for Max VMem usage (GB), start/end times, and return code
         files = os.listdir(os.path.join(workingdir,  str(i)))
         for doc in files:
