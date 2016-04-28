@@ -125,7 +125,7 @@ def parse_rosetta_out(workingdir, verbose = True):
         else:
             continue
 
-        r.increment_report()
+    r.increment_report()
     r.done()
 
     return fattydict, unfinished
@@ -134,7 +134,7 @@ def main():
     my_working_directory = str(os.getcwd() + '/')
     print my_working_directory
     parsed_dict, unfinished_jobs = parse_rosetta_out(my_working_directory)
-                    
+    print parsed_dict                
     #os.chdir(my_working_directory)
 
     #open("DDG_Data.json", "w").write(json.dumps(parsed_dict, sort_keys=True,separators=(',', ': ')))

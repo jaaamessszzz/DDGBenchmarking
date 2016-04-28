@@ -6,6 +6,7 @@ import klab.bio.rcsb as rcsb
 import klab.bio.alignment as align
 import klab.bio.pdb as PDB
 import pandas as pd
+import Bio.PDB
 
 #From Kyle's Finalize.py
 def read_mutations_resfile(filenum_dir):
@@ -72,37 +73,43 @@ def get_PDBs(pdbdir):
     
     for pdb_file in os.listdir(pdbdir):
         if pdb_file.endswith('.pdb'):
+            print "\n***Now BLASTing %s***" % pdb_file
+            actual_pdb_file = pdb_file
             output_dir = os.path.join('/kortemmelab/home/james.lucas/Mutant_PDBs', pdb_file[:-4])
             try:
                 os.makedirs(output_dir)        
             except:
                 print 'File directory %s already exists!!!' % pdb_file[:-4]
-                
-            pdb_chains = re.split(r'_', pdb_file)[1][:-4]
-            pdb_id = re.split(r'_', pdb_file)[0]
-            hv = prody.parsePDB(os.path.join(pdbdir, pdb_file)).getHierView()
+                skip_blast = True
             
-            blast_dict = generate_mut_seq(pdbdir, hv)
-            hit_list = []
-            for sequence in blast_dict:
-                set_dict = {}
-                temp_set = set()
-                blast_me = prody.blastPDB(blast_dict[sequence])
-                hits_dict = blast_me.getHits(percent_identity=95)
-                for hit in hits_dict:
-                    temp_set.add(hit)
+            if skip_blast == False:
+                pdb_chains = re.split(r'_', pdb_file)[1][:-4]
+                pdb_id = re.split(r'_', pdb_file)[0]
+                hv = prody.parsePDB(os.path.join(pdbdir, pdb_file)).getHierView()
 
-                hit_list.append(temp_set)
+                blast_dict = generate_mut_seq(pdbdir, hv)
+                hit_list = []
+                for sequence in blast_dict:
+                    set_dict = {}
+                    temp_set = set()
+                    blast_me = prody.blastPDB(blast_dict[sequence], timeout = 600)
+                    hits_dict = blast_me.getHits(percent_identity=95)
+                    for hit in hits_dict:
+                        temp_set.add(hit)
 
-            common_set = hit_list[0]
+                    hit_list.append(temp_set)
 
-            for entry in hit_list[1:]:
-                common_set.intersection_update(entry)
+                common_set = hit_list[0]
 
-            for hit in common_set:
-                rcsb.download_pdb(hit, output_dir)
-            
-    return pdb_file, common_set, blast_dict
+                for entry in hit_list[1:]:
+                    common_set.intersection_update(entry)
+
+                for hit in common_set:
+                    rcsb.download_pdb(hit, output_dir)
+
+                alignments(actual_pdb_file, common_set, pdbdir)
+            else:
+                print 'Blast skipped!'
 
 def alignments(pdb_file, common_set, pdbdir):
     for pdb_id in common_set:
@@ -118,7 +125,7 @@ def clustal(pdb_WT, pdb_target, pdbdir):
     
     symbols = SubstitutionScore.clustal_symbols
     
-    wt_pdb_path = os.path.join('/kortemmelab', 'home', 'james.lucas', '160322-james-backrub-rscript-full', 'data', pdbdir, 
+    wt_pdb_path = os.path.join('/kortemmelab', 'home', 'james.lucas', 'jobs', '160322-james-backrub-rscript-full', 'data', pdbdir, 
                                             '{0}.pdb'.format(pdb_WT[:-4]))
 
     p1 = PDB.PDB.from_filepath(wt_pdb_path)
@@ -146,8 +153,6 @@ def clustal(pdb_WT, pdb_target, pdbdir):
             sa2.add_sequence('{0}_{1}'.format(best_match_pdb[:-2], best_match_pdb[-1:]), str(p2.seqres_sequences[best_match_pdb[-1:]]))
             asddfasdf=p2.seqres_sequences[best_match_pdb[-1:]]
             sa2.align()
-            #colortext.warning('Differing residues')
-            #print('{0}_{1} -> {2}'.format(pdb_WT[:-4],chain_id_WT, best_match_pdb))
             resmap, clustal_matches = sa2.get_residue_mapping()
             
             #print clustal_matches
@@ -184,16 +189,12 @@ def mut_list_interpreter(formatted_mut_list, pdb_WT, pdb_target):
                 print '%s,%s,%s,%s\n' % (row[0], pdb_WT, row[1], pdb_target)
             
 def main():
-    os.chdir('/kortemmelab/home/james.lucas/160322-james-backrub-rscript-full/data/')
+    os.chdir('/kortemmelab/home/james.lucas/jobs/160322-james-backrub-rscript-full/data/')
     cwd = os.getcwd()
-    output = open('/kortemmelab/home/james.lucas/Mutant_PDBs/Resfile_Mutations_Completed.txt', 'w')
-    output.write('DatasetID,Mutations,PDBFileID,Matches\n')
+    output = open('/kortemmelab/home/james.lucas/Mutant_PDBs/Resfile_Mutations_Completed.txt', 'a')
+    output.write('DatasetID,PDBFileID,Mutations,Matches\n')
     for pdbdir in os.listdir(cwd):
         if os.path.isdir(pdbdir):
-            try:
-                pdb_file, common_set = get_PDBs(pdbdir)
-            except:
-                print 'ERROR!!!'
-            alignments(pdb_file, common_set, pdbdir)
-                
+            get_PDBs(pdbdir)
+            
 main()

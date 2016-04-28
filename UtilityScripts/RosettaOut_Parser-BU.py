@@ -9,6 +9,7 @@ import linecache
 import json
 from klab.Reporter import Reporter
 import datetime
+import pprint
 
 def parse_rosetta_out(workingdir, verbose = True):
     fattydict = {}
@@ -129,7 +130,8 @@ def parse_rosetta_out(workingdir, verbose = True):
                 timeline = line[1].split()
                 fattydict[i]['structIDs'][structID]['Runtime'] = float( timeline[5] )
                 structID = structID + 1
-                        
+        
+        
         if verbose:
             print str(i) + ": " + str(structID - 1) + " structures completed"
         
@@ -174,24 +176,24 @@ def parse_rosetta_out(workingdir, verbose = True):
         wt_score_list = sorted(wt_score_list)
         mutant_score_list = sorted(mutant_score_list)
             
-        #Add new interface energy terms under each stuctID based on sorting 
+        #Add new interface energy terms under each stuctID based on sorting (use a new temp dictionary)
+        
+        another_temp_dict = {}
+        
         for structure_ids in fattydict[i]['structIDs']:
+            another_temp_dict[structure_ids] = {}
+            another_temp_dict[structure_ids]['WT'] = {}
+            another_temp_dict[structure_ids]['Mutant'] = {}
             
             for energy_term in fattydict[i]['structIDs'][structure_ids]['WT']['Total Scores']:
-                fattydict[i]['structIDs'][structure_ids]['WT'][energy_term] = fattydict[i]['structIDs'][wt_score_list[int(structure_ids) - 1][1]]['WT']["Total Scores"][energy_term]
+                another_temp_dict[structure_ids]['WT'] = fattydict[i]['structIDs'][wt_score_list[int(structure_ids) - 1][1]]['WT']["Total Scores"]
                 
             for energy_term in fattydict[i]['structIDs'][structure_ids]['Mutant']['Total Scores']:
-                fattydict[i]['structIDs'][structure_ids]['Mutant'][energy_term] = fattydict[i]['structIDs'][mutant_score_list[int(structure_ids) - 1][1]]['Mutant']["Total Scores"][energy_term]
+                another_temp_dict[structure_ids]['Mutant'] = fattydict[i]['structIDs'][mutant_score_list[int(structure_ids) - 1][1]]['Mutant']["Total Scores"]
             
-        #Pop (Unbound_scores, Bound_scores, Total_scores)
-        for structure_ids in fattydict[i]['structIDs']:
-            fattydict[i]['structIDs'][structure_ids]['WT'].pop('Unbound Scores')
-            fattydict[i]['structIDs'][structure_ids]['WT'].pop('Bound Scores')
-            fattydict[i]['structIDs'][structure_ids]['WT'].pop('Total Scores')
-            fattydict[i]['structIDs'][structure_ids]['Mutant'].pop('Unbound Scores')
-            fattydict[i]['structIDs'][structure_ids]['Mutant'].pop('Bound Scores')
-            fattydict[i]['structIDs'][structure_ids]['Mutant'].pop('Total Scores')
-            
+        #Sub fattydict[i]['structIDs'] with another_temp_dict
+        fattydict[i]['structIDs'] = another_temp_dict
+        
         #Keeps track of unfinished jobs
         if structID - 1 < 50: ###Change for each run!!!!
             unfinished[i] = structID - 1
@@ -207,7 +209,7 @@ def main():
     my_working_directory = str(os.getcwd() + '/')
     print my_working_directory
     parsed_dict, unfinished_jobs = parse_rosetta_out(my_working_directory)
-    print parsed_dict
+    pprint.pprint (parsed_dict)
     #os.chdir(my_working_directory)
 
     #open("DDG_Data.json", "w").write(json.dumps(parsed_dict, sort_keys=True,separators=(',', ': ')))
