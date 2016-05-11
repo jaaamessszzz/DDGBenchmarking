@@ -1,22 +1,21 @@
-#Prints out all PDB files in subdirectories of workingdir
+#Prints out all PDB files in subdirectories of cwd
 #List_PDBs.py
 import os
 import csv
 
-workingdir = '/Users/jameslucas/Kortemme_Rotation/PDB_REDO'
-#workingdir = '/netapp/home/james.lucas/160315-kyleb_james-backrub-rscript/data/'
-#workingdir = '/Users/jameslucas/Kortemme_Rotation/output/'
+cwd = os.getcwd()
+print cwd
 
 pdbcsv = open('PDB_list.csv', 'wb')
 csvwriter = csv.writer(pdbcsv, delimiter=' ', quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
 pdb_set = set()
-for i in os.listdir(workingdir):
-    if i.endswith('.pdb'):
-        pdb_set.add(i)
-    else:
-        continue
+for dirpath, dirnames, filenames in os.walk(cwd):
+    for filename in filenames:
+        if filename.endswith('.pdb'):
+            pdb_set.add(filename)
+            
+print pdb_set
 
 for pdbid in pdb_set:
-    print pdbid
     csvwriter.writerow([pdbid])
