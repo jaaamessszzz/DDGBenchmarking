@@ -8,6 +8,7 @@ from pyRMSD.availableCalculators import availableCalculators
 import prody
 import numpy as np
 import scipy.spatial.distance
+import json
 
 #From Kyle's Finalize.py
 def read_mutations_resfile(filenum_dir):
@@ -66,17 +67,29 @@ def find_neighbors(filenum_dir, pdb_path, neighbor_distance = 8.0):
 
     return neighbors
 
-#Kyle's RMSDWrapper.py (Spread out al over the place now)
+#Kyle's RMSDWrapper.py (Spread out all over the place now)
 def rmsd(input_pdbs, pyrmsd_calc, coordinates):
     if type(coordinates) is dict:
         rmsd_list = []
         for mutres, coord_set in coordinates.iteritems():
             rmsd_matrix = pyRMSD.matrixHandler.MatrixHandler().createMatrix(coord_set, pyrmsd_calc)
-            rmsd_list.append([mutres, scipy.spatial.distance.squareform( rmsd_matrix.get_data() )])
+            avg_rmsd = average_rmsd_calculator(rmsd_matrix)
+            rmsd_list.append([mutres, avg_rmsd])
         return rmsd_list
     else:
         rmsd_matrix = pyRMSD.matrixHandler.MatrixHandler().createMatrix(coordinates, pyrmsd_calc)
-        return [scipy.spatial.distance.squareform( rmsd_matrix.get_data() )]
+        avg_rmsd = average_rmsd_calculator(rmsd_matrix)
+        return avg_rmsd
+    
+def average_rmsd_calculator(rmsd_matrix):
+    rmsd_sqform = scipy.spatial.distance.squareform( rmsd_matrix.get_data() )
+    avg_rmsd_list = []
+    for rmsd_row in enumerate(rmsd_sqform):
+        for rmsd_value in enumerate(rmsd_row[1]):
+            if rmsd_value[0] > rmsd_row[0]:
+                avg_rmsd_list.append(rmsd_value[1])
+    avg_rmsd = sum(avg_rmsd_list)/len(avg_rmsd_list)
+    return avg_rmsd
     
 def global_ca_rms(input_pdbs):
     coordinates = np.array( [prody.parsePDB(input_pdb).select('calpha').getCoords() for input_pdb in input_pdbs] )
@@ -86,17 +99,17 @@ def neighborhood_rms(neighbors, reference, input_pdbs):
     temp = []
 
     for input_pdb in input_pdbs:
-        atom_list = []
-        hv = prody.parsePDB(input_pdb).getHierView()
-        res_list = sorted( [hv[neighbor[1], neighbor[0][1]] for neighbor in neighbors] )
-        for res in res_list:
-            for atom in res:
-                if atom.getElement() != 'H':
-                    print atom
-                    atom_list.append(atom.getCoords())
-                else:
-                    pass
-        temp.append(atom_list)
+        if 'WT.' not in input_pdb:
+            atom_list = []
+            hv = prody.parsePDB(input_pdb).getHierView()
+            res_list = [hv[neighbor[1], neighbor[0][1]] for neighbor in neighbors]
+            for res in res_list:
+                for atom in res:
+                    if atom.getElement() != 'H':
+                        atom_list.append(atom.getCoords())
+                    else:
+                        pass
+                    temp.append(atom_list)
         
     coordinates = np.asarray(temp)
     return coordinates
@@ -111,21 +124,20 @@ def mutant_rms(datadir, input_pdbs):
         temp_nparray = []
         
         for input_pdb in input_pdbs: 
-            atom_list = []
-            hv = prody.parsePDB(input_pdb).getHierView()
-            res_list = [hv[mutation[1], int(mutation[0])]]
-            for res in res_list:
-                for atom in res:
-                    if atom.getElement() != 'H':
-                        atom_list.append(atom.getCoords())
-                    else:
-                        pass
-            temp.append(atom_list)
+            if 'WT.' not in input_pdb:
+                atom_list = []
+                hv = prody.parsePDB(input_pdb).getHierView()
+                res_list = [hv[mutation[1], int(mutation[0])]]
+                for res in res_list:
+                    for atom in res:
+                        if atom.getElement() != 'H':
+                            atom_list.append(atom.getCoords())
+                        else:
+                            pass
+                temp.append(atom_list)
         
         temp_nparray = np.asarray(temp)
-        
         mutation_dict['%s%s' %(mutation[1], mutation[0])] = temp_nparray
-    print mutation_dict.keys()
     return mutation_dict
 
 def chi_angles(datadir, input_pdbs):
@@ -168,59 +180,50 @@ def chi_angles(datadir, input_pdbs):
     xangles_dict = {}
     
     for mutation in mutations:
-        if mutation[3] == 'A' or 'G':
-            continue
+        print mutation
+        if mutation[3] == 'A' or mutation[3] == 'G':
+            xangles_dict['%s%s' %(mutation[0], mutation[1])] = "Mutation is %s!" %mutation[3]
         else:
             xangles_dict['%s%s' %(mutation[0], mutation[1])] = {}
-            counter = 1
+            x1_templist = []
+            x2_templist = []
             for input_pdb in input_pdbs:
-                p = prody.parsePDB(input_pdb)
-                hv = p.getHierView()
+                if 'WT.pdb_' not in input_pdb:
+                    print input_pdb
+                    p = prody.parsePDB(input_pdb)
+                    hv = p.getHierView()
 
-                current_res = hv[mutation[1], int(mutation[0])]
-                templist = []
-
-                if current_res.getResname() == 'ALA' or 'GLY':
-                    continue
-
-                else:
+                    current_res = hv[mutation[1], int(mutation[0])]
+                    
                     if current_res.getResname() in chi1_dict.keys():
                         current_res.select('name %s' %chi1_dict[current_res.getResname()])
-                        chi1 = calcDihedral(current_res.select('name %s' %chi1_dict[current_res.getResname()][0]),
-                                            current_res.select('name %s' %chi1_dict[current_res.getResname()][1]),
-                                            current_res.select('name %s' %chi1_dict[current_res.getResname()][2]),
-                                            current_res.select('name %s' %chi1_dict[current_res.getResname()][3]))
-                        templist.append(chi1[0])
-
+                        chi1 = prody.measure.measure.calcDihedral(current_res.select('name %s' %chi1_dict[current_res.getResname()][0]),
+                                                              current_res.select('name %s' %chi1_dict[current_res.getResname()][1]),
+                                                              current_res.select('name %s' %chi1_dict[current_res.getResname()][2]),
+                                                              current_res.select('name %s' %chi1_dict[current_res.getResname()][3]))
+                        x1_templist.append(chi1[0])
+                        print 'Chi1 %s' %chi1[0]
                     if current_res.getResname() in chi2_dict.keys():
-                        chi2 = calcDihedral(current_res.select('name %s' %chi2_dict[current_res.getResname()][0]),
-                                            current_res.select('name %s' %chi2_dict[current_res.getResname()][1]),
-                                            current_res.select('name %s' %chi2_dict[current_res.getResname()][2]),
-                                            current_res.select('name %s' %chi2_dict[current_res.getResname()][3]))
-                        templist.append(chi2[0])
-
-                    xangles_dict['%s%s' %(mutation[0], mutation[1])]['%s' %counter] = sorted(templist)
-
-                counter = counter + 1
-
-            print xangles_dict
+                        chi2 = prody.measure.measure.calcDihedral(current_res.select('name %s' %chi2_dict[current_res.getResname()][0]),
+                                                              current_res.select('name %s' %chi2_dict[current_res.getResname()][1]),
+                                                              current_res.select('name %s' %chi2_dict[current_res.getResname()][2]),
+                                                              current_res.select('name %s' %chi2_dict[current_res.getResname()][3]))
+                        x2_templist.append(chi2[0])
+                        print 'Chi2 %s' %chi2[0]
+            xangles_dict['%s%s' %(mutation[0], mutation[1])]['X1'] = sum(x1_templist)/len(x1_templist)
+            xangles_dict['%s%s' %(mutation[0], mutation[1])]['X2'] = sum(x2_templist)/len(x2_templist)
+            print x1_templist
+            print x2_templist
     return xangles_dict
 
 #Action!!!
-def main():
-    os.chdir('/home/james.lucas/Rotation/DDGBenchmarks_Test/')
-    
-    #Define things
-    datadir = 'TestJobs/data/59648/'
-    reference = 'TestJobs/data/59648/1TM1_EI.pdb'
-    outputdir = 'TestJobs/output/59648/'
-    
+def do_math(datadir, reference, outputdir):   
     # Use CUDA for GPU calculations, if avialable
     if 'QCP_CUDA_MEM_CALCULATOR' in availableCalculators():
         pyrmsd_calc = 'QCP_CUDA_MEM_CALCULATOR'
     else:
         pyrmsd_calc = 'QCP_SERIAL_CALCULATOR'
-    
+        
     input_temp = []
     for i in os.listdir(outputdir):
         if i.endswith('.pdb'):
@@ -230,12 +233,53 @@ def main():
     neighbors = find_neighbors(datadir, reference, 8)
     
     point_mutants = mutant_rms(datadir, input_pdbs)
-    #neighborhood = neighborhood_rms(neighbors, reference, input_pdbs)
-    #global_ca = global_ca_rms(input_pdbs)
+    neighborhood = neighborhood_rms(neighbors, reference, input_pdbs)
+    global_ca = global_ca_rms(input_pdbs)
+
+    return_output_dict = {}
+
+    return_output_dict['Point Mutant RMSDs'] = rmsd(input_pdbs, pyrmsd_calc, point_mutants)
+    return_output_dict['Neighborhood RMSD'] = rmsd(input_pdbs, pyrmsd_calc, neighborhood)
+    return_output_dict['Global RMSD'] = rmsd(input_pdbs, pyrmsd_calc, global_ca)
+    chi_angles_output = chi_angles(datadir, input_pdbs)
+    if chi_angles_output != {}:
+        return_output_dict['X angles'] = chi_angles_output
+        print chi_angles_output
+    else:
+        print 'No X angles!'
+    return return_output_dict
+
+def main():
+    import sys
+    #Change to root of output directory
+    os.chdir('/kortemmelab/home/james.lucas/160412-kyleb_jl-brub-rscr-v2/DDG_Zemu_v2_output-Sum_DDG_only')
+    cwd = os.getcwd()
+    #Define things
+    output_dict = {}
+    outdir = sys.argv[1]
+    datadir = '../data/%s' %outdir
+    print "\n***Calculating RMSDs for %s***\n" %outdir
+    for asdffile in os.listdir(datadir):
+        if asdffile.endswith('.pdb'):
+            mypdb_ref = asdffile
+                
+    reference = '../data/%s/%s' %(outdir, mypdb_ref) 
+    output_dict[outdir] = do_math(datadir, reference, outdir)
+    print output_dict
     
-    asdf = rmsd(input_pdbs, pyrmsd_calc, point_mutants)
+#    for outdir in os.listdir(cwd):
+#        print "\n***Calculating RMSDs for %s***\n" %outdir
+#        #Define things
+#        datadir = '../data/%s' %outdir
+
+#        for asdffile in os.listdir(datadir):
+#            if asdffile.endswith('.pdb'):
+#                mypdb_ref = asdffile
+                
+#        reference = '../data/%s/%s' %(outdir, mypdb_ref) 
+#        output_dict[outdir] = do_math(datadir, reference, outdir)
     
-    for i in asdf:
-        print i
+    with open('RMSD_dict_X.txt', 'a') as outfile:
+        json.dump(output_dict, outfile)
         
 main()
