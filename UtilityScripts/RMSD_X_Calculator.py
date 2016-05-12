@@ -140,6 +140,14 @@ def mutant_rms(datadir, input_pdbs):
         mutation_dict['%s%s' %(mutation[1], mutation[0])] = temp_nparray
     return mutation_dict
 
+#Bins X-angles
+def bin_me(templist):
+    bins= {}
+    
+    for X in templist:
+        if X >= 0 and X < 30:
+            
+            
 def chi_angles(datadir, input_pdbs):
     mutations = read_mutations_resfile(datadir)
     
@@ -203,6 +211,7 @@ def chi_angles(datadir, input_pdbs):
                                                               current_res.select('name %s' %chi1_dict[current_res.getResname()][3]))
                         x1_templist.append(chi1[0])
                         print 'Chi1 %s' %chi1[0]
+                        
                     if current_res.getResname() in chi2_dict.keys():
                         chi2 = prody.measure.measure.calcDihedral(current_res.select('name %s' %chi2_dict[current_res.getResname()][0]),
                                                               current_res.select('name %s' %chi2_dict[current_res.getResname()][1]),
@@ -210,10 +219,28 @@ def chi_angles(datadir, input_pdbs):
                                                               current_res.select('name %s' %chi2_dict[current_res.getResname()][3]))
                         x2_templist.append(chi2[0])
                         print 'Chi2 %s' %chi2[0]
-            xangles_dict['%s%s' %(mutation[0], mutation[1])]['X1'] = sum(x1_templist)/len(x1_templist)
-            xangles_dict['%s%s' %(mutation[0], mutation[1])]['X2'] = sum(x2_templist)/len(x2_templist)
+            #Bin Xangles and add to bin dicts
+            x1_bins = bin_me(x1_templist)
+            if x2_templist != []:
+                x2_bins = bin_me(x2_templist)
+
+            #Add things to xangles_dict!
+            #xangles_dict['%s%s' %(mutation[0], mutation[1])]['X1'] = sum(x1_templist)/len(x1_templist)
+            #xangles_dict['%s%s' %(mutation[0], mutation[1])]['X2'] = sum(x2_templist)/len(x2_templist)
+
             print x1_templist
             print x2_templist
+
+            #Outputs Ramachandran-like plots for X1 and X2, Violin plots (in progress) if only X1 is present
+            import pandas as pd
+            import seaborn as sns
+            import matplotlib.pyplot as plt
+            
+            x1 = pd.Series(x1_templist, name = 'X1')
+            if x2_templist != []:
+                x2 = pd.Series(x2_templist, name = 'X2')
+                mrplotty = sns.regplot(x1, x2, fit_reg = False)
+                plt.savefig('%s%splot.pdf'  %(mutation[0], mutation[1]))
     return xangles_dict
 
 #Action!!!
@@ -266,18 +293,6 @@ def main():
     reference = '../data/%s/%s' %(outdir, mypdb_ref) 
     output_dict[outdir] = do_math(datadir, reference, outdir)
     print output_dict
-    
-#    for outdir in os.listdir(cwd):
-#        print "\n***Calculating RMSDs for %s***\n" %outdir
-#        #Define things
-#        datadir = '../data/%s' %outdir
-
-#        for asdffile in os.listdir(datadir):
-#            if asdffile.endswith('.pdb'):
-#                mypdb_ref = asdffile
-                
-#        reference = '../data/%s/%s' %(outdir, mypdb_ref) 
-#        output_dict[outdir] = do_math(datadir, reference, outdir)
     
     with open('RMSD_dict_X.txt', 'a') as outfile:
         json.dump(output_dict, outfile)
