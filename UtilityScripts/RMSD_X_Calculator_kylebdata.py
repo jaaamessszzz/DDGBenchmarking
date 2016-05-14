@@ -260,15 +260,21 @@ def do_math(datadir, reference, outputdir):
         pyrmsd_calc = 'QCP_SERIAL_CALCULATOR'
         
     input_temp = []
-    for i in os.listdir(outputdir):
-        if i.endswith('.pdb'):
-            input_temp.append(os.path.join(outputdir, i ))
-    input_pdbs = sorted(input_temp)
+    for app_output_dir in os.listdir(outputdir):
+        for app_outfile in os.listdir(app_output_dir):
+            if app_outfile == 'min_cst.repack-wt_bkrb_min_cst_0001_0001.pdb.gz':
+                input_temp.append(os.path.join(outputdir, app_output_dir, app_outfile ))
+                input_pdbs = sorted(input_temp)
+                
+    #    for j in os.listdir(i):
+    #        if i.endswith('.pdb'):
+    #            input_temp.append(os.path.join(outputdir, i ))
+    #input_pdbs = sorted(input_temp)
     
     #neighbors = find_neighbors(datadir, reference, 8)
     
     #point_mutants = mutant_rms(datadir, input_pdbs)
-    neighborhood = neighborhood_rms(neighbors, reference, input_pdbs)
+    #neighborhood = neighborhood_rms(neighbors, reference, input_pdbs)
     global_ca = global_ca_rms(input_pdbs)
 
     return_output_dict = {}
@@ -287,22 +293,23 @@ def main():
     import sys
     #Define things
     output_dict = {}
-    outdir = sys.argv[1]
-    datadir = '../data/%s' %outdir
+    predID = sys.argv[1]
+    outdir = os.path.join(sys.argv[2], '%s-ddg' %predID)
+    datadir = '../data/%s' #%outdir
     #Change to root of output directory
-    os.chdir('/kortemmelab/home/james.lucas/160412-kyleb_jl-brub-rscr-v2/DDG_Zemu_v2_output-Sum_DDG_only')
-    cwd = os.getcwd()
+    #os.chdir('/kortemmelab/home/james.lucas/160412-kyleb_jl-brub-rscr-v2/DDG_Zemu_v2_output-Sum_DDG_only')
+    os.chdir(outdir)
     
     print "\n***Calculating RMSDs for %s***\n" %outdir
-    for asdffile in os.listdir(datadir):
-        if asdffile.endswith('.pdb'):
-            mypdb_ref = asdffile
+    #for asdffile in os.listdir(datadir):
+    #    if asdffile.endswith('.pdb'):
+    #        mypdb_ref = asdffile
                 
-    reference = '../data/%s/%s' %(outdir, mypdb_ref) 
-    output_dict[outdir] = do_math(datadir, reference, outdir)
+    reference = '../data/%s/%s' #%(outdir, mypdb_ref) 
+    output_dict[predID] = do_math(datadir, reference, outdir)
     print output_dict
     
-    with open('Structural_metrics.txt', 'a') as outfile:
+    with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
         json.dump(output_dict, outfile)
         
 main()

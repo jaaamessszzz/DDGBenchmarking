@@ -16,12 +16,14 @@ wait_for_free_processor() {
 
 cd /kortemmelab/home/james.lucas/160412-kyleb_jl-brub-rscr-v2/DDG_Zemu_v2_output-Sum_DDG_only
 
+#Analyze PDBs from one directory
 nice python ../../DDGBenchmarks_Test/UtilityScripts/RMSD_X_Calculator.py 68417 &
 
+#Iterate over subdirectories within whatever starting directory
 #for i in * ; do
 #    if [ -d "$i" ]; then
 #	nice python ../../DDGBenchmarks_Test/UtilityScripts/RMSD_X_Calculator.py $i &
 #	wait_for_free_processor
 #    fi
 #done
-wait
+#wait
