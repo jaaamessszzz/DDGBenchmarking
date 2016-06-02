@@ -31,5 +31,5 @@ def main():
         run_structural_analysis.wait()
         shutil.rmtree(my_tmp_dir)
         break
-    
+
 main()

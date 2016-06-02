@@ -9,6 +9,9 @@ import prody
 import numpy as np
 import scipy.spatial.distance
 import json
+import pprint
+import sys
+import re
 
 #From Kyle's Finalize.py
 def read_mutations_resfile(filenum_dir):
@@ -25,11 +28,40 @@ def read_mutations_resfile(filenum_dir):
                 post_start = True
     return mutations
 
+#Return mutations for Prediction ID
+def PredID_to_mutations(predID):
+    # List of dictionaries for Resfile mutation info
+    sys.path.insert(0,
+                    '/kortemmelab/home/james.lucas')  # this should point to the directory above your ddg repo checkout
+    from ddg.ddglib.ppi_api import get_interface_with_config_file as get_ppi_interface
+
+    # Create an interface to the database
+    ppi_api = get_ppi_interface()
+
+    # Get details back for one prediction
+    PredID_Details = ppi_api.get_job_details(predID, include_files=True)
+    mutations = []
+    for mutation_entry in PredID_Details['PDBMutations']:
+        mutations.append([mutation_entry['ResidueID'].strip(),
+                          mutation_entry['Chain'],
+                          mutation_entry['PDBFileID'],
+                          mutation_entry['MutantAA']])
+    PDBFile_from_database = PredID_Details['Files']['Input'][0]['Content']
+    return mutations, PDBFile_from_database
+
+    #pprint.pprint(ppi_api.get_job_details(67088, include_files=False))
+
 #From Kyle's Finalize.py
-def find_neighbors(filenum_dir, pdb_path, neighbor_distance = 8.0):
-    mutations = read_mutations_resfile(filenum_dir)
+def find_neighbors(filenum_dir, pdb_path, predID, neighbor_distance = 8.0):
+    #mutations = mutations_resfile(filenum_dir)
+    mutations, PDBFile_from_database = PredID_to_mutations(predID)
     parser = PDBParser(PERMISSIVE=1)
-    open_strct = parser.get_structure('Open', pdb_path)
+    #open_strct = parser.get_structure('Open', pdb_path)
+
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as temp_PDBFile:
+        temp_PDBFile.write(PDBFile_from_database)
+        open_strct = parser.get_structure('Open', temp_PDBFile.name)
 
     # There should only be one model in PDB file
     num_models = 0
@@ -115,10 +147,11 @@ def neighborhood_rms(neighbors, reference, input_pdbs):
     return coordinates
         
 #Calculates sidechain rmsd        
-def mutant_rms(datadir, input_pdbs):
-    mutations = read_mutations_resfile(datadir)
+def mutant_rms(datadir, input_pdbs, predID):
+    #mutations = read_mutations_resfile(datadir)
+    mutations, PDBFile_from_database = PredID_to_mutations(predID)
     mutation_dict = {}
-    
+
     for mutation in mutations:
         temp = []
         temp_nparray = []
@@ -162,8 +195,8 @@ def bin_me(templist):
     readable_X_counts = dict((bin_ranges[key], value) for (key, value) in X_counts.items())
     return readable_X_counts
             
-def chi_angles(datadir, input_pdbs):
-    mutations = read_mutations_resfile(datadir)
+def chi_angles(datadir, input_pdbs, predID):
+    mutations, PDBFile_from_database = PredID_to_mutations(predID)
     
     #http://www.ccp14.ac.uk/ccp/web-mirrors/garlic/garlic/commands/dihedrals.html
     chi1_dict = {'ARG':['N','CA','CB','CG'],
@@ -252,7 +285,7 @@ def chi_angles(datadir, input_pdbs):
     return xangles_dict
 
 #Action!!!
-def do_math(datadir, reference, outputdir):   
+def do_math(datadir, reference, outputdir, predID):
     # Use CUDA for GPU calculations, if avialable
     if 'QCP_CUDA_MEM_CALCULATOR' in availableCalculators():
         pyrmsd_calc = 'QCP_CUDA_MEM_CALCULATOR'
@@ -262,54 +295,84 @@ def do_math(datadir, reference, outputdir):
     input_temp = []
     for app_output_dir in os.listdir(outputdir):
         for app_outfile in os.listdir(app_output_dir):
-            if app_outfile == 'min_cst.repack-wt_bkrb_min_cst_0001_0001.pdb.gz':
-                input_temp.append(os.path.join(outputdir, app_output_dir, app_outfile ))
+            #Mutant Structures
+            if app_outfile == 'min_cst.mutate_bkrb_min_cst_0001_0001.pdb.gz':
+                input_temp.append(os.path.join(outputdir, app_output_dir, app_outfile))
                 input_pdbs = sorted(input_temp)
-                
-    #    for j in os.listdir(i):
-    #        if i.endswith('.pdb'):
-    #            input_temp.append(os.path.join(outputdir, i ))
-    #input_pdbs = sorted(input_temp)
-    
-    #neighbors = find_neighbors(datadir, reference, 8)
-    
-    #point_mutants = mutant_rms(datadir, input_pdbs)
-    #neighborhood = neighborhood_rms(neighbors, reference, input_pdbs)
+            # WT Structures
+            #if app_outfile == 'min_cst.repack-wt_bkrb_min_cst_0001_0001.pdb.gz':
+            #    input_temp.append(os.path.join(outputdir, app_output_dir, app_outfile ))
+            #    input_pdbs = sorted(input_temp)
+
+    neighbors = find_neighbors(datadir, reference, predID, 8)
+    point_mutants = mutant_rms(datadir, input_pdbs, predID)
+    neighborhood = neighborhood_rms(neighbors, reference, input_pdbs)
     global_ca = global_ca_rms(input_pdbs)
 
     return_output_dict = {}
 
-    #return_output_dict['Point Mutant RMSDs'] = rmsd(input_pdbs, pyrmsd_calc, point_mutants)
-    #return_output_dict['Neighborhood RMSD'] = rmsd(input_pdbs, pyrmsd_calc, neighborhood)
+    return_output_dict['Point Mutant RMSDs'] = rmsd(input_pdbs, pyrmsd_calc, point_mutants)
+    return_output_dict['Neighborhood RMSD'] = rmsd(input_pdbs, pyrmsd_calc, neighborhood)
     return_output_dict['Global RMSD'] = rmsd(input_pdbs, pyrmsd_calc, global_ca)
-    #chi_angles_output = chi_angles(datadir, input_pdbs)
-    #if chi_angles_output != {}:
-    #    return_output_dict['X angles'] = chi_angles_output
-    #else:
-    #    print 'No X angles!'
+    chi_angles_output = chi_angles(datadir, input_pdbs, predID)
+    if chi_angles_output != {}:
+        return_output_dict['X angles'] = chi_angles_output
+    else:
+        print 'No X angles!'
     return return_output_dict
 
-def main():
-    import sys
+def main(predID, my_tmp_dir):
+    #Legacy stuff
+    #predID = sys.argv[1]
+    #outdir = os.path.join(sys.argv[2], '%s-ddg' % predID)
+
     #Define things
     output_dict = {}
-    predID = sys.argv[1]
-    outdir = os.path.join(sys.argv[2], '%s-ddg' %predID)
+    outdir = os.path.join(my_tmp_dir, '%s-ddg' %predID)
     datadir = '../data/%s' #%outdir
     #Change to root of output directory
     #os.chdir('/kortemmelab/home/james.lucas/160412-kyleb_jl-brub-rscr-v2/DDG_Zemu_v2_output-Sum_DDG_only')
     os.chdir(outdir)
     
     print "\n***Calculating RMSDs for %s***\n" %outdir
-    #for asdffile in os.listdir(datadir):
-    #    if asdffile.endswith('.pdb'):
-    #        mypdb_ref = asdffile
-                
-    reference = '../data/%s/%s' #%(outdir, mypdb_ref) 
-    output_dict[predID] = do_math(datadir, reference, outdir)
+
+    reference = '../data/%s/%s' #%(outdir, mypdb_ref)
+    output_dict[predID] = do_math(datadir, reference, outdir, predID)
     print output_dict
-    
+    return output_dict
+
+import pandas as pd
+import os
+import tempfile
+import zipfile
+import shutil
+import multiprocessing
+
+def unzip_to_tmp_dir(prediction_id, zip_file):
+    tmp_dir = tempfile.mkdtemp(prefix='unzip_to_tmp_')
+    unzip_path = os.path.join(tmp_dir, '%d-ddg' % prediction_id)
+    os.makedirs(unzip_path)
+    with zipfile.ZipFile(zip_file, 'r') as job_zip:
+        job_zip.extractall(unzip_path)
+    return tmp_dir
+
+def asdfasdf():
+    os.chdir('/kortemmelab/shared/DDG/ppijobs')
+    df = pd.read_csv('/kortemmelab/home/james.lucas/zemu-psbrub_1.6-pv-1000-lbfgs_IDs.txt')
+    pool = multiprocessing.Pool(processes=20)
+    allmyoutput = pool.map_async( multiprocessing_stuff, df)
+    pool.close()
+    pool.join()
+    print allmyoutput
+
     with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
-        json.dump(output_dict, outfile)
-        
-main()
+        json.dump(resultdict, outfile)
+
+def multiprocessing_stuff(df):
+    predID = int(df.split()[0])
+    my_tmp_dir = unzip_to_tmp_dir(predID, '%s.zip' %predID)
+    PredID_output_dict = main(predID, my_tmp_dir)
+    shutil.rmtree(my_tmp_dir)
+    return PredID_output_dict
+
+asdfasdf()
