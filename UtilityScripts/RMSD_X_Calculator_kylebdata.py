@@ -40,6 +40,10 @@ def PredID_to_mutations(predID):
 
     # Get details back for one prediction
     PredID_Details = ppi_api.get_job_details(predID, include_files=True)
+
+    #DEBUGGING ONLY
+    pprint.pprint(PredID_Details)
+
     mutations = []
     for mutation_entry in PredID_Details['PDBMutations']:
         mutations.append([mutation_entry['ResidueID'].strip(),
@@ -293,6 +297,7 @@ def do_math(datadir, reference, outputdir, predID):
         pyrmsd_calc = 'QCP_SERIAL_CALCULATOR'
         
     input_temp = []
+
     for app_output_dir in os.listdir(outputdir):
         for app_outfile in os.listdir(app_output_dir):
             #Mutant Structures
@@ -322,10 +327,6 @@ def do_math(datadir, reference, outputdir, predID):
     return return_output_dict
 
 def main(predID, my_tmp_dir):
-    #Legacy stuff
-    #predID = sys.argv[1]
-    #outdir = os.path.join(sys.argv[2], '%s-ddg' % predID)
-
     #Define things
     output_dict = {}
     outdir = os.path.join(my_tmp_dir, '%s-ddg' %predID)
@@ -337,9 +338,10 @@ def main(predID, my_tmp_dir):
     print "\n***Calculating RMSDs for %s***\n" %outdir
 
     reference = '../data/%s/%s' #%(outdir, mypdb_ref)
-    output_dict[predID] = do_math(datadir, reference, outdir, predID)
-    print output_dict
-    return output_dict
+
+    PredID_to_mutations(predID)
+
+    #output_dict[predID] = do_math(datadir, reference, outdir, predID)
 
 import pandas as pd
 import os
@@ -358,19 +360,27 @@ def unzip_to_tmp_dir(prediction_id, zip_file):
 
 def asdfasdf():
     os.chdir('/kortemmelab/shared/DDG/ppijobs')
-    df = pd.read_csv('/kortemmelab/home/james.lucas/zemu-psbrub_1.6-pv-1000-lbfgs_IDs.txt')
-    pool = multiprocessing.Pool(processes=20)
-    allmyoutput = pool.map_async( multiprocessing_stuff, df)
-    pool.close()
-    pool.join()
-    print allmyoutput
+    csv_info = pd.read_csv('/kortemmelab/home/james.lucas/zemu-psbrub_1.6-pv-1000-lbfgs_IDs.csv')
 
-    with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
-        json.dump(resultdict, outfile)
+    # DEBUGGING ONLY
+    PredID_list = [int(68040)]
+    multiprocessing_stuff(PredID_list[0])
 
-def multiprocessing_stuff(df):
-    predID = int(df.split()[0])
+    # PredID_list = []
+    # for index, row in csv_info.iterrows():
+    #     PredID_list.append(int(row[0].split()[0]))
+
+    # pool = multiprocessing.Pool(20)
+    # allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
+
+    #with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
+    #    for resultdict in allmyoutput:
+    #        json.dump(resultdict, outfile)
+
+def multiprocessing_stuff(predID):
+    print os.getcwd()
     my_tmp_dir = unzip_to_tmp_dir(predID, '%s.zip' %predID)
+    print my_tmp_dir
     PredID_output_dict = main(predID, my_tmp_dir)
     shutil.rmtree(my_tmp_dir)
     return PredID_output_dict
