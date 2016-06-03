@@ -377,16 +377,17 @@ def asdfasdf():
     os.chdir('/kortemmelab/shared/DDG/ppijobs')
     csv_info = pd.read_csv('/kortemmelab/home/james.lucas/zemu-psbrub_1.6-pv-1000-lbfgs_IDs.csv')
 
-    # # DEBUGGING ONLY
-    # PredID_list = [int(67108)]
-    # multiprocessing_stuff(PredID_list[0])
-
     PredID_list = []
     for index, row in csv_info.iterrows():
         PredID_list.append(int(row[0].split()[0]))
 
+    #DEBUGGING
+
     pool = multiprocessing.Pool(20)
     allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
+    pool.close()
+    pool.join()
+
     print allmyoutput
 
     with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
