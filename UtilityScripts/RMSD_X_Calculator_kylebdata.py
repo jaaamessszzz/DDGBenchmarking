@@ -8,25 +8,16 @@ from pyRMSD.availableCalculators import availableCalculators
 import prody
 import numpy as np
 import scipy.spatial.distance
-import json
 import pprint
 import sys
 import re
-
-#From Kyle's Finalize.py
-def read_mutations_resfile(filenum_dir):
-    resfile = os.path.join(filenum_dir, 'mutations_repack.resfile')
-    mutations = []
-    with open(resfile, 'r') as f:
-        post_start = False
-        for line in f:
-            if post_start:
-                line = line.strip()
-                pdb_resnum, chain, pikaa, mut_res = line.split()
-                mutations.append( [pdb_resnum, chain, pikaa, mut_res] )
-            elif line.startswith('start'):
-                post_start = True
-    return mutations
+import pandas as pd
+import os
+import tempfile
+import zipfile
+import shutil
+import json
+import multiprocessing
 
 #Return mutations for Prediction ID
 def PredID_to_mutations(predID):
@@ -41,31 +32,47 @@ def PredID_to_mutations(predID):
     # Get details back for one prediction
     PredID_Details = ppi_api.get_job_details(predID, include_files=True)
 
-    #DEBUGGING ONLY
-    pprint.pprint(PredID_Details)
-
     mutations = []
     for mutation_entry in PredID_Details['PDBMutations']:
         mutations.append([mutation_entry['ResidueID'].strip(),
                           mutation_entry['Chain'],
                           mutation_entry['PDBFileID'],
                           mutation_entry['MutantAA']])
-    PDBFile_from_database = PredID_Details['Files']['Input'][0]['Content']
-    return mutations, PDBFile_from_database
 
-    #pprint.pprint(ppi_api.get_job_details(67088, include_files=False))
+    pdb_filename = PredID_Details['Files']['Input'][0]['Filename']
+    pdb_chains = re.sub('_|\.', ' ', pdb_filename).split()[1]
+    raw_pdb = PredID_Details['Files']['Input'][0]['Content']
+    fresh_pdb = strip_pdbs(raw_pdb, pdb_chains)
+
+    return mutations, fresh_pdb
+
+def strip_pdbs(raw_pdb, pdb_chains):
+    import tempfile
+    with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as temp_PDBFile:
+        delete_me_later = temp_PDBFile.name
+        for line in raw_pdb.splitlines():
+            parsed = line.split()
+            if parsed[0].strip() == 'ATOM':
+                if parsed[4] in pdb_chains:
+                    temp_PDBFile.write(line + '\n')
+            elif parsed[0].strip() == 'HETATM':
+                if parsed[4] in pdb_chains:
+                    temp_PDBFile.write(line + '\n')
+            else:
+                temp_PDBFile.write(line + '\n')
+
+    with open(delete_me_later, mode='rb+') as temp_PDBFile:
+        parser = PDBParser(PERMISSIVE=1)
+        fresh_pdb = parser.get_structure('Open', temp_PDBFile.name)
+
+    os.remove(delete_me_later)
+
+    return fresh_pdb
 
 #From Kyle's Finalize.py
 def find_neighbors(filenum_dir, pdb_path, predID, neighbor_distance = 8.0):
     #mutations = mutations_resfile(filenum_dir)
-    mutations, PDBFile_from_database = PredID_to_mutations(predID)
-    parser = PDBParser(PERMISSIVE=1)
-    #open_strct = parser.get_structure('Open', pdb_path)
-
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as temp_PDBFile:
-        temp_PDBFile.write(PDBFile_from_database)
-        open_strct = parser.get_structure('Open', temp_PDBFile.name)
+    mutations, open_strct = PredID_to_mutations(predID)
 
     # There should only be one model in PDB file
     num_models = 0
@@ -286,6 +293,7 @@ def chi_angles(datadir, input_pdbs, predID):
             #    x2 = pd.Series(x2_templist, name = 'X2')
             #    mrplotty = sns.regplot(x1, x2, fit_reg = False)
             #    plt.savefig('%s%splot.pdf'  %(mutation[0], mutation[1]))
+
     return xangles_dict
 
 #Action!!!
@@ -339,16 +347,12 @@ def main(predID, my_tmp_dir):
 
     reference = '../data/%s/%s' #%(outdir, mypdb_ref)
 
-    PredID_to_mutations(predID)
+    # #DEBUGGING ONLY
+    # PredID_to_mutations(predID)
 
-    #output_dict[predID] = do_math(datadir, reference, outdir, predID)
+    output_dict[predID] = do_math(datadir, reference, outdir, predID)
 
-import pandas as pd
-import os
-import tempfile
-import zipfile
-import shutil
-import multiprocessing
+    return output_dict
 
 def unzip_to_tmp_dir(prediction_id, zip_file):
     tmp_dir = tempfile.mkdtemp(prefix='unzip_to_tmp_')
@@ -358,31 +362,35 @@ def unzip_to_tmp_dir(prediction_id, zip_file):
         job_zip.extractall(unzip_path)
     return tmp_dir
 
+def multiprocessing_stuff(predID):
+    my_tmp_dir = unzip_to_tmp_dir(predID, '%s.zip' %predID)
+    print '*** %s has been unzupped!!!***' %predID
+    try:
+        PredID_output_dict = main(predID, my_tmp_dir)
+    except:
+        PredID_output_dict = {predID}
+        print 'ERROR: %s' %predID
+    shutil.rmtree(my_tmp_dir)
+    return PredID_output_dict
+
 def asdfasdf():
     os.chdir('/kortemmelab/shared/DDG/ppijobs')
     csv_info = pd.read_csv('/kortemmelab/home/james.lucas/zemu-psbrub_1.6-pv-1000-lbfgs_IDs.csv')
 
-    # DEBUGGING ONLY
-    PredID_list = [int(68040)]
-    multiprocessing_stuff(PredID_list[0])
+    # # DEBUGGING ONLY
+    # PredID_list = [int(67108)]
+    # multiprocessing_stuff(PredID_list[0])
 
-    # PredID_list = []
-    # for index, row in csv_info.iterrows():
-    #     PredID_list.append(int(row[0].split()[0]))
+    PredID_list = []
+    for index, row in csv_info.iterrows():
+        PredID_list.append(int(row[0].split()[0]))
 
-    # pool = multiprocessing.Pool(20)
-    # allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
+    pool = multiprocessing.Pool(20)
+    allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
+    print allmyoutput
 
-    #with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
-    #    for resultdict in allmyoutput:
-    #        json.dump(resultdict, outfile)
-
-def multiprocessing_stuff(predID):
-    print os.getcwd()
-    my_tmp_dir = unzip_to_tmp_dir(predID, '%s.zip' %predID)
-    print my_tmp_dir
-    PredID_output_dict = main(predID, my_tmp_dir)
-    shutil.rmtree(my_tmp_dir)
-    return PredID_output_dict
+    with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
+        for resultdict in allmyoutput:
+            json.dump(resultdict, outfile)
 
 asdfasdf()
