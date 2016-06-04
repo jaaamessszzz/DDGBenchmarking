@@ -307,7 +307,7 @@ def do_math(datadir, reference, outputdir, predID):
     input_temp = []
 
     for app_output_dir in os.listdir(outputdir):
-        for app_outfile in os.listdir(os.path.join(outputdir, app_output_dir):
+        for app_outfile in os.listdir(os.path.join(outputdir, app_output_dir)):
             #Mutant Structures
             if app_outfile == 'min_cst.mutate_bkrb_min_cst_0001_0001.pdb.gz':
                 input_temp.append(os.path.join(outputdir, app_output_dir, app_outfile))
