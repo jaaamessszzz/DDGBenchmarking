@@ -382,7 +382,7 @@ def asdfasdf():
     # #DEBUGGING
     # print multiprocessing_stuff(PredID_list[0])
 
-    pool = multiprocessing.Pool(2)
+    pool = multiprocessing.Pool(25)
     allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
     allmyoutput.get()
     pool.close()
