@@ -341,7 +341,9 @@ def main(predID, my_tmp_dir):
     datadir = '../data/%s' #%outdir
     #Change to root of output directory
     #os.chdir('/kortemmelab/home/james.lucas/160412-kyleb_jl-brub-rscr-v2/DDG_Zemu_v2_output-Sum_DDG_only')
-    os.chdir(outdir)
+
+    #FUUUUUUUUUUUU
+    #os.chdir(outdir)
     
     print "\n***Calculating RMSDs for %s***\n" %outdir
 
@@ -365,11 +367,7 @@ def unzip_to_tmp_dir(prediction_id, zip_file):
 def multiprocessing_stuff(predID):
     my_tmp_dir = unzip_to_tmp_dir(predID, '%s.zip' %predID)
     print '*** %s has been unzupped!!!***' %predID
-    try:
-        PredID_output_dict = main(predID, my_tmp_dir)
-    except:
-        PredID_output_dict = {predID}
-        print 'ERROR: %s' %predID
+    PredID_output_dict = main(predID, my_tmp_dir)
     shutil.rmtree(my_tmp_dir)
     return PredID_output_dict
 
@@ -382,14 +380,15 @@ def asdfasdf():
         PredID_list.append(int(row[0].split()[0]))
 
     #DEBUGGING
+    multiprocessing_stuff(PredID_list[0])
 
-    pool = multiprocessing.Pool(2)
-    allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
-    allmyoutput.get()
-    pool.close()
-    pool.join()
-
-    print allmyoutput
+    # pool = multiprocessing.Pool(2)
+    # allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
+    # allmyoutput.get()
+    # pool.close()
+    # pool.join()
+    #
+    # print allmyoutput
 
     with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
         for resultdict in allmyoutput:
