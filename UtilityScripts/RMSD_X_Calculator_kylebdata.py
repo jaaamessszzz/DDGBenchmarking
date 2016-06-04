@@ -385,9 +385,9 @@ def asdfasdf():
 
     pool = multiprocessing.Pool(2)
     allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
+    allmyoutput.get()
     pool.close()
     pool.join()
-
 
     print allmyoutput
 
