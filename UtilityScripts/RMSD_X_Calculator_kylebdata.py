@@ -367,11 +367,14 @@ def unzip_to_tmp_dir(prediction_id, zip_file):
     return tmp_dir
 
 def multiprocessing_stuff(predID):
-    my_tmp_dir = unzip_to_tmp_dir(predID, '%s.zip' %predID)
-    print '*** %s has been unzupped!!!***' %predID
-    PredID_output_dict = main(predID, my_tmp_dir)
-    shutil.rmtree(my_tmp_dir)
-    return PredID_output_dict
+    try:
+        my_tmp_dir = unzip_to_tmp_dir(predID, '%s.zip' %predID)
+        print '*** %s has been unzupped!!!***' %predID
+        PredID_output_dict = main(predID, my_tmp_dir)
+        shutil.rmtree(my_tmp_dir)
+        return PredID_output_dict
+    except:
+        PredID_output_dict = {'%s failed...' %predID}
 
 def asdfasdf():
     os.chdir('/kortemmelab/shared/DDG/ppijobs')
