@@ -383,11 +383,12 @@ def asdfasdf():
 
     #DEBUGGING
 
-    pool = multiprocessing.Pool(20)
+    pool = multiprocessing.Pool(2)
     allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
-    pool.join()
     pool.close()
-    
+    pool.join()
+
+
     print allmyoutput
 
     with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
