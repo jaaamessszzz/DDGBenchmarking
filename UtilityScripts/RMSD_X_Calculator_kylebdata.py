@@ -274,15 +274,14 @@ def chi_angles(datadir, input_pdbs, predID):
                                                               current_res.select('name %s' %chi2_dict[current_res.getResname()][3]))
                         x2_templist.append(chi2[0])
 
-            #Bin Xangles and add to bin dicts
+            #Bin Xangles and add to bin dicts + Add things to xangles_dict!
             x1_bins = bin_me(x1_templist)
+            xangles_dict['%s%s' % (mutation[0], mutation[1])]['X1'] = x1_bins
+
             if x2_templist != []:
                 x2_bins = bin_me(x2_templist)
-
-            #Add things to xangles_dict!
-            xangles_dict['%s%s' %(mutation[0], mutation[1])]['X1'] = x1_bins
-            xangles_dict['%s%s' %(mutation[0], mutation[1])]['X2'] = x2_bins
-
+                xangles_dict['%s%s' % (mutation[0], mutation[1])]['X2'] = x2_bins
+            
             #Outputs Ramachandran-like plots for X1 and X2, Violin plots (in progress) if only X1 is present
             #import pandas as pd
             #import seaborn as sns
