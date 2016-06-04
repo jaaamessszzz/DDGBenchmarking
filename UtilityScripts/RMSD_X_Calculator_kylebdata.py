@@ -373,8 +373,9 @@ def multiprocessing_stuff(predID):
         PredID_output_dict = main(predID, my_tmp_dir)
         shutil.rmtree(my_tmp_dir)
         return PredID_output_dict
-    except:
-        PredID_output_dict = {'%s failed...' %predID}
+    except IOError as MIA:
+        PredID_output_dict = {'%s failed: %s' %(predID, MIA)}
+        return PredID_output_dict
 
 def asdfasdf():
     os.chdir('/kortemmelab/shared/DDG/ppijobs')
