@@ -379,19 +379,19 @@ def asdfasdf():
     for index, row in csv_info.iterrows():
         PredID_list.append(int(row[0].split()[0]))
 
-    #DEBUGGING
-    print multiprocessing_stuff(PredID_list[0])
+    # #DEBUGGING
+    # print multiprocessing_stuff(PredID_list[0])
 
-    # pool = multiprocessing.Pool(2)
-    # allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
-    # allmyoutput.get()
-    # pool.close()
-    # pool.join()
-    #
-    # print allmyoutput
+    pool = multiprocessing.Pool(2)
+    allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
+    allmyoutput.get()
+    pool.close()
+    pool.join()
 
-    # with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
-    #     for resultdict in allmyoutput:
-    #         json.dump(resultdict, outfile)
+    print allmyoutput
+
+    with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
+        for resultdict in allmyoutput:
+            json.dump(resultdict, outfile)
 
 asdfasdf()
