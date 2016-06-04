@@ -390,8 +390,8 @@ def asdfasdf():
     #
     # print allmyoutput
 
-    with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
-        for resultdict in allmyoutput:
-            json.dump(resultdict, outfile)
+    # with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
+    #     for resultdict in allmyoutput:
+    #         json.dump(resultdict, outfile)
 
 asdfasdf()
