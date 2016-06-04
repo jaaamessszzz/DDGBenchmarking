@@ -281,7 +281,7 @@ def chi_angles(datadir, input_pdbs, predID):
             if x2_templist != []:
                 x2_bins = bin_me(x2_templist)
                 xangles_dict['%s%s' % (mutation[0], mutation[1])]['X2'] = x2_bins
-            
+
             #Outputs Ramachandran-like plots for X1 and X2, Violin plots (in progress) if only X1 is present
             #import pandas as pd
             #import seaborn as sns
@@ -351,7 +351,10 @@ def main(predID, my_tmp_dir):
     # #DEBUGGING ONLY
     # PredID_to_mutations(predID)
 
-    output_dict[predID] = do_math(datadir, reference, outdir, predID)
+    try:
+        output_dict[predID] = do_math(datadir, reference, outdir, predID)
+    except Exception as fuuuu:
+        output_dict[predID] = fuuuu
 
     return output_dict
 
