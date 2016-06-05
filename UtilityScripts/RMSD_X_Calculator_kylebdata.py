@@ -374,6 +374,7 @@ def multiprocessing_stuff(predID):
         shutil.rmtree(my_tmp_dir)
         return PredID_output_dict
     except IOError as MIA:
+        print 'FAILURE'
         PredID_output_dict = {'%s failed: %s' %(predID, MIA)}
         return PredID_output_dict
 
@@ -390,7 +391,7 @@ def asdfasdf():
 
     pool = multiprocessing.Pool(25)
     allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
-    allmyoutput.get()
+    #allmyoutput.get()
     pool.close()
     pool.join()
 
