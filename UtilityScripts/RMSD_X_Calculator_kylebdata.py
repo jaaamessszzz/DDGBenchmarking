@@ -386,7 +386,7 @@ def asdfasdf():
         PredID_list.append(int(row[0].split()[0]))
 
     # #DEBUGGING
-    # print multiprocessing_stuff(PredID_list[0])
+    PredID_list = [PredID_list[0]]
 
     pool = multiprocessing.Pool(25)
     allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
