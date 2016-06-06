@@ -384,10 +384,9 @@ def asdfasdf():
         PredID_list.append(int(row[0].split()[0]))
 
     # #DEBUGGING
-    # PredID_list = [PredID_list[0]]
-    PredID_list = []
-    for asdf in range(67088, 67115):
-        PredID_list.append(asdf)
+    # PredID_list = []
+    # for asdf in range(67088, 67115):
+    #     PredID_list.append(asdf)
 
     pool = multiprocessing.Pool(20)
     allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
@@ -395,9 +394,11 @@ def asdfasdf():
     pool.join()
 
     print allmyoutput
+    print 'Dumping information to Structural_metrics.txt'
 
     with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
         for resultdict in allmyoutput:
             json.dump(resultdict, outfile)
+
 
 asdfasdf()
