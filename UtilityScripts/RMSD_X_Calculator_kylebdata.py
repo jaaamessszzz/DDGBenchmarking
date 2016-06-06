@@ -348,9 +348,6 @@ def main(predID, my_tmp_dir):
 
     reference = '../data/%s/%s' #%(outdir, mypdb_ref)
 
-    # #DEBUGGING ONLY
-    # PredID_to_mutations(predID)
-
     try:
         output_dict[predID] = do_math(datadir, reference, outdir, predID)
     except Exception as fuuuu:
@@ -369,7 +366,7 @@ def unzip_to_tmp_dir(prediction_id, zip_file):
 def multiprocessing_stuff(predID):
     try:
         my_tmp_dir = unzip_to_tmp_dir(predID, '%s.zip' %predID)
-        print '*** %s has been unzupped!!!***' %predID
+        print '*** %s has been unzipped!!!***' %predID
         PredID_output_dict = main(predID, my_tmp_dir)
         shutil.rmtree(my_tmp_dir)
         return PredID_output_dict
@@ -388,8 +385,11 @@ def asdfasdf():
 
     # #DEBUGGING
     # PredID_list = [PredID_list[0]]
+    PredID_list = []
+    for asdf in range(67088, 67115):
+        PredID_list.append(asdf)
 
-    pool = multiprocessing.Pool(25)
+    pool = multiprocessing.Pool(20)
     allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
     pool.close()
     pool.join()
