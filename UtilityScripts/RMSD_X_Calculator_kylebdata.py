@@ -22,8 +22,7 @@ import multiprocessing
 #Return mutations for Prediction ID
 def PredID_to_mutations(predID):
     # List of dictionaries for Resfile mutation info
-    sys.path.insert(0,
-                    '/kortemmelab/home/james.lucas')  # this should point to the directory above your ddg repo checkout
+    sys.path.insert(0,'/kortemmelab/home/james.lucas')  # this should point to the directory above your ddg repo checkout
     from ddg.ddglib.ppi_api import get_interface_with_config_file as get_ppi_interface
 
     # Create an interface to the database
@@ -31,6 +30,9 @@ def PredID_to_mutations(predID):
 
     # Get details back for one prediction
     PredID_Details = ppi_api.get_job_details(predID, include_files=True)
+
+    #DEBUGGING
+    print PredID_Details
 
     mutations = []
     for mutation_entry in PredID_Details['PDBMutations']:
@@ -134,11 +136,11 @@ def average_rmsd_calculator(rmsd_matrix):
     avg_rmsd = sum(avg_rmsd_list)/len(avg_rmsd_list)
     return avg_rmsd
     
-def global_ca_rms(input_pdbs):
+def global_ca_coordinates(input_pdbs):
     coordinates = np.array( [prody.parsePDB(input_pdb).select('calpha').getCoords() for input_pdb in input_pdbs] )
     return coordinates    
     
-def neighborhood_rms(neighbors, reference, input_pdbs):
+def neighborhood_coordinates(neighbors, reference, input_pdbs):
     temp = []
 
     for input_pdb in input_pdbs:
@@ -157,9 +159,7 @@ def neighborhood_rms(neighbors, reference, input_pdbs):
     coordinates = np.asarray(temp)
     return coordinates
         
-#Calculates sidechain rmsd        
-def mutant_rms(datadir, input_pdbs, predID):
-    #mutations = read_mutations_resfile(datadir)
+def mutant_coordinates(input_pdbs, predID):
     mutations, PDBFile_from_database = PredID_to_mutations(predID)
     mutation_dict = {}
 
@@ -184,7 +184,6 @@ def mutant_rms(datadir, input_pdbs, predID):
         mutation_dict['%s%s' %(mutation[1], mutation[0])] = temp_nparray
     return mutation_dict
 
-#Bins X-angles
 def bin_me(templist):
     from collections import Counter
     bins= {}
@@ -206,7 +205,7 @@ def bin_me(templist):
     readable_X_counts = dict((bin_ranges[key], value) for (key, value) in X_counts.items())
     return readable_X_counts
             
-def chi_angles(datadir, input_pdbs, predID):
+def chi_angles(input_pdbs, predID):
     mutations, PDBFile_from_database = PredID_to_mutations(predID)
     
     #http://www.ccp14.ac.uk/ccp/web-mirrors/garlic/garlic/commands/dihedrals.html
@@ -274,7 +273,6 @@ def chi_angles(datadir, input_pdbs, predID):
                                                               current_res.select('name %s' %chi2_dict[current_res.getResname()][3]))
                         x2_templist.append(chi2[0])
 
-            #Bin Xangles and add to bin dicts + Add things to xangles_dict!
             x1_bins = bin_me(x1_templist)
             xangles_dict['%s%s' % (mutation[0], mutation[1])]['X1'] = x1_bins
 
@@ -296,7 +294,7 @@ def chi_angles(datadir, input_pdbs, predID):
     return xangles_dict
 
 #Action!!!
-def do_math(datadir, reference, outputdir, predID):
+def do_math( reference, outputdir, predID):
     # Use CUDA for GPU calculations, if avialable
     if 'QCP_CUDA_MEM_CALCULATOR' in availableCalculators():
         pyrmsd_calc = 'QCP_CUDA_MEM_CALCULATOR'
@@ -316,42 +314,37 @@ def do_math(datadir, reference, outputdir, predID):
             #    input_temp.append(os.path.join(outputdir, app_output_dir, app_outfile ))
             #    input_pdbs = sorted(input_temp)
 
-    neighbors = find_neighbors(datadir, reference, predID, 8)
-    point_mutants = mutant_rms(datadir, input_pdbs, predID)
-    neighborhood = neighborhood_rms(neighbors, reference, input_pdbs)
-    global_ca = global_ca_rms(input_pdbs)
+    neighbors = find_neighbors( reference, predID, 8)
+    point_mutants = mutant_coordinates( input_pdbs, predID)
+    neighborhood = neighborhood_coordinates(neighbors, reference, input_pdbs)
+    global_ca = global_ca_coordinates(input_pdbs)
 
     return_output_dict = {}
 
     return_output_dict['Point Mutant RMSDs'] = rmsd(input_pdbs, pyrmsd_calc, point_mutants)
     return_output_dict['Neighborhood RMSD'] = rmsd(input_pdbs, pyrmsd_calc, neighborhood)
     return_output_dict['Global RMSD'] = rmsd(input_pdbs, pyrmsd_calc, global_ca)
-    chi_angles_output = chi_angles(datadir, input_pdbs, predID)
+    chi_angles_output = chi_angles(input_pdbs, predID)
     if chi_angles_output != {}:
         return_output_dict['X angles'] = chi_angles_output
     else:
         print 'No X angles!'
     return return_output_dict
 
-def main(predID, my_tmp_dir):
+def zipzip(predID, my_tmp_dir):
     #Define things
     output_dict = {}
     outdir = os.path.join(my_tmp_dir, '%s-ddg' %predID)
-    datadir = '../data/%s' #%outdir
-    #Change to root of output directory
-    #os.chdir('/kortemmelab/home/james.lucas/160412-kyleb_jl-brub-rscr-v2/DDG_Zemu_v2_output-Sum_DDG_only')
 
-    #FUUUUUUUUUUUU
-    #os.chdir(outdir)
-    
     print "\n***Calculating RMSDs for %s***\n" %outdir
-
     reference = '../data/%s/%s' #%(outdir, mypdb_ref)
 
     try:
-        output_dict[predID] = do_math(datadir, reference, outdir, predID)
+        output_dict[predID] = do_math(reference, outdir, predID)
+        print 'Calculations complete!!!'
     except Exception as fuuuu:
         output_dict[predID] = fuuuu
+        print 'Failure %s : %s' %(predID, fuuuu)
 
     return output_dict
 
@@ -364,41 +357,59 @@ def unzip_to_tmp_dir(prediction_id, zip_file):
     return tmp_dir
 
 def multiprocessing_stuff(predID):
+    def dict_to_json(PredID_output_dict, predID):
+        with open('/kortemmelab/home/james.lucas/Structural_metrics_Outfiles/%s.txt' % predID, 'a') as outfile:
+            json.dump(PredID_output_dict, outfile)
     try:
         my_tmp_dir = unzip_to_tmp_dir(predID, '%s.zip' %predID)
+
         print '*** %s has been unzipped!!!***' %predID
-        PredID_output_dict = main(predID, my_tmp_dir)
+        PredID_output_dict = zipzip(predID, my_tmp_dir)
         shutil.rmtree(my_tmp_dir)
-        return PredID_output_dict
-    except IOError as MIA:
-        print 'FAILURE'
-        PredID_output_dict = {'%s failed: %s' %(predID, MIA)}
+        dict_to_json(PredID_output_dict, predID)
         return PredID_output_dict
 
-def asdfasdf():
+    except IOError as MIA:
+        print 'IO Failure %s: %s' %(predID, MIA)
+        PredID_output_dict = {'%s' %predID: '%s' %MIA}
+        dict_to_json(PredID_output_dict, predID)
+        return PredID_output_dict
+
+    except:
+        print 'General Failure: %s' %predID
+        PredID_output_dict = {'%s' %predID : 'General Failure'}
+        dict_to_json(PredID_output_dict, predID)
+        return PredID_output_dict
+
+def main():
     os.chdir('/kortemmelab/shared/DDG/ppijobs')
     csv_info = pd.read_csv('/kortemmelab/home/james.lucas/zemu-psbrub_1.6-pv-1000-lbfgs_IDs.csv')
 
-    PredID_list = []
-    for index, row in csv_info.iterrows():
-        PredID_list.append(int(row[0].split()[0]))
-
-    # #DEBUGGING
+    # Grab Prediction IDs from .csv file
     # PredID_list = []
-    # for asdf in range(67088, 67115):
-    #     PredID_list.append(asdf)
+    # for index, row in csv_info.iterrows():
+    #     PredID_list.append(int(row[0].split()[0]))
 
-    pool = multiprocessing.Pool(20)
+    PredID_list = []
+    # for asdf in range(67088, 68327): #zemu-psbrub_1.6-pv-1000-lbfgs
+    for asdf in range(94009,95248): #ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014
+        PredID_list.append(asdf)
+
+    #DEBUGGING
+    #PredID_list = [67619, 67611, 67614]
+    PredID_list = [94009]
+
+    pool = multiprocessing.Pool(25)
     allmyoutput = pool.map( multiprocessing_stuff, PredID_list, 1)
     pool.close()
     pool.join()
 
     print allmyoutput
-    print 'Dumping information to Structural_metrics.txt'
 
-    with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
-        for resultdict in allmyoutput:
-            json.dump(resultdict, outfile)
+    # print 'Dumping information to Structural_metrics.txt'
+    #
+    # with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
+    #     for resultdict in allmyoutput:
+    #         json.dump(resultdict, outfile)
 
-
-asdfasdf()
+main()
