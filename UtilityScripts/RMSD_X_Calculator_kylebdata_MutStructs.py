@@ -1,5 +1,5 @@
-# This script is intended to calculate the average pairwise RMSD between all Rosetta-generated mutant ensemble members
-# as a measure of ensemble diversity
+# This script is intended to calculate the average RMSD of each Rosetta-generated mutant ensemble member to the known
+# mutant crystal structure
 
 from Bio.PDB import *
 import Bio.PDB
@@ -47,9 +47,20 @@ def Fetch_PredID_Info(predID):
     pdb_filename = PredID_Details['Files']['Input'][0]['Filename']
     pdb_chains = re.sub('_|\.', ' ', pdb_filename).split()[1]
     raw_pdb = PredID_Details['Files']['Input'][0]['Content']
-    fresh_pdb = strip_pdbs(raw_pdb, pdb_chains)
+    fresh_pdb, delete_me_later = strip_pdbs(raw_pdb, pdb_chains)
 
-    return mutations, fresh_pdb
+    # Get input mutant crystal structure PDB into coordinates
+    fresh_pdb_prody = []
+    atom_list = []
+    hv = prody.parsePDB(delete_me_later).getHierView()
+    for chain in hv:
+        for res in chain:
+            for atom in res:
+                if atom.getElement() != 'H':
+                    atom_list.append(atom.getCoords())
+    fresh_pdb_prody = np.asarray(atom_list)
+
+    return mutations, fresh_pdb, fresh_pdb_prody
 
 def strip_pdbs(raw_pdb, pdb_chains):
     import tempfile
@@ -70,9 +81,7 @@ def strip_pdbs(raw_pdb, pdb_chains):
         parser = PDBParser(PERMISSIVE=1)
         fresh_pdb = parser.get_structure('Open', temp_PDBFile.name)
 
-    os.remove(delete_me_later)
-
-    return fresh_pdb
+    return fresh_pdb, delete_me_later
 
 #From Kyle's Finalize.py
 def find_neighbors( pdb_path, predID, mutations, open_strct, neighbor_distance = 8.0):
@@ -322,7 +331,7 @@ def do_math( reference, outputdir, predID):
             #    input_temp.append(os.path.join(outputdir, app_output_dir, app_outfile ))
             #    input_pdbs = sorted(input_temp)
 
-    mutations, fresh_pdb = Fetch_PredID_Info(predID)
+    mutations, fresh_pdb, fresh_pdb_prody = Fetch_PredID_Info(predID)
 
     point_mutants = mutant_coordinates(input_pdbs, predID, mutations, fresh_pdb)
     neighbors = find_neighbors( reference, predID, mutations, fresh_pdb, 8)
@@ -396,7 +405,8 @@ def main():
     os.chdir('/kortemmelab/shared/DDG/ppijobs')
     csv_info = pd.read_csv('/kortemmelab/home/james.lucas/zemu-psbrub_1.6-pv-1000-lbfgs_IDs.csv')
 
-    # Grab Prediction IDs from .csv file
+    # Old code, can technically still use this but it's just easier to add PredIDs to PredID_list using range() for loop
+    # Grabs Prediction IDs from .csv file
     # PredID_list = []
     # for index, row in csv_info.iterrows():
     #     PredID_list.append(int(row[0].split()[0]))
@@ -424,3 +434,7 @@ def main():
     #         json.dump(resultdict, outfile)
 
 main()
+
+# main(): uses pool to pass individual Prediction IDs to multiprocessing_stuff()
+# multiprocessing_stuff(): Unzips PredID zip into a temp dir, runs do_math() function, then deletes temp dir
+
