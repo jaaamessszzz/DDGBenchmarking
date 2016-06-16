@@ -142,8 +142,6 @@ def neighbors_list(pdb_filepath, pdb_file):
     #Generating pivotlist with sets
     pivotlist = set()
     
-    print res_list[0].get_full_id()
-    
     for i in neighbors:
         pivotlist.add(str(i[0][1]) + str(i[1]))
         for res in res_list:
@@ -221,7 +219,7 @@ def bash(chaintomove, inputdir, outputdir):
            'chain=%s' %(chaintomove),
            '-nstruct 50',
           ]
-    
+
     print 'Working on: %s %s' %(filenum, PDBID)
     
     outfile_path = os.path.join(predIDoutdir, 'rosetta.out')
@@ -234,6 +232,7 @@ def bash(chaintomove, inputdir, outputdir):
         raise
     return_code = rosetta_process.wait()
     print 'Task return code:', return_code, '\n'
+    print arg
     rosetta_outfile.close()    
     
     return filenum
