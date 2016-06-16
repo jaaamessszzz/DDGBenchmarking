@@ -131,7 +131,9 @@ def json_parser():
 #Finds neighbors within 8A and adds position and Chain information to a list
 def neighbors_list(pdb_filepath, pdb_file):
     neighbors = find_neighbors(pdb_filepath, pdb_file, 8)
-    
+
+    print neighbors
+
     parser = PDBParser()
     structure = parser.get_structure('TEST', pdb_file)
     chain_list = Selection.unfold_entities(structure, 'C')
@@ -161,8 +163,7 @@ def neighbors_list(pdb_filepath, pdb_file):
                 all_residues.add(str(residue[1]) + str(residue[2]) + str(chain))
             else:
                 all_residues.add(str(residue[1]) + str(chain.get_id()))
-    
-    pivotlist_alpha = set()
+
     pivotlist_alpha = pivotlist.intersection(all_residues)
     
     pivotlist_final = ''
@@ -225,7 +226,7 @@ def bash(chaintomove, inputdir, outputdir):
     outfile_path = os.path.join(predIDoutdir, 'rosetta.out')
     rosetta_outfile = open(outfile_path, 'w')
     print 'Running RosettaScript...'
-    rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=os.path.join(os.getcwd(), predIDoutdir))
+    rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd= predIDoutdir)
     # try:
     #     rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=predIDoutdir)
     # except OSError:
