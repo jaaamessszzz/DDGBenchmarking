@@ -225,11 +225,12 @@ def bash(chaintomove, inputdir, outputdir):
     outfile_path = os.path.join(predIDoutdir, 'rosetta.out')
     rosetta_outfile = open(outfile_path, 'w')
     print 'Running RosettaScript...'
-    try:
-        rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=predIDoutdir)
-    except OSError:
-        print arg, rosetta_outfile, predIDoutdir
-        raise
+    rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=predIDoutdir)
+    # try:
+    #     rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=predIDoutdir)
+    # except OSError:
+    #     print arg, rosetta_outfile, predIDoutdir
+    #     raise
     return_code = rosetta_process.wait()
     print 'Task return code:', return_code, '\n'
     print arg
