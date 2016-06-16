@@ -3,7 +3,7 @@
 #$ -cwd
 #$ -r yes
 #$ -l h_rt=240:00:00
-#$ -t 1-707
+#$ -t 1-850
 #$ -l arch=linux-x64
 #$ -l mem_free=1.9G
 #$ -l netapp=2G,scratch=1G
@@ -213,14 +213,13 @@ def bash(chaintomove, inputdir, outputdir):
            '-s',
            pdb_relpath,
            '-parser:protocol',
-           '../../../DDGBenchmarks_Test/RosettaScripts/DDG_Protocol_v1.xml',
+           '../../../DDGBenchmarks_Test/RosettaScripts/DDG_Protocol_v1_BackrubProtocol.xml', # Change for unique runs
            '-ignore_unrecognized_res',
            '-parser:script_vars',
            'resfile_relpath=%s' %(resfile_relpath),
            'pivot_residues=%s' %(pivot_residues),
            'chain=%s' %(chaintomove),
            '-nstruct 50',
-           '-mute protocols.canonical_sampling.MetropolisHastingsMover'
           ]
     
     print 'Working on: %s %s' %(filenum, PDBID)
@@ -240,7 +239,7 @@ def bash(chaintomove, inputdir, outputdir):
     return filenum
 
 #Define paths
-outputdir = 'DDG_Zemu_v2_output/'
+outputdir = 'output/' # Change for unique runs
 
 #ACTION!!!
 chaintomove, inputdir = json_parser()
@@ -263,8 +262,8 @@ for line in out.split(os.linesep):
         ram_usage_type = m.group(2)
         print 'Max virtual memory usage: %.1f%s' % (ram_usage, ram_usage_type)
         
-error_out = 'SubmitRun_DDG_Zemu_General_v2.py.e' + str(job_id) + '.' + str(sge_task_id)
-output_out = 'SubmitRun_DDG_Zemu_General_v2.py.o' + str(job_id) + '.' + str(sge_task_id)
+error_out = '%s.e' %sys.argv[0] + str(job_id) + '.' + str(sge_task_id)  # Change for unique runs (now uses argv)
+output_out = '%s.o' %sys.argv[0] + str(job_id) + '.' + str(sge_task_id)  # Change for unique runs (now uses argv)
 
 try:
     shutil.move(error_out , os.path.join(outputdir, filenum))
