@@ -225,7 +225,7 @@ def bash(chaintomove, inputdir, outputdir):
     outfile_path = os.path.join(predIDoutdir, 'rosetta.out')
     rosetta_outfile = open(outfile_path, 'w')
     print 'Running RosettaScript...'
-    rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=predIDoutdir)
+    rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=os.path.join(os.getcwd(), predIDoutdir))
     # try:
     #     rosetta_process = subprocess.Popen(arg, stdout=rosetta_outfile, cwd=predIDoutdir)
     # except OSError:
