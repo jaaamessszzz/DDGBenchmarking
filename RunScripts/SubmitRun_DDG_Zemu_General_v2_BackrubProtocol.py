@@ -120,7 +120,7 @@ def find_neighbors(filenum_dir, pdb_path, neighbor_distance = 8.0):
 
 #Parses dataset .json file and outputs chain to move and input PDB file directory
 def json_parser():
-    jsonload = open("data/blank_job_dict.json")
+    jsonload = open("data/blank_job_dict_updated.json") # Change for uniq jobs
     jsonfile = json.load(jsonload)
     key = sorted(jsonfile.keys())[sge_task_id-1]
     chaintomove = jsonfile[key]["%%chainstomove%%"]
