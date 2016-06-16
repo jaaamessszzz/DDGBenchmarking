@@ -1,0 +1,61 @@
+<ROSETTASCRIPTS>
+    <SCOREFXNS>
+        <fa_talaris2014 weights=talaris2014>
+            <Reweight scoretype="atom_pair_constraint" weight=1.0/>
+            <Reweight scoretype="mm_bend" weight=1.0/>
+        </fa_talaris2014>
+        <beta_nov15_soft weights=beta_nov15_soft/>
+    </SCOREFXNS>
+    <TASKOPERATIONS>
+        <ReadResfile name=readres filename="%%resfile_relpath%%/mutations_repack.resfile"/>
+    </TASKOPERATIONS>
+    <RESIDUE_SELECTORS>
+        <Task name=resselector packable=1 task_operations=readres/>
+        <Neighborhood name=bubble selector=resselector distance=8/>
+        <Not name=everythingelse selector=bubble/>
+    </RESIDUE_SELECTORS>
+    <TASKOPERATIONS>
+        <OperateOnResidueSubset name=repackonly selector=bubble>
+            <RestrictToRepackingRLT/>
+        </OperateOnResidueSubset>
+        <OperateOnResidueSubset name=norepack selector=everythingelse>
+            <PreventRepackingRLT/>
+        </OperateOnResidueSubset>
+    </TASKOPERATIONS>
+    <FILTERS>
+    </FILTERS>
+    <MOVERS>
+        <BackrubProtocol name=backrub pivot_residues="%%pivot_residues%%" mc_kt=1.6 ntrials=1000/>
+        <AddConstraintsToCurrentConformationMover name=addcst use_distance_cst=1 coord_dev=1.0 min_seq_sep=0 max_distance=8 cst_weight=1.0 />
+        <ClearConstraintsMover name=clearcst />
+        <MinMover name=minimize scorefxn=fa_talaris2014 chi=1 bb=1 type=lbfgs_armijo_nonmonotone tolerance=0.000001 max_iter=5000/>
+        <PackRotamersMover name=repack scorefxn=beta_nov15_soft task_operations="repackonly,norepack"/>
+        <PackRotamersMover name=mutate scorefxn=beta_nov15_soft task_operations="readres,norepack"/>
+        <ddG name=ddg scorefxn=fa_talaris2014 chain_name="%%chain%%"/>
+        <SavePoseMover name=savepose restore_pose=0 reference_name=backrubpdb/>
+        <SavePoseMover name=restorepose restore_pose=1 reference_name=backrubpdb/>
+        <DumpPdb name=dumppdb fname=WT.pdb tag_time=1/>
+    </MOVERS>
+    <APPLY_TO_POSE>
+    </APPLY_TO_POSE>
+    <PROTOCOLS>
+      <Add mover_name = addcst/>
+      <Add mover_name = minimize/>
+      <Add mover_name = clearcst/>
+      <Add mover_name = backrub/>
+      <Add mover_name = savepose/>
+      <Add mover_name = repack/>
+      <Add mover_name = addcst/>
+      <Add mover_name = minimize/>
+      <Add mover_name = clearcst/>
+      <Add mover_name = ddg/>
+      <Add mover_name = dumppdb/>
+      <Add mover_name = restorepose/>
+      <Add mover_name = mutate/>
+      <Add mover_name = addcst/>
+      <Add mover_name = minimize/>
+      <Add mover_name = clearcst/>
+      <Add mover_name = ddg/>
+    </PROTOCOLS>
+    <OUTPUT />
+</ROSETTASCRIPTS>
