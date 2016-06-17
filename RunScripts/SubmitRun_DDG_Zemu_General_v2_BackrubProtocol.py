@@ -271,8 +271,8 @@ for line in out.split(os.linesep):
         ram_usage_type = m.group(2)
         print 'Max virtual memory usage: %.1f%s' % (ram_usage, ram_usage_type)
         
-error_out = '%s.e' %sys.argv[0] + str(job_id) + '.' + str(sge_task_id)  # Change for unique runs (now uses argv)
-output_out = '%s.o' %sys.argv[0] + str(job_id) + '.' + str(sge_task_id)  # Change for unique runs (now uses argv)
+error_out = 'SubmitRun_DDG_Zemu_General_v2_BackrubProtocol.py.e' + str(job_id) + '.' + str(sge_task_id)  # Change for unique runs (now uses argv)
+output_out = 'SubmitRun_DDG_Zemu_General_v2_BackrubProtocol.py.o' + str(job_id) + '.' + str(sge_task_id)  # Change for unique runs (now uses argv)
 
 try:
     shutil.move(error_out , os.path.join(outputdir, filenum))
