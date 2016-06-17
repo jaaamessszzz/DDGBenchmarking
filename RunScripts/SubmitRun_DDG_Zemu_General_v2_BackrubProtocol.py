@@ -153,26 +153,32 @@ def neighbors_list(pdb_filepath, pdb_file):
             if str(res.get_full_id()[2]) == str(i[1]):
                 if str(res.get_full_id()[3][1]) == str(i[0][1]+1):
                     pivotlist.add(str(i[0][1] + 1) + str(i[1]))
-    
+
+    pivotlist_final = ''
+    for residue in pivotlist:
+        pivotlist_final = pivotlist_final + '%s,' % residue
+    pivotlist_final = pivotlist_final[:-1]
+    return pivotlist_final
+
     #Adds +1/-1 residues for items in pivotlist
     #Dirty AF but it works
-    
-    for chain in chain_list:
-        for residue in [res.get_id() for res in res_list]:
-            if residue[2] != ' ':
-                all_residues.add(str(residue[1]) + str(residue[2]) + str(chain))
-            else:
-                all_residues.add(str(residue[1]) + str(chain.get_id()))
-
-    pivotlist_alpha = pivotlist.intersection(all_residues)
-    
-    pivotlist_final = ''
-    for i in pivotlist_alpha:
-        pivotlist_final = pivotlist_final + '%s,' %i
-    
-    pivotlist_final = pivotlist_final[:-1]
-
-    return pivotlist_final
+    #
+    # for chain in chain_list:
+    #     for residue in [res.get_id() for res in res_list]:
+    #         if residue[2] != ' ':
+    #             all_residues.add(str(residue[1]) + str(residue[2]) + str(chain))
+    #         else:
+    #             all_residues.add(str(residue[1]) + str(chain.get_id()))
+    #
+    # pivotlist_alpha = pivotlist.intersection(all_residues)
+    #
+    # pivotlist_final = ''
+    # for i in pivotlist_alpha:
+    #     pivotlist_final = pivotlist_final + '%s,' %i
+    #
+    # pivotlist_final = pivotlist_final[:-1]
+    #
+    # return pivotlist_final
 
 #Reads resfile and returns mutation position+chain and type
 def resfile_stuff(pdb_filepath):
