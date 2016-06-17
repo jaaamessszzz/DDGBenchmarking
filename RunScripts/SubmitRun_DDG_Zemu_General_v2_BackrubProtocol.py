@@ -146,13 +146,18 @@ def neighbors_list(pdb_filepath, pdb_file):
     
     for i in neighbors:
         pivotlist.add(str(i[0][1]) + str(i[1]))
+        print 'Neighbor residue: %s' %str(i[0][1]) + str(i[1])
         for res in res_list:
             if str(res.get_full_id()[2]) == str(i[1]):
                 if str(res.get_full_id()[3][1]) == str(i[0][1]-1):
-                      pivotlist.add(str(i[0][1] - 1) + str(i[1]))
+                    pivotlist.add(str(i[0][1] - 1) + str(i[1]))
+                    print '-1: %s' %str(i[0][1] - 1) + str(i[1])
             if str(res.get_full_id()[2]) == str(i[1]):
                 if str(res.get_full_id()[3][1]) == str(i[0][1]+1):
                     pivotlist.add(str(i[0][1] + 1) + str(i[1]))
+                    print res.get_full_id()[3][1]
+                    print str(i[1])
+                    print '+1: %s' % str(i[0][1] + 1) + str(i[1])
 
     pivotlist_final = ''
     for residue in pivotlist:
