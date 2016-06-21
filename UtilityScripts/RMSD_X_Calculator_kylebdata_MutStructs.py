@@ -359,12 +359,12 @@ def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tm
             fetch_from_res_map = residue_maps[(mutation[1], wt_to_mut_chains[mutation[1]])]['%s %s ' % (mutation[1], ('   ' + str(mutation[0]))[-3:])].split()
             mutations_mut_numbering.append([fetch_from_res_map[1], fetch_from_res_map[0]])
             mut_key_dict[str(fetch_from_res_map[0]) + fetch_from_res_map[1]] = mutation[1] + str(mutation[0])
+        print mutations_mut_numbering
 
     def generate_point_atom_list(input_pdbs, mutations, acceptable_atoms_wt_set, acceptable_atoms_mut_set, mut_key_dict, input_type):
         mutation_dict = {}
         # DEBUGGING
         print mut_key_dict
-        print mutations_mut_numbering
         for counter, mutation in enumerate(mutations):
             temp = []
             for input_pdb in input_pdbs:
