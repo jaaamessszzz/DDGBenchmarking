@@ -351,10 +351,9 @@ def neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chai
 
 def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type):
     acceptable_atoms_wt_set, acceptable_atoms_mut_set = common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_pdbs, mutations)
-
+    mut_key_dict = {}
     if input_type == 'Mutant PDB':
         mutations_mut_numbering = []
-        mut_key_dict = {}
         for mutation in mutations:
         # Converts mutation in WT PDB numbering to Mutant PDB numbering
             fetch_from_res_map = residue_maps[(mutation[1], wt_to_mut_chains[mutation[1]])]['%s %s ' % (mutation[1], ('   ' + str(mutation[0]))[-3:])].split()
