@@ -191,7 +191,6 @@ def rmsd(pyrmsd_calc, coordinates, fresh_coords):
         rmsd_list = []
 
         for mutres, coord_set in coordinates.iteritems():
-            print mutres
             print coord_set.shape
             print coord_set
             print fresh_coords[mutres].shape
@@ -629,8 +628,6 @@ def main():
     # PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
 
     # DEBUGGING
-
-    # PredID_list = [94531]
     PredID_list = [int(sys.argv[1])]
 
     pool = multiprocessing.Pool(25)
