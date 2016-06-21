@@ -631,7 +631,7 @@ def main():
     # DEBUGGING
 
     # PredID_list = [94531]
-    PredID_list = sys.argv[1]
+    PredID_list = [sys.argv[1]]
 
     pool = multiprocessing.Pool(25)
     allmyoutput = pool.map(multiprocessing_stuff, PredID_list, 1)
