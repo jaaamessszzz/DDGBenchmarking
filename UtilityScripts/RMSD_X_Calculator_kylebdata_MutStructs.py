@@ -52,6 +52,9 @@ def Fetch_PredID_Info(predID):
     for index, row in df.iterrows():
         if row['PPMutagenesisID'] == PredID_Details['PDBMutations'][0]['PPMutagenesisID']:
             Mutant_PDB_ID = row['Mutant']
+            # DEBUGGING
+            MutagenesisID_index = index
+            print row['PPMutagenesisID']
             break
 
     # WT pdb is from a string and Mut PDB is from file... so... yeah... this happened
@@ -63,7 +66,7 @@ def Fetch_PredID_Info(predID):
     WT_PDB_ID = wt_pdb_filename[:4]
 
     # IN PROGRESS
-    residue_maps, wt_to_mut_chains = map_pdbs(WT_PDB_ID, Mutant_PDB_ID, wt_pdb_chains)
+    residue_maps, wt_to_mut_chains = map_pdbs(WT_PDB_ID, Mutant_PDB_ID, wt_pdb_chains, df, MutagenesisID_index) # Variable df is temporary while Shane figures out chain mapping thing
     fresh_wt_pdb, tmp_wt_pdb = strip_pdbs(raw_wt_pdb, wt_to_mut_chains, input_type='WT PDB')
     fresh_mut_pdb, tmp_mut_pdb = strip_pdbs(raw_mutant_pdb, wt_to_mut_chains, input_type='Mutant PDB')
 
@@ -106,15 +109,27 @@ def strip_pdbs(raw_pdb, wt_to_mut_chains, input_type):
     return fresh_pdb, tmp_pdb
 
 
-def map_pdbs(WT_PDB_ID, Mutant_PDB_ID, wt_pdb_chains):
+def map_pdbs(WT_PDB_ID, Mutant_PDB_ID, wt_pdb_chains, df, MutagenesisID_index):
     pssa = PDBSeqresSequenceAligner(WT_PDB_ID, Mutant_PDB_ID, cache_dir='/tmp')
     mut_chain_ids = {}
     residue_maps = {}
+
     for wt_chain_id in wt_pdb_chains:
         mut_chain_ids[wt_chain_id] = pssa.get_matching_chains(wt_chain_id)
         for mut_chain_id in mut_chain_ids[wt_chain_id]:
             residue_maps[(wt_chain_id, mut_chain_id)] = pssa.get_atom_residue_mapping(wt_chain_id, mut_chain_id)
     wt_to_mut_chains = {chain[0]: chain[1] for chain in residue_maps.keys()}
+
+    # Tempory chain matching solution...
+    wt_to_mut_chains = {}
+    for mapping in re.sub(' |,', ' ', df.loc[MutagenesisID_index]['WT:Mut Mapping']).split():
+        wt_to_mut_chains[mapping[0]] = mapping[2]
+
+    chains_to_keep = set([key for key in residue_maps.keys()]) & set([(wt_to_mut , wt_to_mut_chains[wt_to_mut]) for wt_to_mut in wt_to_mut_chains])
+
+    for residue_maps_key in residue_maps.keys():
+        if residue_maps_key not in chains_to_keep:
+            residue_maps.pop(residue_maps_key)
 
     return residue_maps, wt_to_mut_chains
 
@@ -165,14 +180,12 @@ def rmsd(pyrmsd_calc, coordinates, fresh_coords):
     def generate_out_dict(rmsd):
         from pyRMSD.condensedMatrix import CondensedMatrix
 
-        # DEBUGGING
-        print CondensedMatrix(rmsd).get_data()
-
         out_dict_temp = {}
         out_dict_temp['Mean'] = CondensedMatrix(rmsd).calculateMean()
         out_dict_temp['Variance'] = CondensedMatrix(rmsd).calculateVariance()
         out_dict_temp['Skewness'] = CondensedMatrix(rmsd).calculateSkewness()
         out_dict_temp['Kurtosis'] = CondensedMatrix(rmsd).calculateKurtosis()
+        out_dict_temp['Raw'] = CondensedMatrix(rmsd).get_data().flatten()
         return out_dict_temp
 
     if type(coordinates) is dict:
@@ -192,7 +205,6 @@ def rmsd(pyrmsd_calc, coordinates, fresh_coords):
         out_dict = generate_out_dict(rmsd)
         return out_dict
 
-
 def flip_me(residue_maps, wt_to_mut_chains):
     # Flips residue_maps and wt_to_mut_chains for wt --> mut residue numbering
     residue_maps_reverse = {}
@@ -209,160 +221,175 @@ def common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_
     mut_atoms = set()
     wt_atoms = set()
 
-    residue_maps_reverse, mut_to_wt_chains = flip_me(residue_maps, wt_to_mut_chains)
+    for chain_mapping in residue_maps:
+        for wt_residue, mut_residue in residue_maps[chain_mapping].iteritems():
+            wt_atoms.add(wt_residue.split()[0] + wt_residue.split()[1])
+            mut_atoms.add(mut_residue.split()[0] + mut_residue.split()[1])
 
-    # For c_alphas
-    if selection_type == 'CA':
-        mut_pdb_hv = prody.parsePDB(tmp_mut_pdb).select('calpha').getHierView()
-        wt_pdb_hv = prody.parsePDB(input_pdbs[1]).select('calpha').getHierView()
-
-        for hv_chain in mut_pdb_hv:
-            for hv_calpha in hv_chain:
-                for (chain, position) in zip(hv_calpha.getChids(), hv_calpha.getResnums()):
-                    wt_atoms.add(mut_to_wt_chains[chain] + str(residue_maps_reverse[(chain, mut_to_wt_chains[chain])][
-                                                                   '%s %s ' % (
-                                                                   chain, ('   ' + str(position))[-3:])].split()[1]))
-        for hv_chain in wt_pdb_hv:
-            for hv_calpha in hv_chain:
-                for (chain, position) in zip(hv_calpha.getChids(), hv_calpha.getResnums()):
-                    mut_atoms.add(chain + str(position))
-
-        acceptable_atoms = mut_atoms & wt_atoms
-        return acceptable_atoms
+    acceptable_atoms = {}
+    acceptable_atoms['RosettaOut'] = wt_atoms
+    acceptable_atoms['Mutant PDB'] = mut_atoms
 
     # For point mutants and neighbors (only looks at residues returned by find_neighbors(), doesn't look at +1/-1 residues)
     if isinstance(selection_type, list):
         mut_pdb_hv = prody.parsePDB(tmp_mut_pdb).getHierView()
         wt_pdb_hv = prody.parsePDB(input_pdbs[1]).getHierView()
 
-        acceptable_atoms = set()
+        acceptable_atoms_wt_set = set()
+        acceptable_atoms_mut_set = set()
 
         for residue in selection_type:
+            wt_res = wt_pdb_hv[(residue[1], int(residue[0]))]
             try:
-                wt_res = wt_pdb_hv[(residue[1], int(residue[0]))]
-                mut_res = mut_pdb_hv[(wt_to_mut_chains[residue[1]], int(
-                    residue_maps[(residue[1], wt_to_mut_chains[residue[1]])][
-                        '%s %s ' % (residue[1], ('   ' + str(residue[0]))[-3:])].split()[1]))]
+                mut_res = mut_pdb_hv[(wt_to_mut_chains[residue[1]], int(residue_maps[(residue[1], wt_to_mut_chains[residue[1]])]['%s %s ' % (residue[1], ('   ' + str(residue[0]))[-3:])].split()[1]))]
                 if wt_res.getResname() == mut_res.getResname():
                     for wt_atom in wt_res:
                         for mut_atom in mut_res:
                             if wt_atom.getName() == mut_atom.getName():
-                                acceptable_atoms.add(
-                                    (wt_res.getChid(), wt_res.getResname(), wt_res.getResnum(), wt_atom.getName()))
-            except Exception as e:
-                print e
-        return acceptable_atoms
+                                acceptable_atoms_wt_set.add((wt_res.getChid(), wt_res.getResname(), wt_res.getResnum(), wt_atom.getName()))
+                                acceptable_atoms_mut_set.add((mut_res.getChid(), mut_res.getResname(), mut_res.getResnum(), mut_atom.getName()))
+            except:
+                print '%s%s has no equivalent residue in the Reference Mutant PDB' %(residue[1], int(residue[0]))
+                pass
 
+        return acceptable_atoms_wt_set, acceptable_atoms_mut_set
+    return acceptable_atoms
 
-def global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains):
+def global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type):
     acceptable_atoms = common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_pdbs, selection_type='CA')
-    temp = []
-    for input_pdb in input_pdbs:
-        if 'WT.' not in input_pdb:
-            atom_list = []
-            c_alpha_all = prody.parsePDB(input_pdb).select('calpha').getHierView()
-            for c_alpha_chain in c_alpha_all:
-                for c_alpha in c_alpha_chain:
-                    if c_alpha.getChids()[0] + str(c_alpha.getResnums()[0]) in acceptable_atoms:
-                        atom_list.append(c_alpha.getCoords()[0])
-        temp.append(atom_list)
-    coordinates = np.asarray(temp)
-    return coordinates
 
+    def generate_ca_atom_list(input_pdbs, acceptable_atoms, input_type):
+        temp = []
+        for input_pdb in input_pdbs:
+            if 'WT.' not in input_pdb:
+                atom_list = []
+                c_alpha_all = prody.parsePDB(input_pdb).select('calpha').getHierView()
+                for c_alpha_chain in c_alpha_all:
+                    for c_alpha in c_alpha_chain:
+                        if input_type == 'Mutant PDB':
+                            print c_alpha.getChids()[0] + str(c_alpha.getResnums()[0])
+                            if c_alpha.getChids()[0] + str(c_alpha.getResnums()[0]) in acceptable_atoms['Mutant PDB']:
+                                atom_list.append(c_alpha.getCoords()[0])
+                                print c_alpha.getChids()[0] + str(c_alpha.getResnums()[0]) + 'added!'
+                        else:
+                            if c_alpha.getChids()[0] + str(c_alpha.getResnums()[0]) in acceptable_atoms['RosettaOut']:
+                                atom_list.append(c_alpha.getCoords()[0])
+            temp.append(atom_list)
+        coordinates = np.asarray(temp)
+
+        return coordinates
+
+    if input_type == 'RosettaOut':
+        return generate_ca_atom_list(input_pdbs, acceptable_atoms, input_type)
+    if input_type == 'Mutant PDB':
+        return generate_ca_atom_list([tmp_mut_pdb], acceptable_atoms, input_type)
 
 def neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type):
     neighbors_reorganized = [[neighbor[0][1], neighbor[1]] for neighbor in neighbors]
-    acceptable_atoms = common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_pdbs, neighbors_reorganized)
+    acceptable_atoms_wt_set, acceptable_atoms_mut_set = common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_pdbs, neighbors_reorganized)
     residue_maps_reverse, mut_to_wt_chains = flip_me(residue_maps, wt_to_mut_chains)
-
-    temp = []
 
     # Converts neighbor selection into mutant PDB numbering
     if input_type == 'Mutant PDB':
-        neighbors_temp = []
+        neighbors_mut_numbering = []
+
         for neighbor_residue in neighbors:
-            neighbors_temp.append(((' ',
-                                 int(residue_maps[(neighbor_residue[1], wt_to_mut_chains[neighbor_residue[1]])][
-                                         '%s %s ' % (
-                                         neighbor_residue[1], ('   ' + str(neighbor_residue[0][1]))[-3:])].split()[1]),
-                                 ' '),
-                                residue_maps[(neighbor_residue[1], wt_to_mut_chains[neighbor_residue[1]])]['%s %s ' % (
-                                neighbor_residue[1], ('   ' + str(neighbor_residue[0][1]))[-3:])].split()[0]))
-        neighbors = neighbors_temp
-        input_pdbs = [tmp_mut_pdb]
+            try:
+                neighbors_mut_numbering.append(((' ',
+                                         int(residue_maps[(neighbor_residue[1], wt_to_mut_chains[neighbor_residue[1]])][
+                                                 '%s %s ' % (
+                                                 neighbor_residue[1], ('   ' + str(neighbor_residue[0][1]))[-3:])].split()[1]),
+                                         ' '),
+                                        residue_maps[(neighbor_residue[1], wt_to_mut_chains[neighbor_residue[1]])]['%s %s ' % (
+                                        neighbor_residue[1], ('   ' + str(neighbor_residue[0][1]))[-3:])].split()[0]))
+            except:
+                print '%s%s has no equivalent residue in the Reference Mutant PDB' %(neighbor_residue[1], str(neighbor_residue[0][1]))
+                pass
 
-    for input_pdb in input_pdbs:
-        if 'WT.' not in input_pdb:
-            atom_list = []
-            hv = prody.parsePDB(input_pdb).getHierView()
-            res_list = [hv[neighbor[1], neighbor[0][1]] for neighbor in neighbors]
-
-            for res in res_list:
-                # Check if numbering should be for WT or Mutant
-                # Check that residues are present in acceptable_residues
-                # Check that atom coordinates are present in acceptable_atoms
-                for atom in res:
-                    if input_type == 'Mutant PDB':
-                        if (mut_to_wt_chains[res.getChid()], res.getResname(),
-                            int(residue_maps_reverse[(res.getChid(), mut_to_wt_chains[res.getChid()])][
-                                    '%s %s ' % (res.getChid(), ('   ' + str(res.getResnum()))[-3:])].split()[1]),
-                            atom.getName()) in acceptable_atoms:
-                            if atom.getElement() != 'H':
-                                atom_list.append(atom.getCoords())
-
-                    else:
-                        if (res.getChid(), res.getResname(), res.getResnum(), atom.getName()) in acceptable_atoms:
-                            if atom.getElement() != 'H':
-                                atom_list.append(atom.getCoords())
-
-            temp.append(atom_list)
-
-    coordinates = np.asarray(temp)
-    return coordinates
-
-def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type):
-    acceptable_atoms = common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_pdbs, mutations)
-    residue_maps_reverse, mut_to_wt_chains = flip_me(residue_maps, wt_to_mut_chains)
-
-    mutation_dict = {}
-
-    for mutation in mutations:
-        # Converts mutation in WT PDB numbering to Mutant PDB numbering
-        if input_type == 'Mutant PDB':
-            fetch_from_res_map = residue_maps[(mutation[1], wt_to_mut_chains[mutation[1]])][
-                '%s %s ' % (mutation[1], ('   ' + str(mutation[0]))[-3:])].split()
-            mutation = [fetch_from_res_map[1], fetch_from_res_map[0]]
-            input_pdbs = [tmp_mut_pdb]
-
+    def generate_neighborhood_atom_list(input_pdbs, neighbors, acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type):
         temp = []
-
         for input_pdb in input_pdbs:
             if 'WT.' not in input_pdb:
                 atom_list = []
                 hv = prody.parsePDB(input_pdb).getHierView()
-                res_list = [hv[mutation[1], int(mutation[0])]]
+                res_list = [hv[neighbor[1], neighbor[0][1]] for neighbor in neighbors]
+
                 for res in res_list:
                     # Check if numbering should be for WT or Mutant
                     # Check that residues are present in acceptable_residues
                     # Check that atom coordinates are present in acceptable_atoms
                     for atom in res:
                         if input_type == 'Mutant PDB':
-                            if (mut_to_wt_chains[res.getChid()], res.getResname(),
+                            print (mut_to_wt_chains[res.getChid()], res.getResname(),
                                 int(residue_maps_reverse[(res.getChid(), mut_to_wt_chains[res.getChid()])][
-                                            '%s %s ' % (res.getChid(), ('   ' + str(res.getResnum()))[-3:])].split()[
-                                        1]),
-                                atom.getName()) in acceptable_atoms:
+                                        '%s %s ' % (res.getChid(), ('   ' + str(res.getResnum()))[-3:])].split()[1]),
+                                atom.getName())
+                            if (res.getChid(), res.getResname(),int(res.getResnum()), atom.getName()) in acceptable_atoms_mut_set:
                                 if atom.getElement() != 'H':
                                     atom_list.append(atom.getCoords())
+
                         else:
-                            if (res.getChid(), res.getResname(), res.getResnum(), atom.getName()) in acceptable_atoms:
+                            if (res.getChid(), res.getResname(), res.getResnum(), atom.getName()) in acceptable_atoms_wt_set:
                                 if atom.getElement() != 'H':
                                     atom_list.append(atom.getCoords())
 
                 temp.append(atom_list)
-        temp_nparray = np.asarray(temp)
-        mutation_dict['%s%s' % (mutation[1], mutation[0])] = temp_nparray
-    return mutation_dict
+
+        coordinates = np.asarray(temp)
+        return coordinates
+
+    # RosettaOut
+    if input_type == 'RosettaOut':
+        return generate_neighborhood_atom_list(input_pdbs, neighbors,  acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type)
+    # Mutant PDB
+    if input_type == 'Mutant PDB':
+        return generate_neighborhood_atom_list([tmp_mut_pdb], neighbors_mut_numbering,  acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type)
+
+
+def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type):
+    acceptable_atoms_wt_set, acceptable_atoms_mut_set = common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_pdbs, mutations)
+
+    if input_type == 'Mutant PDB':
+        mutations_mut_numbering = []
+        for mutation in mutations:
+        # Converts mutation in WT PDB numbering to Mutant PDB numbering
+            fetch_from_res_map = residue_maps[(mutation[1], wt_to_mut_chains[mutation[1]])]['%s %s ' % (mutation[1], ('   ' + str(mutation[0]))[-3:])].split()
+            mutations_mut_numbering.append([fetch_from_res_map[1], fetch_from_res_map[0]])
+
+    def generate_point_atom_list(input_pdbs, mutations, dict_keys, acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type):
+        mutation_dict = {}
+        temp = []
+        for counter, mutation in enumerate(mutations):
+            for input_pdb in input_pdbs:
+                if 'WT.' not in input_pdb:
+                    atom_list = []
+                    hv = prody.parsePDB(input_pdb).getHierView()
+                    res_list = [hv[mutation[1], int(mutation[0])]]
+                    for res in res_list:
+                        # Check if numbering should be for WT or Mutant
+                        # Check that residues are present in acceptable_residues
+                        # Check that atom coordinates are present in acceptable_atoms
+                        for atom in res:
+                            if input_type == 'Mutant PDB':
+                                if (res.getChid(), res.getResname(),int(res.getResnum()), atom.getName())  in acceptable_atoms_mut_set:
+                                    if atom.getElement() != 'H':
+                                        atom_list.append(atom.getCoords())
+                            else:
+                                if (res.getChid(), res.getResname(), res.getResnum(), atom.getName()) in acceptable_atoms_wt_set:
+                                    if atom.getElement() != 'H':
+                                        atom_list.append(atom.getCoords())
+
+                    temp.append(atom_list)
+            temp_nparray = np.asarray(temp)
+            mutation_dict['%s' %counter] = temp_nparray
+        return mutation_dict
+
+# RosettaOut
+    if input_type == 'RosettaOut':
+        return generate_point_atom_list(input_pdbs, mutations, mutations, acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type)
+    # Mutant PDB
+    if input_type == 'Mutant PDB':
+        return generate_point_atom_list([tmp_mut_pdb], mutations_mut_numbering, mutations, acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type)
 
 def bin_me(templist):
     from collections import Counter
@@ -500,21 +527,24 @@ def do_math(reference, outputdir, predID):
         predID)
 
     point_mutants = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'RosettaOut')
-    neighbors = find_neighbors(mutations, fresh_wt_pdb, 8)
-    neighborhood = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb,
-                                           tmp_wt_pdb, input_type='RosettaOut')
-    global_ca = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains)
+    # neighbors = find_neighbors(mutations, fresh_wt_pdb, 8)
+    # neighborhood = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='RosettaOut')
+    # global_ca = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'RosettaOut')
 
     # Get prody coordinates from reference mutant crystal structure
-    fresh_pdb_global = np.array([prody.parsePDB(tmp_mut_pdb).select('calpha').getCoords()])
-    fresh_pdb_neighbors = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='Mutant PDB')
+    # fresh_pdb_global = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'Mutant PDB')
+    # fresh_pdb_neighbors = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='Mutant PDB')
     fresh_pdb_points = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'Mutant PDB')
 
     return_output_dict = {}
 
+    # DEBUGGING
+    pprint.pprint(point_mutants)
+    pprint.pprint(fresh_pdb_points)
+
     return_output_dict['Point Mutant RMSDs'] = rmsd( pyrmsd_calc, point_mutants, fresh_pdb_points)
-    return_output_dict['Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood, fresh_pdb_neighbors)
-    return_output_dict['Global RMSD'] = rmsd(pyrmsd_calc, global_ca, fresh_pdb_global)
+    # return_output_dict['Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood, fresh_pdb_neighbors)
+    # return_output_dict['Global RMSD'] = rmsd(pyrmsd_calc, global_ca, fresh_pdb_global)
     # chi_angles_output = chi_angles(input_pdbs, predID, mutations, fresh_pdb)
     # if chi_angles_output != {}:
     #     return_output_dict['X angles'] = chi_angles_output
@@ -535,7 +565,7 @@ def unzip_to_tmp_dir(prediction_id, zip_file):
 def multiprocessing_stuff(predID):
     def dict_to_json(PredID_output_dict, predID):
         with open('/kortemmelab/home/james.lucas/Structural_metrics_Outfiles/%s.txt' % predID, 'a') as outfile:
-            json.dump(PredID_output_dict, outfile)
+            outfile.write(PredID_output_dict)
 
     try:
         my_tmp_dir = unzip_to_tmp_dir(predID, '%s.zip' % predID)
@@ -559,7 +589,7 @@ def multiprocessing_stuff(predID):
             traceback.print_exc()
 
         shutil.rmtree(my_tmp_dir)
-        dict_to_json(PredID_output_dict, predID)
+        # dict_to_json(PredID_output_dict, predID)
         return PredID_output_dict
 
     except IOError as MIA:
@@ -592,9 +622,12 @@ def main():
     for asdf in range(94009, 95248):  # ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014
         PredID_list.append(asdf)
 
-    # DEBUGGING
     # PredID_list = [67619, 67611, 67614]
-    PredID_list = [95248]
+    # PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
+
+    # DEBUGGING
+
+    PredID_list = [94531]
 
     pool = multiprocessing.Pool(25)
     allmyoutput = pool.map(multiprocessing_stuff, PredID_list, 1)
@@ -602,13 +635,13 @@ def main():
     pool.join()
 
     print allmyoutput
+    print 'Dumping information to Structural_metrics.txt'
 
-    # print 'Dumping information to Structural_metrics.txt'
-    #
-    # with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
-    #     for resultdict in allmyoutput:
-    #         json.dump(resultdict, outfile)
+    #Sub-angstrom vs >1-angstrom RMSDs
 
+    with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
+        for resultdict in allmyoutput:
+            outfile.write(str(resultdict))
 
 main()
 
