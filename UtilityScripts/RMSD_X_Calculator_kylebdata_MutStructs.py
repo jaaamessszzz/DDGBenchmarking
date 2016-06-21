@@ -197,7 +197,7 @@ def rmsd(pyrmsd_calc, coordinates, fresh_coords):
             print fresh_coords[mutres].shape
             print fresh_coords[mutres]
 
-            coords_plus_ref = np.concatenate((coord_set, fresh_coords[mutres]), axis=0)
+            coords_plus_ref = np.append(coord_set, fresh_coords[mutres], axis=0)
             calculator = pyRMSD.RMSDCalculator.RMSDCalculator(pyrmsd_calc, coords_plus_ref)
             rmsd = calculator.oneVsTheOthers(50)
             out_dict = generate_out_dict(rmsd)
