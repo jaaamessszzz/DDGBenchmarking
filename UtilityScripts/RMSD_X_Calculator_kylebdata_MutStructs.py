@@ -354,12 +354,14 @@ def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tm
 
     if input_type == 'Mutant PDB':
         mutations_mut_numbering = []
+        mut_key_dict = {}
         for mutation in mutations:
         # Converts mutation in WT PDB numbering to Mutant PDB numbering
             fetch_from_res_map = residue_maps[(mutation[1], wt_to_mut_chains[mutation[1]])]['%s %s ' % (mutation[1], ('   ' + str(mutation[0]))[-3:])].split()
             mutations_mut_numbering.append([fetch_from_res_map[1], fetch_from_res_map[0]])
+            mut_key_dict[fetch_from_res_map[1] + str(fetch_from_res_map[0])] = mutation[1] + str(mutation[0])
 
-    def generate_point_atom_list(input_pdbs, mutations, acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type):
+    def generate_point_atom_list(input_pdbs, mutations, acceptable_atoms_wt_set, acceptable_atoms_mut_set, mut_key_dict, input_type):
         mutation_dict = {}
         for counter, mutation in enumerate(mutations):
             temp = []
@@ -383,15 +385,18 @@ def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tm
                                         atom_list.append(atom.getCoords())
 
                     temp.append(atom_list)
-            mutation_dict['%s' %counter] = np.asarray(temp)
+            if input_type == 'Mutant PDB':
+                mutation_dict[mut_key_dict[mutation[1] + str(mutation[0]]] = np.asarray(temp)
+            if input_type == 'RosettaOut':
+                mutation_dict[mutation[1] + str(mutation[0]] = np.asarray(temp)
         return mutation_dict
 
 # RosettaOut
     if input_type == 'RosettaOut':
-        return generate_point_atom_list(input_pdbs, mutations, acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type)
+        return generate_point_atom_list(input_pdbs, mutations, acceptable_atoms_wt_set, acceptable_atoms_mut_set, mut_key_dict, input_type)
     # Mutant PDB
     if input_type == 'Mutant PDB':
-        return generate_point_atom_list([tmp_mut_pdb], mutations_mut_numbering, acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type)
+        return generate_point_atom_list([tmp_mut_pdb], mutations_mut_numbering, acceptable_atoms_wt_set, acceptable_atoms_mut_set, mut_key_dict, input_type)
 
 def bin_me(templist):
     from collections import Counter
@@ -625,7 +630,8 @@ def main():
 
     # DEBUGGING
 
-    PredID_list = [94531]
+    # PredID_list = [94531]
+    PredID_list = [94009]
 
     pool = multiprocessing.Pool(25)
     allmyoutput = pool.map(multiprocessing_stuff, PredID_list, 1)
