@@ -192,6 +192,10 @@ def rmsd(pyrmsd_calc, coordinates, fresh_coords):
         rmsd_list = []
 
         for mutres, coord_set in coordinates.iteritems():
+            print mutres
+            print coord_set.shape
+            print fresh_coords[mutres].shape
+
             coords_plus_ref = np.concatenate((coord_set, fresh_coords[mutres]), axis=0)
             calculator = pyRMSD.RMSDCalculator.RMSDCalculator(pyrmsd_calc, coords_plus_ref)
             rmsd = calculator.oneVsTheOthers(50)
@@ -356,10 +360,10 @@ def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tm
             fetch_from_res_map = residue_maps[(mutation[1], wt_to_mut_chains[mutation[1]])]['%s %s ' % (mutation[1], ('   ' + str(mutation[0]))[-3:])].split()
             mutations_mut_numbering.append([fetch_from_res_map[1], fetch_from_res_map[0]])
 
-    def generate_point_atom_list(input_pdbs, mutations, dict_keys, acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type):
+    def generate_point_atom_list(input_pdbs, mutations, acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type):
         mutation_dict = {}
-        temp = []
         for counter, mutation in enumerate(mutations):
+            temp = []
             for input_pdb in input_pdbs:
                 if 'WT.' not in input_pdb:
                     atom_list = []
@@ -371,25 +375,24 @@ def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tm
                         # Check that atom coordinates are present in acceptable_atoms
                         for atom in res:
                             if input_type == 'Mutant PDB':
-                                if (res.getChid(), res.getResname(),int(res.getResnum()), atom.getName())  in acceptable_atoms_mut_set:
+                                if (res.getChid(), res.getResname(),int(res.getResnum()), atom.getName()) in acceptable_atoms_mut_set:
                                     if atom.getElement() != 'H':
                                         atom_list.append(atom.getCoords())
-                            else:
+                            if input_type == 'RosettaOut':
                                 if (res.getChid(), res.getResname(), res.getResnum(), atom.getName()) in acceptable_atoms_wt_set:
                                     if atom.getElement() != 'H':
                                         atom_list.append(atom.getCoords())
 
                     temp.append(atom_list)
-            temp_nparray = np.asarray(temp)
-            mutation_dict['%s' %counter] = temp_nparray
+            mutation_dict['%s' %counter] = np.asarray(temp)
         return mutation_dict
 
 # RosettaOut
     if input_type == 'RosettaOut':
-        return generate_point_atom_list(input_pdbs, mutations, mutations, acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type)
+        return generate_point_atom_list(input_pdbs, mutations, acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type)
     # Mutant PDB
     if input_type == 'Mutant PDB':
-        return generate_point_atom_list([tmp_mut_pdb], mutations_mut_numbering, mutations, acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type)
+        return generate_point_atom_list([tmp_mut_pdb], mutations_mut_numbering, acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type)
 
 def bin_me(templist):
     from collections import Counter
@@ -537,10 +540,6 @@ def do_math(reference, outputdir, predID):
     fresh_pdb_points = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'Mutant PDB')
 
     return_output_dict = {}
-
-    # DEBUGGING
-    pprint.pprint(point_mutants)
-    pprint.pprint(fresh_pdb_points)
 
     return_output_dict['Point Mutant RMSDs'] = rmsd( pyrmsd_calc, point_mutants, fresh_pdb_points)
     # return_output_dict['Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood, fresh_pdb_neighbors)
