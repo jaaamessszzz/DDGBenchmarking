@@ -384,8 +384,6 @@ def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tm
 
                     temp.append(atom_list)
             mutation_dict['%s' %counter] = np.asarray(temp)
-            print " *** %s *** " %counter
-            print mutation_dict['%s' %counter]
         return mutation_dict
 
 # RosettaOut
@@ -627,7 +625,7 @@ def main():
 
     # DEBUGGING
 
-    PredID_list = [94009]
+    PredID_list = [94531]
 
     pool = multiprocessing.Pool(25)
     allmyoutput = pool.map(multiprocessing_stuff, PredID_list, 1)
