@@ -386,9 +386,9 @@ def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tm
 
                     temp.append(atom_list)
             if input_type == 'Mutant PDB':
-                mutation_dict[mut_key_dict[mutation[1] + str(mutation[0]]] = np.asarray(temp)
+                mutation_dict[mut_key_dict[mutation[1] + str(mutation[0])]] = np.asarray(temp)
             if input_type == 'RosettaOut':
-                mutation_dict[mutation[1] + str(mutation[0]] = np.asarray(temp)
+                mutation_dict[mutation[1] + str(mutation[0])] = np.asarray(temp)
         return mutation_dict
 
 # RosettaOut
