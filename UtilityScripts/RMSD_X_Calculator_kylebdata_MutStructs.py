@@ -532,7 +532,7 @@ def do_math(reference, outputdir, predID):
     mutations, fresh_wt_pdb, tmp_wt_pdb, fresh_mut_pdb, tmp_mut_pdb, residue_maps, wt_to_mut_chains = Fetch_PredID_Info(
         predID)
 
-    point_mutants = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'RosettaOut')
+    # point_mutants = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'RosettaOut')
     neighbors = find_neighbors(mutations, fresh_wt_pdb, 8)
     neighborhood = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='RosettaOut')
     global_ca = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'RosettaOut')
@@ -540,11 +540,11 @@ def do_math(reference, outputdir, predID):
     # Get prody coordinates from reference mutant crystal structure
     fresh_pdb_global = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'Mutant PDB')
     fresh_pdb_neighbors = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='Mutant PDB')
-    fresh_pdb_points = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'Mutant PDB')
+    # fresh_pdb_points = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'Mutant PDB')
 
     return_output_dict = {}
 
-    return_output_dict['Point Mutant RMSDs'] = rmsd( pyrmsd_calc, point_mutants, fresh_pdb_points)
+    # return_output_dict['Point Mutant RMSDs'] = rmsd( pyrmsd_calc, point_mutants, fresh_pdb_points)
     return_output_dict['Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood, fresh_pdb_neighbors)
     return_output_dict['Global RMSD'] = rmsd(pyrmsd_calc, global_ca, fresh_pdb_global)
     # chi_angles_output = chi_angles(input_pdbs, predID, mutations, fresh_pdb)
