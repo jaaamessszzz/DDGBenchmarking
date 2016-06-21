@@ -384,6 +384,7 @@ def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tm
 
                     temp.append(atom_list)
             mutation_dict['%s' %counter] = np.asarray(temp)
+            print " *** %s *** " %counter
             print mutation_dict['%s' %counter]
         return mutation_dict
 
