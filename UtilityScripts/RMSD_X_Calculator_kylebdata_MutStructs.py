@@ -52,8 +52,11 @@ def Fetch_PredID_Info(predID):
     for index, row in df.iterrows():
         if row['PPMutagenesisID'] == PredID_Details['PDBMutations'][0]['PPMutagenesisID']:
             Mutant_PDB_ID = row['Mutant']
-            # DEBUGGING
+            # Tempory chain matching solution...
             MutagenesisID_index = index
+            # DEBUGGING
+            print row['PPMutagenesisID']
+            print row['Mutant']
             break
 
     # WT pdb is from a string and Mut PDB is from file... so... yeah... this happened
@@ -191,10 +194,11 @@ def rmsd(pyrmsd_calc, coordinates, fresh_coords):
         rmsd_list = []
 
         for mutres, coord_set in coordinates.iteritems():
-            print coord_set.shape
-            print coord_set
-            print fresh_coords[mutres].shape
-            print fresh_coords[mutres]
+            # DEBUGGING
+            # print coord_set.shape
+            # print coord_set
+            # print fresh_coords[mutres].shape
+            # print fresh_coords[mutres]
 
             coords_plus_ref = np.concatenate((coord_set, fresh_coords[mutres]), axis=0)
             calculator = pyRMSD.RMSDCalculator.RMSDCalculator(pyrmsd_calc, coords_plus_ref)
@@ -203,6 +207,12 @@ def rmsd(pyrmsd_calc, coordinates, fresh_coords):
             rmsd_list.append([mutres, out_dict])
         return rmsd_list
     else:
+        # DEBUGGING
+        # print coordinates.shape
+        # pprint.pprint(coordinates)
+        # print fresh_coords.shape
+        # pprint.pprint(fresh_coords)
+
         coords_plus_ref = np.concatenate((coordinates, fresh_coords), axis=0)
         calculator = pyRMSD.RMSDCalculator.RMSDCalculator(pyrmsd_calc, coords_plus_ref)
         rmsd = calculator.oneVsTheOthers(50)
@@ -219,28 +229,60 @@ def flip_me(residue_maps, wt_to_mut_chains):
     mut_to_wt_chains = {mut: wt for wt, mut in wt_to_mut_chains.iteritems()}
     return residue_maps_reverse, mut_to_wt_chains
 
-
 def common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_pdbs, selection_type):
     # Checks for atoms present in both RosettaOut and Reference mutant structures
     mut_atoms = set()
     wt_atoms = set()
+    real_wt_atoms = set()
+    real_mut_atoms = set()
+    acceptable_atoms_wt_set = set()
+    acceptable_atoms_mut_set = set()
 
-    for chain_mapping in residue_maps:
-        for wt_residue, mut_residue in residue_maps[chain_mapping].iteritems():
-            wt_atoms.add(wt_residue.split()[0] + wt_residue.split()[1])
-            mut_atoms.add(mut_residue.split()[0] + mut_residue.split()[1])
+    if selection_type == 'CA':
+        for chain_mapping in residue_maps:
+            for wt_residue, mut_residue in residue_maps[chain_mapping].iteritems():
+                wt_atoms.add(wt_residue.split()[0] + wt_residue.split()[1])
+                mut_atoms.add(mut_residue.split()[0] + mut_residue.split()[1])
 
-    acceptable_atoms = {}
-    acceptable_atoms['RosettaOut'] = wt_atoms
-    acceptable_atoms['Mutant PDB'] = mut_atoms
+        mut_pdb_hv = prody.parsePDB(tmp_mut_pdb).select('calpha').getHierView()
+        wt_pdb_hv = prody.parsePDB(input_pdbs[1]).select('calpha').getHierView()
+
+        # Intersection between Mut dict atoms and Mut hv atoms = mut real atoms
+        for hv_chain in mut_pdb_hv:
+            for hv_calpha in hv_chain:
+                for (chain, position) in zip(hv_calpha.getChids(), hv_calpha.getResnums()):
+                    if (chain + str(position)) in mut_atoms:
+                        real_mut_atoms.add(chain + str(position))
+        # Intersection between WT dict atoms and WT hv atoms = wt real atoms
+        for hv_chain in wt_pdb_hv:
+            for hv_calpha in hv_chain:
+                for (chain, position) in zip(hv_calpha.getChids(), hv_calpha.getResnums()):
+                    if (chain + str(position)) in wt_atoms:
+                        real_wt_atoms.add(chain + str(position))
+
+        # Intersection between wt and mut real atoms (use wt_to_mut_dict)
+        for real_wt_atom in real_wt_atoms:
+            chain = real_wt_atom[:1]
+            position = real_wt_atom[1:]
+            if (wt_to_mut_chains[chain] + str(residue_maps[(chain, wt_to_mut_chains[chain])]['%s %s ' % (chain, ('   ' + str(position))[-3:])].split()[1])) in real_mut_atoms:
+                acceptable_atoms_wt_set.add(real_wt_atom)
+                acceptable_atoms_mut_set.add(wt_to_mut_chains[chain] + str(residue_maps[(chain, wt_to_mut_chains[chain])]['%s %s ' % (chain, ('   ' + str(position))[-3:])].split()[1]))
+
+        acceptable_atoms = {}
+        acceptable_atoms['RosettaOut'] = acceptable_atoms_wt_set
+        acceptable_atoms['Mutant PDB'] = acceptable_atoms_mut_set
+
+        # print 'acceptable_atoms_wt_set: %s' %len(acceptable_atoms_wt_set)
+        # print acceptable_atoms_wt_set
+        # print 'acceptable_atoms_mut_set: %s' %len(acceptable_atoms_mut_set)
+        # print acceptable_atoms_mut_set
+
+        return acceptable_atoms
 
     # For point mutants and neighbors (only looks at residues returned by find_neighbors(), doesn't look at +1/-1 residues)
     if isinstance(selection_type, list):
         mut_pdb_hv = prody.parsePDB(tmp_mut_pdb).getHierView()
         wt_pdb_hv = prody.parsePDB(input_pdbs[1]).getHierView()
-
-        acceptable_atoms_wt_set = set()
-        acceptable_atoms_mut_set = set()
 
         for residue in selection_type:
             wt_res = wt_pdb_hv[(residue[1], int(residue[0]))]
@@ -257,7 +299,7 @@ def common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_
                 pass
 
         return acceptable_atoms_wt_set, acceptable_atoms_mut_set
-    return acceptable_atoms
+
 
 def global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type):
     acceptable_atoms = common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_pdbs, selection_type='CA')
@@ -532,7 +574,7 @@ def do_math(reference, outputdir, predID):
     mutations, fresh_wt_pdb, tmp_wt_pdb, fresh_mut_pdb, tmp_mut_pdb, residue_maps, wt_to_mut_chains = Fetch_PredID_Info(
         predID)
 
-    # point_mutants = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'RosettaOut')
+    point_mutants = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'RosettaOut')
     neighbors = find_neighbors(mutations, fresh_wt_pdb, 8)
     neighborhood = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='RosettaOut')
     global_ca = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'RosettaOut')
@@ -540,11 +582,11 @@ def do_math(reference, outputdir, predID):
     # Get prody coordinates from reference mutant crystal structure
     fresh_pdb_global = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'Mutant PDB')
     fresh_pdb_neighbors = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='Mutant PDB')
-    # fresh_pdb_points = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'Mutant PDB')
+    fresh_pdb_points = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'Mutant PDB')
 
     return_output_dict = {}
 
-    # return_output_dict['Point Mutant RMSDs'] = rmsd( pyrmsd_calc, point_mutants, fresh_pdb_points)
+    return_output_dict['Point Mutant RMSDs'] = rmsd( pyrmsd_calc, point_mutants, fresh_pdb_points)
     return_output_dict['Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood, fresh_pdb_neighbors)
     return_output_dict['Global RMSD'] = rmsd(pyrmsd_calc, global_ca, fresh_pdb_global)
     # chi_angles_output = chi_angles(input_pdbs, predID, mutations, fresh_pdb)
@@ -628,7 +670,8 @@ def main():
     # PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
 
     # DEBUGGING
-    PredID_list = [int(sys.argv[1])]
+    PredID_list = [int(sys.argv[1])] #94535 has an RMSD of 22A for some reason...
+    # {94541:94550:94571:94574:94578:94581:94953:94956:94964:94981:95074:95079:95113:95118:95127:95131:95163} not in Zemu???
 
     pool = multiprocessing.Pool(25)
     allmyoutput = pool.map(multiprocessing_stuff, PredID_list, 1)
