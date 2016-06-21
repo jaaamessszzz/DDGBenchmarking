@@ -57,6 +57,7 @@ def Fetch_PredID_Info(predID):
             # DEBUGGING
             print row['PPMutagenesisID']
             print row['Mutant']
+            print row['WT:Mut Mapping']
             break
 
     # WT pdb is from a string and Mut PDB is from file... so... yeah... this happened
@@ -315,7 +316,7 @@ def global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_
                         if input_type == 'Mutant PDB':
                             if c_alpha.getChids()[0] + str(c_alpha.getResnums()[0]) in acceptable_atoms['Mutant PDB']:
                                 atom_list.append(c_alpha.getCoords()[0])
-                        else:
+                        if input_type == 'RosettaOut':
                             if c_alpha.getChids()[0] + str(c_alpha.getResnums()[0]) in acceptable_atoms['RosettaOut']:
                                 atom_list.append(c_alpha.getCoords()[0])
             temp.append(atom_list)
@@ -667,10 +668,10 @@ def main():
         PredID_list.append(asdf)
 
     # PredID_list = [67619, 67611, 67614]
-    # PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
+    PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
 
     # DEBUGGING
-    PredID_list = [int(sys.argv[1])] #94535 has an RMSD of 22A for some reason...
+    # PredID_list = [int(sys.argv[1])] #94535 has an RMSD of 22A for some reason...
     # {94541:94550:94571:94574:94578:94581:94953:94956:94964:94981:95074:95079:95113:95118:95127:95131:95163} not in Zemu???
 
     pool = multiprocessing.Pool(25)
