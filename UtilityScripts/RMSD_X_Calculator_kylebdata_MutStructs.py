@@ -54,7 +54,6 @@ def Fetch_PredID_Info(predID):
             Mutant_PDB_ID = row['Mutant']
             # DEBUGGING
             MutagenesisID_index = index
-            print row['PPMutagenesisID']
             break
 
     # WT pdb is from a string and Mut PDB is from file... so... yeah... this happened
@@ -194,7 +193,9 @@ def rmsd(pyrmsd_calc, coordinates, fresh_coords):
         for mutres, coord_set in coordinates.iteritems():
             print mutres
             print coord_set.shape
+            print coord_set
             print fresh_coords[mutres].shape
+            print fresh_coords[mutres]
 
             coords_plus_ref = np.concatenate((coord_set, fresh_coords[mutres]), axis=0)
             calculator = pyRMSD.RMSDCalculator.RMSDCalculator(pyrmsd_calc, coords_plus_ref)
@@ -271,10 +272,8 @@ def global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_
                 for c_alpha_chain in c_alpha_all:
                     for c_alpha in c_alpha_chain:
                         if input_type == 'Mutant PDB':
-                            print c_alpha.getChids()[0] + str(c_alpha.getResnums()[0])
                             if c_alpha.getChids()[0] + str(c_alpha.getResnums()[0]) in acceptable_atoms['Mutant PDB']:
                                 atom_list.append(c_alpha.getCoords()[0])
-                                print c_alpha.getChids()[0] + str(c_alpha.getResnums()[0]) + 'added!'
                         else:
                             if c_alpha.getChids()[0] + str(c_alpha.getResnums()[0]) in acceptable_atoms['RosettaOut']:
                                 atom_list.append(c_alpha.getCoords()[0])
@@ -324,10 +323,10 @@ def neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chai
                     # Check that atom coordinates are present in acceptable_atoms
                     for atom in res:
                         if input_type == 'Mutant PDB':
-                            print (mut_to_wt_chains[res.getChid()], res.getResname(),
-                                int(residue_maps_reverse[(res.getChid(), mut_to_wt_chains[res.getChid()])][
-                                        '%s %s ' % (res.getChid(), ('   ' + str(res.getResnum()))[-3:])].split()[1]),
-                                atom.getName())
+                            # print (mut_to_wt_chains[res.getChid()], res.getResname(),
+                            #     int(residue_maps_reverse[(res.getChid(), mut_to_wt_chains[res.getChid()])][
+                            #             '%s %s ' % (res.getChid(), ('   ' + str(res.getResnum()))[-3:])].split()[1]),
+                            #     atom.getName())
                             if (res.getChid(), res.getResname(),int(res.getResnum()), atom.getName()) in acceptable_atoms_mut_set:
                                 if atom.getElement() != 'H':
                                     atom_list.append(atom.getCoords())
@@ -530,20 +529,20 @@ def do_math(reference, outputdir, predID):
         predID)
 
     point_mutants = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'RosettaOut')
-    # neighbors = find_neighbors(mutations, fresh_wt_pdb, 8)
-    # neighborhood = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='RosettaOut')
-    # global_ca = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'RosettaOut')
+    neighbors = find_neighbors(mutations, fresh_wt_pdb, 8)
+    neighborhood = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='RosettaOut')
+    global_ca = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'RosettaOut')
 
     # Get prody coordinates from reference mutant crystal structure
-    # fresh_pdb_global = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'Mutant PDB')
-    # fresh_pdb_neighbors = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='Mutant PDB')
+    fresh_pdb_global = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'Mutant PDB')
+    fresh_pdb_neighbors = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='Mutant PDB')
     fresh_pdb_points = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'Mutant PDB')
 
     return_output_dict = {}
 
     return_output_dict['Point Mutant RMSDs'] = rmsd( pyrmsd_calc, point_mutants, fresh_pdb_points)
-    # return_output_dict['Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood, fresh_pdb_neighbors)
-    # return_output_dict['Global RMSD'] = rmsd(pyrmsd_calc, global_ca, fresh_pdb_global)
+    return_output_dict['Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood, fresh_pdb_neighbors)
+    return_output_dict['Global RMSD'] = rmsd(pyrmsd_calc, global_ca, fresh_pdb_global)
     # chi_angles_output = chi_angles(input_pdbs, predID, mutations, fresh_pdb)
     # if chi_angles_output != {}:
     #     return_output_dict['X angles'] = chi_angles_output
@@ -626,7 +625,7 @@ def main():
 
     # DEBUGGING
 
-    PredID_list = [94531]
+    PredID_list = [94009]
 
     pool = multiprocessing.Pool(25)
     allmyoutput = pool.map(multiprocessing_stuff, PredID_list, 1)
