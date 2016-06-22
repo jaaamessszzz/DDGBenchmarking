@@ -26,117 +26,6 @@ from klab.bio.clustalo import PDBSeqresSequenceAligner
 from kddg.api import settings
 sys_settings = settings.load()
 
-# Return mutations for Prediction ID
-def Fetch_PredID_Info(predID):
-    # List of dictionaries for Resfile mutation info
-    sys.path.insert(0,'/kortemmelab/home/james.lucas')  # this should point to the directory above your ddg repo checkout
-    from kddg.api.ppi import get_interface_with_config_file as get_ppi_interface
-
-    # Create an interface to the database
-    ppi_api = get_ppi_interface()
-
-    # Get details back for one prediction
-    PredID_Details = ppi_api.get_job_details(predID, include_files=True)
-
-    mutations = []
-    for mutation_entry in PredID_Details['PDBMutations']:
-        mutations.append([mutation_entry['ResidueID'].strip(),
-                          mutation_entry['Chain'],
-                          mutation_entry['PDBFileID'],
-                          mutation_entry['MutantAA']])
-
-    wt_pdb_filename = PredID_Details['Files']['Input'][0]['Filename']  # Literally prints the filename (1TM1_EI.pdb)
-    wt_pdb_chains = [chain for chain in re.sub('_|\.', ' ', wt_pdb_filename).split()[1]]  # Prints chains as string (EI)
-
-    df = pd.read_csv('/kortemmelab/home/james.lucas/skempi_mutants.tsv', delimiter='\t')
-    for index, row in df.iterrows():
-        if row['PPMutagenesisID'] == PredID_Details['PDBMutations'][0]['PPMutagenesisID']:
-            Mutant_PDB_ID = row['Mutant']
-            # Tempory chain matching solution...
-            MutagenesisID_index = index
-            # DEBUGGING
-            print row['PPMutagenesisID']
-            print row['Mutant']
-            print row['WT:Mut Mapping']
-            break
-
-    # WT pdb is from a string and Mut PDB is from file... so... yeah... this happened
-    raw_wt_pdb = PredID_Details['Files']['Input'][0]['Content']
-    raw_mutant_pdb = ''
-    for line in open('/kortemmelab/home/james.lucas/skempi_mutants/%s.pdb' % Mutant_PDB_ID):
-        raw_mutant_pdb += line
-
-    WT_PDB_ID = wt_pdb_filename[:4]
-
-    # IN PROGRESS
-    residue_maps, wt_to_mut_chains = map_pdbs(WT_PDB_ID, Mutant_PDB_ID, wt_pdb_chains, df, MutagenesisID_index) # Variable df is temporary while Shane figures out chain mapping thing
-    fresh_wt_pdb, tmp_wt_pdb = strip_pdbs(raw_wt_pdb, wt_to_mut_chains, input_type='WT PDB')
-    fresh_mut_pdb, tmp_mut_pdb = strip_pdbs(raw_mutant_pdb, wt_to_mut_chains, input_type='Mutant PDB')
-
-    return mutations, fresh_wt_pdb, tmp_wt_pdb, fresh_mut_pdb, tmp_mut_pdb, residue_maps, wt_to_mut_chains
-
-
-def strip_pdbs(raw_pdb, wt_to_mut_chains, input_type):
-    import tempfile
-
-    if input_type == 'Mutant PDB':
-        pdb_chains = []
-        for key, item in wt_to_mut_chains.items():
-            pdb_chains.append(item)
-
-    else:
-        pdb_chains = []
-        for key, item in wt_to_mut_chains.items():
-            pdb_chains.append(key)
-
-    with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as temp_PDBFile:
-        tmp_pdb = temp_PDBFile.name
-        # for line in raw_pdb.splitlines(): #Switched from string to file, no longer need to split string for lines
-        # lol nvm
-        for line in raw_pdb.splitlines():
-            parsed = line.split()
-            if parsed[0].strip() == 'ATOM':
-                if parsed[4] in pdb_chains:
-                    temp_PDBFile.write(line + '\n')
-            elif parsed[0].strip() == 'HETATM':
-                if parsed[4] in pdb_chains:
-                    temp_PDBFile.write(line + '\n')
-            else:
-                temp_PDBFile.write(line + '\n')
-
-    with open(tmp_pdb, mode='rb+') as temp_PDBFile:
-        # WARNING: BIOPYTHON!!!
-        parser = PDBParser(PERMISSIVE=1)
-        fresh_pdb = parser.get_structure('Open', temp_PDBFile.name)
-
-    return fresh_pdb, tmp_pdb
-
-
-def map_pdbs(WT_PDB_ID, Mutant_PDB_ID, wt_pdb_chains, df, MutagenesisID_index):
-    pssa = PDBSeqresSequenceAligner(WT_PDB_ID, Mutant_PDB_ID, cache_dir='/tmp')
-    mut_chain_ids = {}
-    residue_maps = {}
-
-    for wt_chain_id in wt_pdb_chains:
-        mut_chain_ids[wt_chain_id] = pssa.get_matching_chains(wt_chain_id)
-        for mut_chain_id in mut_chain_ids[wt_chain_id]:
-            residue_maps[(wt_chain_id, mut_chain_id)] = pssa.get_atom_residue_mapping(wt_chain_id, mut_chain_id)
-    wt_to_mut_chains = {chain[0]: chain[1] for chain in residue_maps.keys()}
-
-    # Tempory chain matching solution...
-    wt_to_mut_chains = {}
-    for mapping in re.sub(' |,', ' ', df.loc[MutagenesisID_index]['WT:Mut Mapping']).split():
-        wt_to_mut_chains[mapping[0]] = mapping[2]
-
-    chains_to_keep = set([key for key in residue_maps.keys()]) & set([(wt_to_mut , wt_to_mut_chains[wt_to_mut]) for wt_to_mut in wt_to_mut_chains])
-
-    for residue_maps_key in residue_maps.keys():
-        if residue_maps_key not in chains_to_keep:
-            residue_maps.pop(residue_maps_key)
-
-    return residue_maps, wt_to_mut_chains
-
-
 # From Kyle's Finalize.py
 def find_neighbors(mutations, open_strct, neighbor_distance=8.0):
     # mutations = mutations_resfile(filenum_dir)
@@ -550,9 +439,115 @@ def chi_angles(input_pdbs, predID, mutations, PDBFile_from_database):
 
     return xangles_dict
 
+# Return mutations for Prediction ID
+
+def Fetch_Mutant_ID(predID):
+    # List of dictionaries for Resfile mutation info
+    sys.path.insert(0,'/kortemmelab/home/james.lucas')  # this should point to the directory above your ddg repo checkout
+    from kddg.api.ppi import get_interface_with_config_file as get_ppi_interface
+
+    # Create an interface to the database
+    ppi_api = get_ppi_interface()
+
+    # Get details back for one prediction
+    PredID_Details = ppi_api.get_job_details(predID, include_files=True)
+
+    mutations = []
+    for mutation_entry in PredID_Details['PDBMutations']:
+        mutations.append([mutation_entry['ResidueID'].strip(),
+                          mutation_entry['Chain'],
+                          mutation_entry['PDBFileID'],
+                          mutation_entry['MutantAA']])
+
+    # mutant_list contains (MUTANT_PDB_ID, MutagenesisID_index)
+    MutagenesisID_list = []
+    df = pd.read_csv('/kortemmelab/home/james.lucas/skempi_mutants.tsv', delimiter='\t')
+    for index, row in df.iterrows():
+        if row['PPMutagenesisID'] == PredID_Details['PDBMutations'][0]['PPMutagenesisID']:
+            MutagenesisID_list.append((row['Mutant'], index))
+
+    return MutagenesisID_list, mutations, PredID_Details, df
+
+def Generate_PDBs_and_Resmaps(PredID_Details, Mutant_PDB_ID, MutagenesisID_index, df):
+    wt_pdb_filename = PredID_Details['Files']['Input'][0]['Filename']  # Literally prints the filename (1TM1_EI.pdb)
+    wt_pdb_chains = [chain for chain in re.sub('_|\.', ' ', wt_pdb_filename).split()[1]]  # Prints chains as string (EI)
+
+    # WT pdb is from a string and Mut PDB is from file... so... yeah... this happened
+    raw_wt_pdb = PredID_Details['Files']['Input'][0]['Content']
+    raw_mutant_pdb = ''
+    for line in open('/kortemmelab/home/james.lucas/skempi_mutants/%s.pdb' % Mutant_PDB_ID):
+        raw_mutant_pdb += line
+
+    WT_PDB_ID = wt_pdb_filename[:4]
+
+    # IN PROGRESS
+    residue_maps, wt_to_mut_chains = map_pdbs(WT_PDB_ID, Mutant_PDB_ID, wt_pdb_chains, df, MutagenesisID_index)  # Variable df is temporary while Shane figures out chain mapping thing
+    fresh_wt_pdb, tmp_wt_pdb = strip_pdbs(raw_wt_pdb, wt_to_mut_chains, input_type='WT PDB')
+    fresh_mut_pdb, tmp_mut_pdb = strip_pdbs(raw_mutant_pdb, wt_to_mut_chains, input_type='Mutant PDB')
+
+    return fresh_wt_pdb, tmp_wt_pdb, fresh_mut_pdb, tmp_mut_pdb, residue_maps, wt_to_mut_chains
+
+def strip_pdbs(raw_pdb, wt_to_mut_chains, input_type):
+    import tempfile
+
+    if input_type == 'Mutant PDB':
+        pdb_chains = []
+        for key, item in wt_to_mut_chains.items():
+            pdb_chains.append(item)
+
+    else:
+        pdb_chains = []
+        for key, item in wt_to_mut_chains.items():
+            pdb_chains.append(key)
+
+    with tempfile.NamedTemporaryFile(mode='w+b', delete=False) as temp_PDBFile:
+        tmp_pdb = temp_PDBFile.name
+        # for line in raw_pdb.splitlines(): #Switched from string to file, no longer need to split string for lines
+        # lol nvm
+        for line in raw_pdb.splitlines():
+            parsed = line.split()
+            if parsed[0].strip() == 'ATOM':
+                if parsed[4] in pdb_chains:
+                    temp_PDBFile.write(line + '\n')
+            elif parsed[0].strip() == 'HETATM':
+                if parsed[4] in pdb_chains:
+                    temp_PDBFile.write(line + '\n')
+            else:
+                temp_PDBFile.write(line + '\n')
+
+    with open(tmp_pdb, mode='rb+') as temp_PDBFile:
+        # WARNING: BIOPYTHON!!!
+        parser = PDBParser(PERMISSIVE=1)
+        fresh_pdb = parser.get_structure('Open', temp_PDBFile.name)
+
+    return fresh_pdb, tmp_pdb
+
+def map_pdbs(WT_PDB_ID, Mutant_PDB_ID, wt_pdb_chains, df, MutagenesisID_index):
+    pssa = PDBSeqresSequenceAligner(WT_PDB_ID, Mutant_PDB_ID, cache_dir='/tmp')
+    mut_chain_ids = {}
+    residue_maps = {}
+
+    for wt_chain_id in wt_pdb_chains:
+        mut_chain_ids[wt_chain_id] = pssa.get_matching_chains(wt_chain_id)
+        for mut_chain_id in mut_chain_ids[wt_chain_id]:
+            residue_maps[(wt_chain_id, mut_chain_id)] = pssa.get_atom_residue_mapping(wt_chain_id, mut_chain_id)
+    wt_to_mut_chains = {chain[0]: chain[1] for chain in residue_maps.keys()}
+
+    # Tempory chain matching solution...
+    wt_to_mut_chains = {}
+    for mapping in re.sub(' |,', ' ', df.loc[MutagenesisID_index]['WT:Mut Mapping']).split():
+        wt_to_mut_chains[mapping[0]] = mapping[2]
+
+    chains_to_keep = set([key for key in residue_maps.keys()]) & set([(wt_to_mut , wt_to_mut_chains[wt_to_mut]) for wt_to_mut in wt_to_mut_chains])
+
+    for residue_maps_key in residue_maps.keys():
+        if residue_maps_key not in chains_to_keep:
+            residue_maps.pop(residue_maps_key)
+
+    return residue_maps, wt_to_mut_chains
 
 # Action!!!
-def do_math(reference, outputdir, predID):
+def do_math(outputdir, predID):
     # Use CUDA for GPU calculations, if avialable
     if 'QCP_CUDA_MEM_CALCULATOR' in availableCalculators():
         pyrmsd_calc = 'QCP_CUDA_MEM_CALCULATOR'
@@ -572,31 +567,38 @@ def do_math(reference, outputdir, predID):
                 #    input_temp.append(os.path.join(outputdir, app_output_dir, app_outfile ))
                 #    input_pdbs = sorted(input_temp)
 
-    mutations, fresh_wt_pdb, tmp_wt_pdb, fresh_mut_pdb, tmp_mut_pdb, residue_maps, wt_to_mut_chains = Fetch_PredID_Info(
-        predID)
-
-    point_mutants = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'RosettaOut')
-    neighbors = find_neighbors(mutations, fresh_wt_pdb, 8)
-    neighborhood = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='RosettaOut')
-    global_ca = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'RosettaOut')
-
-    # Get prody coordinates from reference mutant crystal structure
-    fresh_pdb_global = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'Mutant PDB')
-    fresh_pdb_neighbors = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='Mutant PDB')
-    fresh_pdb_points = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'Mutant PDB')
+    # mutations, fresh_wt_pdb, tmp_wt_pdb, fresh_mut_pdb, tmp_mut_pdb, residue_maps, wt_to_mut_chains = Fetch_PredID_Info(
+    #     predID)
 
     return_output_dict = {}
 
-    return_output_dict['Point Mutant RMSDs'] = rmsd( pyrmsd_calc, point_mutants, fresh_pdb_points)
-    return_output_dict['Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood, fresh_pdb_neighbors)
-    return_output_dict['Global RMSD'] = rmsd(pyrmsd_calc, global_ca, fresh_pdb_global)
-    # chi_angles_output = chi_angles(input_pdbs, predID, mutations, fresh_pdb)
-    # if chi_angles_output != {}:
-    #     return_output_dict['X angles'] = chi_angles_output
-    # else:
-    #     print 'No X angles!'
-    return return_output_dict
+    MutagenesisID_list, mutations, PredID_Details, df = Fetch_Mutant_ID(predID)
 
+    for Mutant_PDB_ID, MutagenesisID_index in MutagenesisID_list:
+        fresh_wt_pdb, tmp_wt_pdb, fresh_mut_pdb, tmp_mut_pdb, residue_maps, wt_to_mut_chains = Generate_PDBs_and_Resmaps(PredID_Details, Mutant_PDB_ID, MutagenesisID_index, df)
+
+        point_mutants = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'RosettaOut')
+        neighbors = find_neighbors(mutations, fresh_wt_pdb, 8)
+        neighborhood = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='RosettaOut')
+        global_ca = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'RosettaOut')
+
+        # Get prody coordinates from reference mutant crystal structure
+        fresh_pdb_global = global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type = 'Mutant PDB')
+        fresh_pdb_neighbors = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='Mutant PDB')
+        fresh_pdb_points = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'Mutant PDB')
+
+        return_output_dict[Mutant_PDB_ID] = {}
+
+        return_output_dict[Mutant_PDB_ID]['Point Mutant RMSDs'] = rmsd( pyrmsd_calc, point_mutants, fresh_pdb_points)
+        return_output_dict[Mutant_PDB_ID]['Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood, fresh_pdb_neighbors)
+        return_output_dict[Mutant_PDB_ID]['Global RMSD'] = rmsd(pyrmsd_calc, global_ca, fresh_pdb_global)
+        # chi_angles_output = chi_angles(input_pdbs, predID, mutations, fresh_pdb)
+        # if chi_angles_output != {}:
+        #     return_output_dict['X angles'] = chi_angles_output
+        # else:
+        #     print 'No X angles!'
+
+    return return_output_dict
 
 def unzip_to_tmp_dir(prediction_id, zip_file):
     tmp_dir = tempfile.mkdtemp(prefix='unzip_to_tmp_')
@@ -612,20 +614,22 @@ def multiprocessing_stuff(predID):
         with open('/kortemmelab/home/james.lucas/Structural_metrics_Outfiles/%s.txt' % predID, 'a') as outfile:
             outfile.write(PredID_output_dict)
 
+    # DEBUGGING
+    print predID
+
     try:
         my_tmp_dir = unzip_to_tmp_dir(predID, '%s.zip' % predID)
 
-        print '*** %s has been unzipped!!!***' % predID
+        print '*** %s has been unzipped!!! ***' % predID
 
         # Define things
         PredID_output_dict = {}
         outdir = os.path.join(my_tmp_dir, '%s-ddg' % predID)
 
-        print "\n***Calculating RMSDs for %s***\n" % outdir
-        reference = '../data/%s/%s'  # %(outdir, mypdb_ref)
+        print "\n*** Calculating RMSDs for %s ***\n" % outdir
 
         try:
-            PredID_output_dict[predID] = do_math(reference, outdir, predID)
+            PredID_output_dict[predID] = do_math( outdir, predID)
             print 'Calculations complete!!!'
         except Exception as fuuuu:
             PredID_output_dict[predID] = fuuuu
@@ -664,8 +668,8 @@ def main():
 
     PredID_list = []
     # for asdf in range(67088, 68327): #zemu-psbrub_1.6-pv-1000-lbfgs
-    for asdf in range(94009, 95248):  # ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014
-        PredID_list.append(asdf)
+    # for asdf in range(94009, 95248):  # ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014
+    #     PredID_list.append(asdf)
 
     # PredID_list = [67619, 67611, 67614]
     PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
@@ -680,13 +684,20 @@ def main():
     pool.join()
 
     print allmyoutput
-    print 'Dumping information to Structural_metrics.txt'
+    print 'Dumping information to Structural_metrics.pickle'
 
     #Sub-angstrom vs >1-angstrom RMSDs
 
-    with open('/kortemmelab/home/james.lucas/Structural_metrics.txt', 'a') as outfile:
+    import pickle
+
+    with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/Structural_metrics.pickle', 'wb') as outfile:
+        output_dict = {}
         for resultdict in allmyoutput:
-            outfile.write(str(resultdict))
+            output_dict[resultdict.keys()[0]] = resultdict
+        pickle.dump(output_dict, outfile, 0)
+
+    # with open('Structural_metrics.pickle', 'rb') as outfile:
+    #     b = pickle.load(outfile)
 
 main()
 
