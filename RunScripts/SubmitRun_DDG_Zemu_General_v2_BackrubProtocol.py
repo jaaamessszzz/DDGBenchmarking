@@ -281,5 +281,9 @@ except:
     print 'No error or out file!'
 
 import zipfile
-with zipfile.ZipFile(os.path.join(outputdir, '%s.zip' %filenum), 'w' ) as myzip:
-    myzip.write(os.path.join(outputdir, filenum))
+os.chdir(outputdir)
+with zipfile.ZipFile(os.path.join(outputdir, '%s.zip' %filenum), 'w', zipfile.ZIP_DEFLATED) as myzip:
+    for dirname, subdirs, files in os.walk(filenum):
+        for filename in files:
+            myzip.write(os.path.join(dirname, filename))
+shutil.rmtree(filenum, ignore_errors=True)
