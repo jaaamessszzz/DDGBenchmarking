@@ -2,15 +2,11 @@
 # mutant crystal structure
 
 from Bio.PDB import *
-import Bio.PDB
-import os
 import pyRMSD
-from pyRMSD.matrixHandler import MatrixHandler
 import pyRMSD.RMSDCalculator
 from pyRMSD.availableCalculators import availableCalculators
 import prody
 import numpy as np
-import scipy.spatial.distance
 import pprint
 import sys
 import re
@@ -19,7 +15,6 @@ import os
 import tempfile
 import zipfile
 import shutil
-import json
 import multiprocessing
 from klab.bio.clustalo import PDBSeqresSequenceAligner
 
@@ -66,7 +61,6 @@ def find_neighbors(mutations, open_strct, neighbor_distance=8.0):
 
     return neighbors
 
-
 # Kyle's RMSDWrapper.py (Spread out all over the place now)
 def rmsd(pyrmsd_calc, coordinates, fresh_coords):
     def generate_out_dict(rmsd):
@@ -84,12 +78,6 @@ def rmsd(pyrmsd_calc, coordinates, fresh_coords):
         rmsd_list = []
 
         for mutres, coord_set in coordinates.iteritems():
-            # DEBUGGING
-            # print coord_set.shape
-            # print coord_set
-            # print fresh_coords[mutres].shape
-            # print fresh_coords[mutres]
-
             coords_plus_ref = np.concatenate((coord_set, fresh_coords[mutres]), axis=0)
             calculator = pyRMSD.RMSDCalculator.RMSDCalculator(pyrmsd_calc, coords_plus_ref)
             rmsd = calculator.oneVsTheOthers(50)
@@ -97,12 +85,6 @@ def rmsd(pyrmsd_calc, coordinates, fresh_coords):
             rmsd_list.append([mutres, out_dict])
         return rmsd_list
     else:
-        # DEBUGGING
-        # print coordinates.shape
-        # pprint.pprint(coordinates)
-        # print fresh_coords.shape
-        # pprint.pprint(fresh_coords)
-
         coords_plus_ref = np.concatenate((coordinates, fresh_coords), axis=0)
         calculator = pyRMSD.RMSDCalculator.RMSDCalculator(pyrmsd_calc, coords_plus_ref)
         rmsd = calculator.oneVsTheOthers(50)
@@ -162,11 +144,6 @@ def common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_
         acceptable_atoms['RosettaOut'] = acceptable_atoms_wt_set
         acceptable_atoms['Mutant PDB'] = acceptable_atoms_mut_set
 
-        # print 'acceptable_atoms_wt_set: %s' %len(acceptable_atoms_wt_set)
-        # print acceptable_atoms_wt_set
-        # print 'acceptable_atoms_mut_set: %s' %len(acceptable_atoms_mut_set)
-        # print acceptable_atoms_mut_set
-
         return acceptable_atoms
 
     # For point mutants and neighbors (only looks at residues returned by find_neighbors(), doesn't look at +1/-1 residues)
@@ -189,7 +166,6 @@ def common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_
                 pass
 
         return acceptable_atoms_wt_set, acceptable_atoms_mut_set
-
 
 def global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_type):
     acceptable_atoms = common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_pdbs, selection_type='CA')
@@ -272,13 +248,10 @@ def neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chai
         coordinates = np.asarray(temp)
         return coordinates
 
-    # RosettaOut
     if input_type == 'RosettaOut':
         return generate_neighborhood_atom_list(input_pdbs, neighbors,  acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type)
-    # Mutant PDB
     if input_type == 'Mutant PDB':
         return generate_neighborhood_atom_list([tmp_mut_pdb], neighbors_mut_numbering,  acceptable_atoms_wt_set, acceptable_atoms_mut_set, input_type)
-
 
 def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type):
     acceptable_atoms_wt_set, acceptable_atoms_mut_set = common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_pdbs, mutations)
@@ -322,10 +295,8 @@ def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tm
                 mutation_dict[mutation[1] + str(mutation[0])] = np.asarray(temp)
         return mutation_dict
 
-# RosettaOut
     if input_type == 'RosettaOut':
         return generate_point_atom_list(input_pdbs, mutations, acceptable_atoms_wt_set, acceptable_atoms_mut_set, mut_key_dict, input_type)
-    # Mutant PDB
     if input_type == 'Mutant PDB':
         return generate_point_atom_list([tmp_mut_pdb], mutations_mut_numbering, acceptable_atoms_wt_set, acceptable_atoms_mut_set, mut_key_dict, input_type)
 
@@ -349,7 +320,6 @@ def bin_me(templist):
                   int(6.0): 'x = 180'}
     readable_X_counts = dict((bin_ranges[key], value) for (key, value) in X_counts.items())
     return readable_X_counts
-
 
 def chi_angles(input_pdbs, predID, mutations, PDBFile_from_database):
     # http://www.ccp14.ac.uk/ccp/web-mirrors/garlic/garlic/commands/dihedrals.html
@@ -459,14 +429,19 @@ def Fetch_Mutant_ID(predID):
                           mutation_entry['PDBFileID'],
                           mutation_entry['MutantAA']])
 
-    # mutant_list contains (MUTANT_PDB_ID, MutagenesisID_index)
+    # mutant_list contains (Wildtype_PDB_ID, MUTANT_PDB_ID, MutagenesisID_index)
     MutagenesisID_list = []
     df = pd.read_csv('/kortemmelab/home/james.lucas/skempi_mutants.tsv', delimiter='\t')
     for index, row in df.iterrows():
         if row['PPMutagenesisID'] == PredID_Details['PDBMutations'][0]['PPMutagenesisID']:
-            MutagenesisID_list.append((row['Mutant'], index))
+            MutagenesisID_list.append((row['Wildtype'], row['Mutant'], index))
 
-    return MutagenesisID_list, mutations, PredID_Details, df
+    #Grabs Rosetta energies for complexes
+    scores = ppi_api.get_prediction_scores(predID)
+    for score_method in scores:
+        REU_list = [scores[score_method][ensemble_member]['MutantComplex']['total'] for ensemble_member in scores[score_method]]
+
+    return MutagenesisID_list, mutations, PredID_Details, df, REU_list
 
 def Generate_PDBs_and_Resmaps(PredID_Details, Mutant_PDB_ID, MutagenesisID_index, df):
     wt_pdb_filename = PredID_Details['Files']['Input'][0]['Filename']  # Literally prints the filename (1TM1_EI.pdb)
@@ -531,7 +506,6 @@ def map_pdbs(WT_PDB_ID, Mutant_PDB_ID, wt_pdb_chains, df, MutagenesisID_index):
         mut_chain_ids[wt_chain_id] = pssa.get_matching_chains(wt_chain_id)
         for mut_chain_id in mut_chain_ids[wt_chain_id]:
             residue_maps[(wt_chain_id, mut_chain_id)] = pssa.get_atom_residue_mapping(wt_chain_id, mut_chain_id)
-    wt_to_mut_chains = {chain[0]: chain[1] for chain in residue_maps.keys()}
 
     # Tempory chain matching solution...
     wt_to_mut_chains = {}
@@ -546,7 +520,6 @@ def map_pdbs(WT_PDB_ID, Mutant_PDB_ID, wt_pdb_chains, df, MutagenesisID_index):
 
     return residue_maps, wt_to_mut_chains
 
-# Action!!!
 def do_math(outputdir, predID):
     # Use CUDA for GPU calculations, if avialable
     if 'QCP_CUDA_MEM_CALCULATOR' in availableCalculators():
@@ -567,14 +540,11 @@ def do_math(outputdir, predID):
                 #    input_temp.append(os.path.join(outputdir, app_output_dir, app_outfile ))
                 #    input_pdbs = sorted(input_temp)
 
-    # mutations, fresh_wt_pdb, tmp_wt_pdb, fresh_mut_pdb, tmp_mut_pdb, residue_maps, wt_to_mut_chains = Fetch_PredID_Info(
-    #     predID)
-
     return_output_dict = {}
 
-    MutagenesisID_list, mutations, PredID_Details, df = Fetch_Mutant_ID(predID)
+    MutagenesisID_list, mutations, PredID_Details, df, REU_list = Fetch_Mutant_ID(predID)
 
-    for Mutant_PDB_ID, MutagenesisID_index in MutagenesisID_list:
+    for Wildtype_PDB_ID, Mutant_PDB_ID, MutagenesisID_index in MutagenesisID_list:
         fresh_wt_pdb, tmp_wt_pdb, fresh_mut_pdb, tmp_mut_pdb, residue_maps, wt_to_mut_chains = Generate_PDBs_and_Resmaps(PredID_Details, Mutant_PDB_ID, MutagenesisID_index, df)
 
         point_mutants = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'RosettaOut')
@@ -587,11 +557,12 @@ def do_math(outputdir, predID):
         fresh_pdb_neighbors = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='Mutant PDB')
         fresh_pdb_points = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'Mutant PDB')
 
-        return_output_dict[Mutant_PDB_ID] = {}
+        return_output_dict['%s : %s' %(Wildtype_PDB_ID, Mutant_PDB_ID)] = {}
 
-        return_output_dict[Mutant_PDB_ID]['Point Mutant RMSDs'] = rmsd( pyrmsd_calc, point_mutants, fresh_pdb_points)
-        return_output_dict[Mutant_PDB_ID]['Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood, fresh_pdb_neighbors)
-        return_output_dict[Mutant_PDB_ID]['Global RMSD'] = rmsd(pyrmsd_calc, global_ca, fresh_pdb_global)
+        return_output_dict['%s : %s' %(Wildtype_PDB_ID, Mutant_PDB_ID)]['Point Mutant RMSD'] = rmsd( pyrmsd_calc, point_mutants, fresh_pdb_points)
+        return_output_dict['%s : %s' %(Wildtype_PDB_ID, Mutant_PDB_ID)]['Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood, fresh_pdb_neighbors)
+        return_output_dict['%s : %s' %(Wildtype_PDB_ID, Mutant_PDB_ID)]['Global RMSD'] = rmsd(pyrmsd_calc, global_ca, fresh_pdb_global)
+        return_output_dict['%s : %s' %(Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant Complex REUs'] = REU_list
         # chi_angles_output = chi_angles(input_pdbs, predID, mutations, fresh_pdb)
         # if chi_angles_output != {}:
         #     return_output_dict['X angles'] = chi_angles_output
@@ -608,14 +579,10 @@ def unzip_to_tmp_dir(prediction_id, zip_file):
         job_zip.extractall(unzip_path)
     return tmp_dir
 
-
 def multiprocessing_stuff(predID):
     def dict_to_json(PredID_output_dict, predID):
         with open('/kortemmelab/home/james.lucas/Structural_metrics_Outfiles/%s.txt' % predID, 'a') as outfile:
             outfile.write(PredID_output_dict)
-
-    # DEBUGGING
-    print predID
 
     try:
         my_tmp_dir = unzip_to_tmp_dir(predID, '%s.zip' % predID)
@@ -655,7 +622,6 @@ def multiprocessing_stuff(predID):
         traceback.print_exc()
         return PredID_output_dict
 
-
 def main():
     os.chdir('/kortemmelab/shared/DDG/ppijobs')
 
@@ -666,17 +632,12 @@ def main():
     # for index, row in csv_info.iterrows():
     #     PredID_list.append(int(row[0].split()[0]))
 
-    PredID_list = []
-    # for asdf in range(67088, 68327): #zemu-psbrub_1.6-pv-1000-lbfgs
-    # for asdf in range(94009, 95248):  # ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014
-    #     PredID_list.append(asdf)
-
-    # PredID_list = [67619, 67611, 67614]
+    # CHANGE FOR EACH RUN
     PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
+    job_name = 'ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014'
 
     # DEBUGGING
     # PredID_list = [int(sys.argv[1])] #94535 has an RMSD of 22A for some reason...
-    # {94541:94550:94571:94574:94578:94581:94953:94956:94964:94981:95074:95079:95113:95118:95127:95131:95163} not in Zemu???
 
     pool = multiprocessing.Pool(25)
     allmyoutput = pool.map(multiprocessing_stuff, PredID_list, 1)
@@ -684,13 +645,10 @@ def main():
     pool.join()
 
     print allmyoutput
-    print 'Dumping information to Structural_metrics.pickle'
 
-    #Sub-angstrom vs >1-angstrom RMSDs
-
+    print 'Dumping information to pickle'
     import pickle
-
-    with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/Structural_metrics.pickle', 'wb') as outfile:
+    with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/StructuralMetrics-%s.pickle' % job_name, 'wb') as outfile:
         output_dict = {}
         for resultdict in allmyoutput:
             output_dict[resultdict.keys()[0]] = resultdict
