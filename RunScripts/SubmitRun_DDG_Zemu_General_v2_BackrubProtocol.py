@@ -195,9 +195,9 @@ def bash(chaintomove, inputdir, outputdir):
     #Removes PDB file from path, saves in variable filenum_dir
     inputdir_parse = re.sub("/",' ', str(inputdir))
     data, filenum, pdbtemp = inputdir_parse.split()
-    filenum_dir = data + "/" + filenum
+    filenum_dir = os.path.join(data, filenum)
     PDBID = pdbtemp[:-4]
-    predIDoutdir = outputdir + filenum
+    predIDoutdir = os.path.join(outputdir, filenum)
     
     #Makes a folder for data dumping
     print 'Making directory %s%s...' %(outputdir, filenum)
@@ -279,3 +279,7 @@ try:
     shutil.move(output_out , os.path.join(outputdir, filenum))
 except:
     print 'No error or out file!'
+
+import zipfile
+with zipfile.ZipFile(os.path.join(outputdir, '%s.zip' %filenum), 'w' ) as myzip:
+    myzip.write(os.path.join(outputdir, filenum))
