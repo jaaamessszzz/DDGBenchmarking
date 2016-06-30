@@ -40,14 +40,18 @@ def dataframe_construction(StructuralMetrics_pickle):
             mutant_df = pickle.load(input)
         for PredictionID in RMSD_dict:
             PredID_set.add(PredictionID)
-            for nested_PredID in RMSD_dict[PredictionID]:
-                for Mutant_PDB in RMSD_dict[PredictionID][nested_PredID]:
-                    if RMSD_dict[PredictionID][nested_PredID][Mutant_PDB]['Global RMSD']['Mean'] > 10:
+            if 'Failure' in RMSD_dict[PredictionID][PredictionID]:
+                tossed_set.add(RMSD_dict[PredictionID][PredictionID])
+            else:
+                for Mutant_PDB in RMSD_dict[PredictionID][PredictionID]:
+                    if RMSD_dict[PredictionID][PredictionID][Mutant_PDB]['Global RMSD']['Mean'] > 10:
                         tossed_set.add(Mutant_PDB)
                     else:
                         PDB_set.add(Mutant_PDB)
                         for rmsd_type in RMSD_dict[PredictionID][PredictionID][Mutant_PDB]:
-                            if type(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]) == list and len(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]) < 50:  # rmsd[0] = Point Mutant Position, rmsd[1] = Dict
+                            if type(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]) == list and len(
+                                    RMSD_dict[PredictionID][PredictionID][Mutant_PDB][
+                                        rmsd_type]) < 50:  # rmsd[0] = Point Mutant Position, rmsd[1] = Dict
                                 for point_mutant in RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]:
                                     mutant_set.add('%s %s' % (Mutant_PDB, point_mutant[0]))
                                     print '%s %s' % (Mutant_PDB, point_mutant[0])
@@ -55,33 +59,40 @@ def dataframe_construction(StructuralMetrics_pickle):
         print '%s does not exist, generating it now...\n' %Dataframe_pickle
         for PredictionID in RMSD_dict:
             PredID_set.add(PredictionID)
-            for Mutant_PDB in RMSD_dict[PredictionID][PredictionID]:
-                if RMSD_dict[PredictionID][PredictionID][Mutant_PDB]['Global RMSD']['Mean'] > 10:
-                    tossed_set.add(Mutant_PDB)
-                else:
-                    PDB_set.add(Mutant_PDB)
-                    for rmsd_type in RMSD_dict[PredictionID][PredictionID][Mutant_PDB]:
-                        if type(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]) == list and len(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]) < 50 : # rmsd[0] = Point Mutant Position, rmsd[1] = Dict
-                            for point_mutant in RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]:
-                                mutant_set.add('%s %s' %(Mutant_PDB, point_mutant[0]))
-                                for rmsd_value in point_mutant[1]['Raw']:
-                                    mutant_df = add_to_df(PredictionID, Mutant_PDB, 'Point Mutant', point_mutant[0], rmsd_value, mutant_df, None)
-                        elif type(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]) == dict:
-                            for rmsd_value, REU_score in zip(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]['Raw'], RMSD_dict[PredictionID][PredictionID][Mutant_PDB]['Mutant Complex REUs']):
-                                mutant_df = add_to_df(PredictionID, Mutant_PDB, rmsd_type, None, rmsd_value, mutant_df, REU_score)
-
+            if 'Failure' in RMSD_dict[PredictionID][PredictionID]:
+                tossed_set.add(RMSD_dict[PredictionID][PredictionID])
+            else:
+                for Mutant_PDB in RMSD_dict[PredictionID][PredictionID]:
+                    if RMSD_dict[PredictionID][PredictionID][Mutant_PDB]['Global RMSD']['Mean'] > 10:
+                        tossed_set.add(Mutant_PDB)
+                    else:
+                        PDB_set.add(Mutant_PDB)
+                        for rmsd_type in RMSD_dict[PredictionID][PredictionID][Mutant_PDB]:
+                            if type(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]) == list and len(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]) < 50 : # rmsd[0] = Point Mutant Position, rmsd[1] = Dict
+                                for point_mutant in RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]:
+                                    mutant_set.add('%s %s' %(Mutant_PDB, point_mutant[0]))
+                                    for rmsd_value in point_mutant[1]['Raw']:
+                                        mutant_df = add_to_df(PredictionID, Mutant_PDB, 'Point Mutant', point_mutant[0], rmsd_value, mutant_df, None)
+                            elif type(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]) == dict:
+                                for rmsd_value, REU_score in zip(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]['Raw'], RMSD_dict[PredictionID][PredictionID][Mutant_PDB]['Mutant Complex REUs']):
+                                    mutant_df = add_to_df(PredictionID, Mutant_PDB, rmsd_type, None, rmsd_value, mutant_df, REU_score)
+                            else:
+                                print Mutant_PDB
         with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/%s' % Dataframe_pickle, 'wb') as output:
             pickle.dump(mutant_df, output, 0)
 
     mutant_df = mutant_df.reset_index(drop = True)
+
     # Import dataframes
+    # CHANGE FOR EACH RUN
     data_df = pd.read_csv('/kortemmelab/home/kyleb/reports/160608/analysis_sets/ZEMu/ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014/data.csv')
+    # data_df = pd.read_csv('/kortemmelab/home/kyleb/reports/160627-bruball/analysis_sets/ZEMu/ddg_analysis_type_MatchPairs-prediction_set_id_zemu-psbrub_1.6-pv-nt50000-bruball-score_method_Rescore-Talaris2014/data.csv')
     skempi_df = pd.read_csv('/kortemmelab/home/james.lucas/skempi_mutants.tsv', delimiter='\t')
 
     # Modify mutant_df to include Predicted DDG values
     try:
         print 'Opening cached mutant_df\n'
-        with open('mutant_df_DDGs_cached.pickle', 'rb') as input:
+        with open('mutant_df_DDGs_cached-%s' %StructuralMetrics_pickle[18:], 'rb') as input:
             mutant_df = pickle.load(input)
 
     except:
@@ -111,17 +122,18 @@ def dataframe_construction(StructuralMetrics_pickle):
                                 data_row['Experimental_ZEMu'] - data_row['Predicted'])
                     break
 
-        with open('mutant_df_DDGs_cached.pickle', 'wb') as output:
+        with open('mutant_df_DDGs_cached-%s' %StructuralMetrics_pickle[18:], 'wb') as output:
             pickle.dump(mutant_df, output, 0)
 
     return RMSD_dict, mutant_df, PDB_set, mutant_set
 
 def plot_stuff(mutant_df, PDB_set, mutant_set):
+    # CHANGE FOR EACH RUN
     from matplotlib.backends.backend_pdf import PdfPages
-    output_pdf = PdfPages('RMSD_Analysis_Output.pdf')
+    output_pdf = PdfPages('RMSD_Analysis_Output_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000.pdf')
 
-    print PDB_set
-    print mutant_set
+    print 'Unique WT PDBs: %s' %len(mutant_df['WT PDBID'].unique())
+    print 'Unique Mutant PDBs: %s' %len(mutant_df['Mutant PDBID'].unique())
 
     for type, df_subset in mutant_df.groupby('RMSD Type'):
         if type != 'Point M':
@@ -133,7 +145,7 @@ def plot_stuff(mutant_df, PDB_set, mutant_set):
             ################################################
             # Pairplot
             ################################################
-            sns.set_style('white', {'axes.grid': True})
+            sns.set_style('white', {'axes.grid': True, 'axes.edgecolor':'0'})
             sns.set_context('paper', font_scale=1.5, rc={'lines.linewidth': 1})
             # sns.despine()
             WT_pairplot = sns.pairplot(df_subset,
@@ -143,22 +155,24 @@ def plot_stuff(mutant_df, PDB_set, mutant_set):
                                        hue_order=sorted(list(mutant_df['WT PDBID'].unique())),
                                        kind='scatter',
                                        diag_kind='hist'
-                                       )
-            WT_pairplot.fig.legend(handles=df_subset['WT PDBID'], labels=df_subset['WT PDBID'], bbox_to_anchor=(1.1, 0.5))
+                                       )# .add_legend(bbox_to_anchor=(1.1, 0.5))
+            lgd = WT_pairplot.fig.legend(handles=df_subset['WT PDBID'], labels=df_subset['WT PDBID'], bbox_to_anchor=(1.05, 0.5))
             output_pdf.attach_note('This pairplot compares the various numerical variables contained within the mutant_df dataframe. The following variables are compared in a pairwise fashion where hue is WT PDBID: Experimental DDG, Predicted DDG, Absolute Error DDG, Mutant Complex Rosetta Energy, and RMSD')
-            output_pdf.savefig(WT_pairplot.fig, pad_inches = 1)
+            title = WT_pairplot.fig.suptitle('PairPlot for %s' %description, fontsize =24, y=1.05)
+            output_pdf.savefig(WT_pairplot.fig, pad_inches = 1, bbox_extra_artists = [title, lgd], bbox_inches='tight')
 
             Mut_pairplot = sns.pairplot(df_subset,
-                                       vars = ['Experimental DDG', 'Predicted DDG', 'Absolute Error DDG', 'Mutant Complex REU', 'RMSD'],
-                                       size =3,
-                                       hue='Mutant PDBID',
+                                        vars = ['Experimental DDG', 'Predicted DDG', 'Absolute Error DDG', 'Mutant Complex REU', 'RMSD'],
+                                        size =3,
+                                        hue='Mutant PDBID',
                                         hue_order= sorted(list(mutant_df['Mutant PDBID'].unique())),
-                                       kind='scatter',
-                                       diag_kind='hist'
-                                       )
-            Mut_pairplot.fig.legend(handles=df_subset['Mutant PDBID'], labels=df_subset['Mutant PDBID'], bbox_to_anchor=(1.1, 0.5))
+                                        kind='scatter',
+                                        diag_kind='hist'
+                                       )# .add_legend(bbox_to_anchor=(1.1, 0.5))
+            lgd = Mut_pairplot.fig.legend(handles=df_subset['Mutant PDBID'], labels=df_subset['Mutant PDBID'], bbox_to_anchor=(1.05, 0.5))
             output_pdf.attach_note('This pairplot compares the various numerical variables contained within the mutant_df dataframe. The following variables are compared in a pairwise fashion where hue is Mutant PDBID: Experimental DDG, Predicted DDG, Absolute Error DDG, Mutant Complex Rosetta Energy, and RMSD')
-            output_pdf.savefig(Mut_pairplot.fig, pad_inches = 1)
+            title = Mut_pairplot.fig.suptitle('PairPlot for %s' % description, fontsize=24, y=1.05)
+            output_pdf.savefig(Mut_pairplot.fig, pad_inches = 1, bbox_extra_artists = [title, lgd], bbox_inches='tight')
 
             ################################################
             # Scatter plot - DDG Error vs. RMSD
@@ -183,45 +197,58 @@ def plot_stuff(mutant_df, PDB_set, mutant_set):
             )
             ax.set_title(description,fontsize=18)
             output_pdf.attach_note('Error bars represent 95% confidence interval. Each point represents an ensemble for which we possess a reference mutant crystal structure')
-            output_pdf.savefig(fig, pad_inches = 1)
+            output_pdf.savefig(fig, pad_inches = 1, bbox_inches='tight')
             plt.close()
 
             ################################################
             # RMSD vs. REU Scatter plot  and RMSD Distributions
             ################################################
             for wt_pdb, wt_pdb_subset in df_subset.groupby('WT PDBID'):
-                gspec = gs.GridSpec(1, 2)
-                fig = plt.figure(figsize=(20, 10))
-                ax1 = fig.add_subplot(gspec[0,0])
-                ax2 = fig.add_subplot(gspec[0,1])
+                # gspec = gs.GridSpec(1, 2)
+                # fig = plt.figure(figsize=(20, 10))
+                # ax1 = fig.add_subplot(gspec[0,0])
+                # ax2 = fig.add_subplot(gspec[0,1])
+                #
+                # sns.regplot('RMSD',
+                #             'Mutant Complex REU',
+                #             data=wt_pdb_subset,
+                #             x_estimator=np.mean,
+                #             scatter=True,
+                #             fit_reg=False,
+                #             ax=ax2
+                #             )
+                #
+                # ax2.set_title(wt_pdb, fontsize=18)
+                #
+                # sns.distplot(wt_pdb_subset['RMSD'],
+                #              hist=False,
+                #              kde=True,
+                #              norm_hist=True,
+                #              ax=ax1)
+                # ax1.set_ylabel('Percentage of cases (%)\nExcept not right now, working on it', fontsize=12)
+                # ax1.set_xlim(left = 0)
+                # ax1.set_ylim(bottom = 0)
+                #
+                # title = fig.suptitle(
+                #     '%s vs.\nMutant Complex Rosetta Energy' %description,
+                #     fontsize=24,
+                #     y=1.00
+                # )
 
-                sns.regplot('RMSD',
-                            'Mutant Complex REU',
-                            data=wt_pdb_subset,
-                            x_estimator=np.mean,
-                            scatter=True,
-                            fit_reg=False,
-                            ax=ax2
-                            )
-
-                ax2.set_title(wt_pdb, fontsize=18)
-
-                sns.distplot(wt_pdb_subset['RMSD'],
-                             hist=False,
-                             kde=True,
-                             norm_hist=True,
-                             ax=ax1)
-                ax1.set_ylabel('Percentage of cases (%)\nExcept not right now, working on it', fontsize=12)
-                ax1.set_xlim(left = 0)
-                ax1.set_ylim(bottom = 0)
-
-                title = fig.suptitle(
-                    '%s vs.\nMutant Complex Rosetta Energy' %description,
-                    fontsize=24,
-                    y=1.00
-                )
-
-                output_pdf.savefig(fig, pad_inches = 1)
+                sns.despine()
+                sns.set_style('white', {'axes.grid': True})
+                sns.set_context('notebook', font_scale=1, rc={'lines.linewidth': 1})
+                pairgrid = sns.PairGrid(vars = ['RMSD', 'Mutant Complex REU'],
+                                        data=wt_pdb_subset,
+                                        hue='Mutant PDBID',
+                                        size = 6
+                                        ).map_offdiag(plt.scatter).map_diag(sns.kdeplot).add_legend(bbox_to_anchor=(1.1, 0.5))
+                # pairgrid.set(xlim=(0, None))
+                title = pairgrid.fig.suptitle('%s vs.\nMutant Complex Rosetta Energy: %s' %(description, wt_pdb),
+                                      fontsize=24,
+                                      y=1.05)
+                lgd = pairgrid.fig.legend(handles=wt_pdb_subset['Mutant PDBID'], labels=wt_pdb_subset['Mutant PDBID'], bbox_to_anchor=(1.1, 0.5))
+                output_pdf.savefig(pairgrid.fig, pad_inches = 1, bbox_extra_artists = [lgd, title], bbox_inches='tight')
                 plt.close()
 
             ###############################################
@@ -240,11 +267,8 @@ def plot_stuff(mutant_df, PDB_set, mutant_set):
             )
             sns.set_context('notebook', font_scale=1, rc={'lines.linewidth': 1})
 
-            output_pdf.savefig(fig, pad_inches = 1)
+            output_pdf.savefig(fig, pad_inches = 1, bbox_inches='tight')
             plt.close()
-            # fig.savefig('%s-RMSD_Boxplot.pdf' % (type),
-            #             # bbox_extra_artists=title,
-            #             bbox_inches='tight')
 
         else:
             ################################################
@@ -252,7 +276,7 @@ def plot_stuff(mutant_df, PDB_set, mutant_set):
             ################################################
             sns_fig = sns.lmplot('Absolute Error DDG',
                                  'RMSD',
-                                 hue='PDBID : Point Mutant',
+                                 hue='Mutant PDBID',
                                  data=df_subset,
                                  x_estimator=np.mean,
                                  fit_reg=False,
@@ -260,14 +284,14 @@ def plot_stuff(mutant_df, PDB_set, mutant_set):
                                  # legend_out=True,
                                  size=10
                                  )
+            sns_fig.fig.suptitle('All Mutant Resides All-Atom RMSD vs. Absolute Error in Predicted DDG for Each\n\
+            Rosetta-Generated Ensemble/Reference Mutant Crystal Structure Pair')
             sns_fig = sns_fig.despine().set_axis_labels('Predicted DDG Absolute Error', 'Point Mutant All-atom RMSD')
+            sns_fig.set(xlim=(0, None), ylim=(0, None))
             sns.set_style('white', {'axes.grid': True})
             sns.set_context('notebook', font_scale=1, rc={'lines.linewidth': 1})
             output_pdf.attach_note('Each point represents the average all-atom RMSD plus 95% confidence interval vs. the absolute error in predicted DDG for individual point mutant residues in the Rosetta-generated ensembles.')
-            output_pdf.savefig(sns_fig.fig, pad_inches = 1)
-            # fig.savefig('%s-DGG_Err_vs_RMSD_Scatter.pdf' % (type),
-            #             # bbox_extra_artists=title,
-            #             bbox_inches='tight')
+            output_pdf.savefig(sns_fig.fig, pad_inches = 1, bbox_inches='tight')
 
             ################################################
             # Boxplot
@@ -292,16 +316,14 @@ def plot_stuff(mutant_df, PDB_set, mutant_set):
                 ax.set_xlabel('RMSD', fontsize=16)
                 ax.set_ylabel('WT:Mut PDBID - Point Mutant', fontsize=16)
 
-
-                output_pdf.savefig(fig, pad_inches = 1)
+                output_pdf.savefig(fig, pad_inches = 1, bbox_inches='tight')
                 plt.close()
-                # fig.savefig('%s-RMSD_Boxplot-%s.pdf' % (type, name),
-                #             # bbox_extra_artists=title,
-                #             bbox_inches='tight')
     output_pdf.close()
 
 def main():
+    # CHANGE FOR EACH RUN
     StructuralMetrics_pickle = 'StructuralMetrics-ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014.pickle'
+    # StructuralMetrics_pickle = 'StructuralMetrics-zemu-psbrub_1.6-pv-nt50000-bruball.pickle'
     RMSD_dict, mutant_df, PDB_set, mutant_set = dataframe_construction(StructuralMetrics_pickle)
     plot_stuff(mutant_df, PDB_set, mutant_set)
 

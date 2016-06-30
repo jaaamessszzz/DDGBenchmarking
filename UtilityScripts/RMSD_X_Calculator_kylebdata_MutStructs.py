@@ -321,6 +321,30 @@ def bin_me(templist):
     readable_X_counts = dict((bin_ranges[key], value) for (key, value) in X_counts.items())
     return readable_X_counts
 
+def PCA_Analysis(predID, input_pdbs, tmp_mut_pdb):
+    # http://prody.csb.pitt.edu/tutorials/ensemble_analysis/xray_calculations.html#calculations
+    ref_structure = prody.parsePDB(tmp_mut_pdb)
+    ref_selection = ref_structure.select('calpha')
+    for ref_chain in ref_structure.getHierView():
+        prody.startLogfile('%s_%s_log'%(predID, ref_chain.getChid()))
+        ensemble = prody.PDBEnsemble('%s_%s_ensemble'%(predID, ref_chain.getChid()))
+        ensemble.setAtoms(ref_chain.select('calpha'))
+        ensemble.setCoords(ref_chain.select('calpha'))
+        print 'Generating Ensemble...'
+        for input_pdb in input_pdbs:
+            structure = prody.parsePDB(input_pdb, subset='calpha')
+            mappings = prody.mapOntoChain(structure, ref_chain)
+            atommap = mappings[0][0]
+            ensemble.addCoordset(atommap, weights=atommap.getFlags('mapped'))
+        ensemble.iterpose()
+        prody.closeLogfile('%s_%s_log'%(predID, ref_chain.getChid()))
+        prody.writePDB('%s_%s_ensemble.pdb'%(predID, ref_chain.getChid()), ensemble)
+
+        pca = prody.PCA('%s_%s_pca'%(predID, ref_chain.getChid()))
+        pca.buildCovariance(ensemble)
+        pca.calcModes()
+        print pca.getEigvecs()
+
 def chi_angles(input_pdbs, predID, mutations, PDBFile_from_database):
     # http://www.ccp14.ac.uk/ccp/web-mirrors/garlic/garlic/commands/dihedrals.html
     chi1_dict = {'ARG': ['N', 'CA', 'CB', 'CG'],
@@ -547,6 +571,10 @@ def do_math(outputdir, predID):
     for Wildtype_PDB_ID, Mutant_PDB_ID, MutagenesisID_index in MutagenesisID_list:
         fresh_wt_pdb, tmp_wt_pdb, fresh_mut_pdb, tmp_mut_pdb, residue_maps, wt_to_mut_chains = Generate_PDBs_and_Resmaps(PredID_Details, Mutant_PDB_ID, MutagenesisID_index, df)
 
+        # PCA ANAYLSIS STUFF
+        # PCA_Analysis(predID, input_pdbs, tmp_mut_pdb)
+
+        #Perform selections
         point_mutants = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'RosettaOut')
         neighbors = find_neighbors(mutations, fresh_wt_pdb, 8)
         neighborhood = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='RosettaOut')
@@ -580,46 +608,35 @@ def unzip_to_tmp_dir(prediction_id, zip_file):
     return tmp_dir
 
 def multiprocessing_stuff(predID):
-    def dict_to_json(PredID_output_dict, predID):
-        with open('/kortemmelab/home/james.lucas/Structural_metrics_Outfiles/%s.txt' % predID, 'a') as outfile:
-            outfile.write(PredID_output_dict)
+    # Define things
+    PredID_output_dict = {}
 
     try:
         my_tmp_dir = unzip_to_tmp_dir(predID, '%s.zip' % predID)
-
-        print '*** %s has been unzipped!!! ***' % predID
-
-        # Define things
-        PredID_output_dict = {}
         outdir = os.path.join(my_tmp_dir, '%s-ddg' % predID)
-
+        print '*** %s has been unzipped!!! ***' % predID
         print "\n*** Calculating RMSDs for %s ***\n" % outdir
 
         try:
             PredID_output_dict[predID] = do_math( outdir, predID)
             print 'Calculations complete!!!'
         except Exception as fuuuu:
-            PredID_output_dict[predID] = fuuuu
+            PredID_output_dict = fuuuu
             print 'Failure %s : %s' % (predID, fuuuu)
             import traceback
             traceback.print_exc()
 
         shutil.rmtree(my_tmp_dir)
-        # dict_to_json(PredID_output_dict, predID)
         return PredID_output_dict
 
     except IOError as MIA:
         print 'IO Failure %s: %s' % (predID, MIA)
-        PredID_output_dict = {'%s' % predID: '%s' % MIA}
-        dict_to_json(PredID_output_dict, predID)
+        PredID_output_dict = {predID: 'Failure : %s' % MIA}
         return PredID_output_dict
 
     except:
         print 'General Failure: %s' % predID
-        PredID_output_dict = {'%s' % predID: 'General Failure'}
-        dict_to_json(PredID_output_dict, predID)
-        import traceback
-        traceback.print_exc()
+        PredID_output_dict = {predID: 'General Failure'}
         return PredID_output_dict
 
 def main():
@@ -627,17 +644,20 @@ def main():
 
     # Old code, can technically still use this but it's just easier to add PredIDs to PredID_list using range() for loop
     # Grabs Prediction IDs from .csv file
-    # csv_info = pd.read_csv('/kortemmelab/home/james.lucas/zemu-psbrub_1.6-pv-1000-lbfgs_IDs.csv')
+    # csv_info = pd.read_csv('Location of data.csv for job_name')
     # PredID_list = []
     # for index, row in csv_info.iterrows():
     #     PredID_list.append(int(row[0].split()[0]))
 
     # CHANGE FOR EACH RUN
-    PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
-    job_name = 'ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014'
+    # job_name = 'ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014'
+    # PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
+
+    # job_name = 'zemu-psbrub_1.6-pv-nt50000-bruball'
+    # PredID_list = [89049, 89051, 89052, 89115, 89245, 89253, 89270, 89271, 89308, 89309, 89310, 89311, 89312, 89354, 89355, 89356, 89357, 89358, 89359, 89407, 89571, 89573, 89574, 89575, 89576, 89577, 89578, 89579, 89580, 89581, 89590, 89611, 89614, 89618, 89621, 89993, 89996, 90004, 90021, 90114, 90119, 90153, 90158, 90167, 90171, 90203]
 
     # DEBUGGING
-    # PredID_list = [int(sys.argv[1])] #94535 has an RMSD of 22A for some reason...
+    PredID_list = [int(sys.argv[1])] #94535 has an RMSD of 22A for some reason...
 
     pool = multiprocessing.Pool(25)
     allmyoutput = pool.map(multiprocessing_stuff, PredID_list, 1)
