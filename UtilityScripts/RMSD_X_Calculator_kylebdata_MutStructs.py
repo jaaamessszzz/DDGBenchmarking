@@ -5,6 +5,7 @@ from Bio.PDB import *
 import pyRMSD
 import pyRMSD.RMSDCalculator
 from pyRMSD.availableCalculators import availableCalculators
+import scipy.spatial.distance
 import prody
 import numpy as np
 import pprint
@@ -64,31 +65,119 @@ def find_neighbors(mutations, open_strct, neighbor_distance=8.0):
 # Kyle's RMSDWrapper.py (Spread out all over the place now)
 def rmsd(pyrmsd_calc, coordinates, fresh_coords):
     def generate_out_dict(rmsd):
-        from pyRMSD.condensedMatrix import CondensedMatrix
+        # from pyRMSD.condensedMatrix import CondensedMatrix
+        # out_dict_temp['Mean'] = CondensedMatrix(rmsd).calculateMean()
+        # out_dict_temp['Variance'] = CondensedMatrix(rmsd).calculateVariance()
+        # out_dict_temp['Skewness'] = CondensedMatrix(rmsd).calculateSkewness()
+        # out_dict_temp['Kurtosis'] = CondensedMatrix(rmsd).calculateKurtosis()
+        # out_dict_temp['Raw'] = CondensedMatrix(rmsd).get_data().flatten()
 
         out_dict_temp = {}
-        out_dict_temp['Mean'] = CondensedMatrix(rmsd).calculateMean()
-        out_dict_temp['Variance'] = CondensedMatrix(rmsd).calculateVariance()
-        out_dict_temp['Skewness'] = CondensedMatrix(rmsd).calculateSkewness()
-        out_dict_temp['Kurtosis'] = CondensedMatrix(rmsd).calculateKurtosis()
-        out_dict_temp['Raw'] = CondensedMatrix(rmsd).get_data().flatten()
+        out_dict_temp['Mean'] = np.mean(rmsd)
+        out_dict_temp['Variance'] = np.var(rmsd)
+        out_dict_temp['Raw'] = np.asarray(rmsd)
         return out_dict_temp
+
+    def superpose(coordinates, fresh_coords):
+        # Select reference PDB backbone atoms
+        ref_coords = fresh_coords[0].select('name CA C N').getCoords()
+
+        # http://nghiaho.com/?page_id=671
+        # http://nghiaho.com/uploads/code/rigid_transform_3D.py_
+        coordinates_superposed_tmp = []
+        for coordinate in coordinates:
+            fitting_coords = np.asarray(coordinate.select('name CA C N').getCoords())
+
+            centroid_fitting = np.mean(fitting_coords, axis=0)
+            centroid_ref = np.mean(ref_coords, axis=0)
+
+            centered_fitting = fitting_coords - np.tile(centroid_fitting, (fitting_coords.shape[0], 1))
+            centered_ref = ref_coords - np.tile(centroid_ref, (ref_coords.shape[0], 1))
+
+            H = np.matmul(centered_fitting.T, centered_ref)
+            U, S, Vt = np.linalg.svd(H)
+
+            # List containing Rotation Matrix
+            Rotation_matrix = np.matmul(Vt.T, U.T)
+            Translation_matrix = -np.matmul(Rotation_matrix, centroid_fitting.T) + centroid_ref.T
+
+            # CHECK THIS!!! Deviated from reference script
+            coordinate_superposed = (np.matmul(Rotation_matrix, coordinate.getCoords().T) + np.tile(Translation_matrix,(coordinate.getCoords().shape[0], 1)).T).T
+            coordinates_superposed_tmp.append(coordinate_superposed)
+
+        # Double-checking alignment with a 3D plot
+        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        for coordinate_superposed in coordinates_superposed_tmp:
+            x = coordinate_superposed[:, 0]
+            y = coordinate_superposed[:, 1]
+            z = coordinate_superposed[:, 2]
+            ax.scatter(x, y, -z, zdir='z', c='red')
+        a = ref_coords[:, 0]
+        b = ref_coords[:, 1]
+        c = ref_coords[:, 2]
+        ax.scatter(a, b, -c, zdir='z', c='blue')
+        plt.show()
+
+        return np.asarray(coordinates_superposed_tmp)
 
     if type(coordinates) is dict:
         rmsd_list = []
 
         for mutres, coord_set in coordinates.iteritems():
-            coords_plus_ref = np.concatenate((coord_set, fresh_coords[mutres]), axis=0)
-            calculator = pyRMSD.RMSDCalculator.RMSDCalculator(pyrmsd_calc, coords_plus_ref)
-            rmsd = calculator.oneVsTheOthers(50)
-            out_dict = generate_out_dict(rmsd)
+            coordinates_superposed = superpose(coord_set, fresh_coords[mutres])
+
+            rmsd_array = []
+            for rosettaout in coordinates_superposed:
+                error = rosettaout - np.asarray([fresh_coords[mutres][0].getCoords()])
+                rmsd_array.append(np.sqrt(np.sum(np.multiply(error, error)) / fresh_coords[mutres][0].getCoords().shape[0]))
+
+            out_dict = generate_out_dict(rmsd_array)
             rmsd_list.append([mutres, out_dict])
+
+            # coords_plus_ref = np.concatenate((coord_set, fresh_coords[mutres]), axis=0)
+            # calculator = pyRMSD.RMSDCalculator.RMSDCalculator(pyrmsd_calc, coords_plus_ref)
+            # rmsd = calculator.oneVsTheOthers(50)
+            # out_dict = generate_out_dict(rmsd)
+            # rmsd_list.append([mutres, out_dict])
+
         return rmsd_list
     else:
-        coords_plus_ref = np.concatenate((coordinates, fresh_coords), axis=0)
-        calculator = pyRMSD.RMSDCalculator.RMSDCalculator(pyrmsd_calc, coords_plus_ref)
-        rmsd = calculator.oneVsTheOthers(50)
-        out_dict = generate_out_dict(rmsd)
+
+        # # http://prody.csb.pitt.edu/tutorials/ensemble_analysis/dimer.html#multimeric-structures
+        # # Set up Ensemble
+        # ensemble = prody.PDBEnsemble('ensemble')
+        # ensemble.setAtoms(fresh_coords_backbone)
+        # ensemble.setCoords(fresh_coords_backbone.getCoords())
+        # for coordinate in coordinates:
+        #     ensemble.addCoordset(coordinate)
+        # ensemble.iterpose()
+        # # Convert superposed PDBs to numpy array coordinates
+        # superposed_PDBs = list([])
+        # for superposed_PDB in ensemble:
+        #     superposed_PDBs.append(superposed_PDB.getCoords())
+        # coordinates_np = np.asarray(superposed_PDBs)
+
+        coordinates_superposed = superpose(coordinates, fresh_coords)
+
+        rmsd_array = []
+        for rosettaout in coordinates_superposed:
+            error = rosettaout - np.asarray([fresh_coords[0].getCoords()])
+            rmsd_array.append(np.sqrt(np.sum(np.multiply(error, error))/fresh_coords[0].getCoords().shape[0]))
+
+        # Old stuff
+        # coordinates_np = np.asarray([coordinate.getCoords() for coordinate in coordinates])
+        # coords_plus_ref = np.concatenate((coordinates_np, np.asarray([fresh_coords[0].getCoords()])), axis=0)
+
+        # pyRMSD Method
+        # coords_plus_ref = np.concatenate((coordinates_superposed, np.asarray([fresh_coords[0].getCoords()])), axis=0)
+        # calculator = pyRMSD.RMSDCalculator.RMSDCalculator(pyrmsd_calc, coords_plus_ref)
+        # rmsd = calculator.pairwiseRMSDMatrix()
+        # out_dict = generate_out_dict(rmsd)
+
+        out_dict = generate_out_dict(rmsd_array)
         return out_dict
 
 def flip_me(residue_maps, wt_to_mut_chains):
@@ -172,22 +261,25 @@ def global_ca_coordinates(input_pdbs, tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_
 
     def generate_ca_atom_list(input_pdbs, acceptable_atoms, input_type):
         temp = []
+        # Adds acceptable atom indexes to atom list which are then used in select() to return atom object with desired coordinates
         for input_pdb in input_pdbs:
             if 'WT.' not in input_pdb:
                 atom_list = []
-                c_alpha_all = prody.parsePDB(input_pdb).select('calpha').getHierView()
-                for c_alpha_chain in c_alpha_all:
+                c_alpha_all = prody.parsePDB(input_pdb).select('calpha')
+                c_alpha_all_hv = c_alpha_all.getHierView()
+                for c_alpha_chain in c_alpha_all_hv:
                     for c_alpha in c_alpha_chain:
                         if input_type == 'Mutant PDB':
                             if c_alpha.getChids()[0] + str(c_alpha.getResnums()[0]) in acceptable_atoms['Mutant PDB']:
-                                atom_list.append(c_alpha.getCoords()[0])
+                                for atom in c_alpha:
+                                    atom_list.append(str(atom.getIndex()))
                         if input_type == 'RosettaOut':
                             if c_alpha.getChids()[0] + str(c_alpha.getResnums()[0]) in acceptable_atoms['RosettaOut']:
-                                atom_list.append(c_alpha.getCoords()[0])
-            temp.append(atom_list)
-        coordinates = np.asarray(temp)
+                                for atom in c_alpha:
+                                    atom_list.append(str(atom.getIndex()))
+                temp.append(c_alpha_all.select('index ' + ' '.join(atom_list)))
 
-        return coordinates
+        return temp
 
     if input_type == 'RosettaOut':
         return generate_ca_atom_list(input_pdbs, acceptable_atoms, input_type)
@@ -221,8 +313,9 @@ def neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chai
         for input_pdb in input_pdbs:
             if 'WT.' not in input_pdb:
                 atom_list = []
-                hv = prody.parsePDB(input_pdb).getHierView()
-                res_list = [hv[neighbor[1], neighbor[0][1]] for neighbor in neighbors]
+                neighborhood = prody.parsePDB(input_pdb)
+                neighborhood_hv = neighborhood.getHierView()
+                res_list = [neighborhood_hv[neighbor[1], neighbor[0][1]] for neighbor in neighbors]
 
                 for res in res_list:
                     # Check if numbering should be for WT or Mutant
@@ -236,14 +329,14 @@ def neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chai
                             #     atom.getName())
                             if (res.getChid(), res.getResname(),int(res.getResnum()), atom.getName()) in acceptable_atoms_mut_set:
                                 if atom.getElement() != 'H':
-                                    atom_list.append(atom.getCoords())
+                                    atom_list.append(str(atom.getIndex()))
 
                         else:
                             if (res.getChid(), res.getResname(), res.getResnum(), atom.getName()) in acceptable_atoms_wt_set:
                                 if atom.getElement() != 'H':
-                                    atom_list.append(atom.getCoords())
+                                    atom_list.append(str(atom.getIndex()))
 
-                temp.append(atom_list)
+                temp.append(neighborhood.select('index ' + ' '.join(atom_list)))
 
         coordinates = np.asarray(temp)
         return coordinates
@@ -256,7 +349,6 @@ def neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chai
 def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type):
     acceptable_atoms_wt_set, acceptable_atoms_mut_set = common_atoms(tmp_mut_pdb, tmp_wt_pdb, residue_maps, wt_to_mut_chains, input_pdbs, mutations)
     mut_key_dict = {}
-    pprint.pprint(mutations)
     if input_type == 'Mutant PDB':
         mutations_mut_numbering = []
         for mutation in mutations:
@@ -272,8 +364,9 @@ def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tm
             for input_pdb in input_pdbs:
                 if 'WT.' not in input_pdb:
                     atom_list = []
-                    hv = prody.parsePDB(input_pdb).getHierView()
-                    res_list = [hv[mutation[1], int(mutation[0])]]
+                    point_mutant = prody.parsePDB(input_pdb)
+                    point_mutant_hv = point_mutant.getHierView()
+                    res_list = [point_mutant_hv[mutation[1], int(mutation[0])]]
                     for res in res_list:
                         # Check if numbering should be for WT or Mutant
                         # Check that residues are present in acceptable_residues
@@ -282,13 +375,13 @@ def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tm
                             if input_type == 'Mutant PDB':
                                 if (res.getChid(), res.getResname(),int(res.getResnum()), atom.getName()) in acceptable_atoms_mut_set:
                                     if atom.getElement() != 'H':
-                                        atom_list.append(atom.getCoords())
+                                        atom_list.append(str(atom.getIndex()))
                             if input_type == 'RosettaOut':
                                 if (res.getChid(), res.getResname(), res.getResnum(), atom.getName()) in acceptable_atoms_wt_set:
                                     if atom.getElement() != 'H':
-                                        atom_list.append(atom.getCoords())
+                                        atom_list.append(str(atom.getIndex()))
 
-                    temp.append(atom_list)
+                    temp.append(point_mutant.select('index ' + ' '.join(atom_list)))
             if input_type == 'Mutant PDB':
                 mutation_dict[mut_key_dict[mutation[1] + str(mutation[0])]] = np.asarray(temp)
             if input_type == 'RosettaOut':
@@ -459,6 +552,7 @@ def Fetch_Mutant_ID(predID):
     for index, row in df.iterrows():
         if row['PPMutagenesisID'] == PredID_Details['PDBMutations'][0]['PPMutagenesisID']:
             MutagenesisID_list.append((row['Wildtype'], row['Mutant'], index))
+            break
 
     #Grabs Rosetta energies for complexes
     scores = ppi_api.get_prediction_scores(predID)
@@ -545,11 +639,14 @@ def map_pdbs(WT_PDB_ID, Mutant_PDB_ID, wt_pdb_chains, df, MutagenesisID_index):
     return residue_maps, wt_to_mut_chains
 
 def do_math(outputdir, predID):
-    # Use CUDA for GPU calculations, if avialable
-    if 'QCP_CUDA_MEM_CALCULATOR' in availableCalculators():
-        pyrmsd_calc = 'QCP_CUDA_MEM_CALCULATOR'
-    else:
-        pyrmsd_calc = 'QCP_SERIAL_CALCULATOR'
+    # # Use CUDA for GPU calculations, if avialable
+    # if 'QCP_CUDA_MEM_CALCULATOR' in availableCalculators():
+    #     pyrmsd_calc = 'QCP_CUDA_MEM_CALCULATOR'
+    # else:
+    #     pyrmsd_calc = 'QCP_SERIAL_CALCULATOR'
+
+    # pyRMSD calculator which does not perform superposition
+    pyrmsd_calc = 'NOSUP_SERIAL_CALCULATOR'
 
     input_temp = []
 
@@ -567,6 +664,8 @@ def do_math(outputdir, predID):
     return_output_dict = {}
 
     MutagenesisID_list, mutations, PredID_Details, df, REU_list = Fetch_Mutant_ID(predID)
+
+    print MutagenesisID_list
 
     for Wildtype_PDB_ID, Mutant_PDB_ID, MutagenesisID_index in MutagenesisID_list:
         fresh_wt_pdb, tmp_wt_pdb, fresh_mut_pdb, tmp_mut_pdb, residue_maps, wt_to_mut_chains = Generate_PDBs_and_Resmaps(PredID_Details, Mutant_PDB_ID, MutagenesisID_index, df)
@@ -650,7 +749,7 @@ def main():
     #     PredID_list.append(int(row[0].split()[0]))
 
     # CHANGE FOR EACH RUN
-    # job_name = 'ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014'
+    job_name = 'ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014'
     # PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
 
     # job_name = 'zemu-psbrub_1.6-pv-nt50000-bruball'
@@ -666,13 +765,13 @@ def main():
 
     print allmyoutput
 
-    print 'Dumping information to pickle'
-    import pickle
-    with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/StructuralMetrics-%s.pickle' % job_name, 'wb') as outfile:
-        output_dict = {}
-        for resultdict in allmyoutput:
-            output_dict[resultdict.keys()[0]] = resultdict
-        pickle.dump(output_dict, outfile, 0)
+    # print 'Dumping information to pickle'
+    # import pickle
+    # with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/StructuralMetrics-%s.pickle' % job_name, 'wb') as outfile:
+    #     output_dict = {}
+    #     for resultdict in allmyoutput:
+    #         output_dict[resultdict.keys()[0]] = resultdict
+    #     pickle.dump(output_dict, outfile, 0)
 
     # with open('Structural_metrics.pickle', 'rb') as outfile:
     #     b = pickle.load(outfile)
