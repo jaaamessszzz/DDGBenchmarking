@@ -125,7 +125,7 @@ def rmsd(pyrmsd_calc, coordinates, fresh_coords):
         return np.asarray(coordinates_superposed_tmp)
 
     if type(coordinates) is dict:
-        rmsd_list = []
+        rmsd_list = {}
         for mutres, coord_set in coordinates.iteritems():
             coordinates_superposed = superpose(coord_set, fresh_coords[mutres])
             rmsd_array = []
@@ -134,7 +134,7 @@ def rmsd(pyrmsd_calc, coordinates, fresh_coords):
                 rmsd_array.append(np.sqrt(np.sum(np.multiply(error, error)) / fresh_coords[mutres][0].getCoords().shape[0]))
 
             out_dict = generate_out_dict(rmsd_array)
-            rmsd_list.append([mutres, out_dict])
+            rmsd_list[mutres] = out_dict
 
             # coords_plus_ref = np.concatenate((coord_set, fresh_coords[mutres]), axis=0)
             # calculator = pyRMSD.RMSDCalculator.RMSDCalculator(pyrmsd_calc, coords_plus_ref)
@@ -436,7 +436,7 @@ def PCA_Analysis(predID, input_pdbs, tmp_mut_pdb):
         pca.calcModes()
         print pca.getEigvecs()
 
-def chi_angles(input_pdbs, predID, mutations, PDBFile_from_database):
+def chi_angles(input_pdbs, mutations):
     # http://www.ccp14.ac.uk/ccp/web-mirrors/garlic/garlic/commands/dihedrals.html
     chi1_dict = {'ARG': ['N', 'CA', 'CB', 'CG'],
                  'ASN': ['N', 'CA', 'CB', 'CG'],
@@ -462,7 +462,7 @@ def chi_angles(input_pdbs, predID, mutations, PDBFile_from_database):
                  'GLN': ['CA', 'CB', 'CG', 'CD'],
                  'GLU': ['CA', 'CB', 'CG', 'CD'],
                  'HIS': ['CA', 'CB', 'CG', 'ND1'],
-                 'ILE': ['CA', 'CB', 'CG1', 'CD'],
+                 'ILE': ['CA', 'CB', 'CG1', 'CD1'],
                  'LEU': ['CA', 'CB', 'CG', 'CD1'],
                  'LYS': ['CA', 'CB', 'CG', 'CD'],
                  'MET': ['CA', 'CB', 'CG', 'SD'],
@@ -475,9 +475,9 @@ def chi_angles(input_pdbs, predID, mutations, PDBFile_from_database):
 
     for mutation in mutations:
         if mutation[3] == 'A' or mutation[3] == 'G':
-            xangles_dict['%s%s' % (mutation[0], mutation[1])] = "Mutation is %s!" % mutation[3]
+            xangles_dict['%s%s' % (mutation[1], mutation[0])] = "Mutation is %s!" % mutation[3]
         else:
-            xangles_dict['%s%s' % (mutation[0], mutation[1])] = {}
+            xangles_dict['%s%s' % (mutation[1], mutation[0])] = {}
             x1_templist = []
             x2_templist = []
             for input_pdb in input_pdbs:
@@ -504,12 +504,18 @@ def chi_angles(input_pdbs, predID, mutations, PDBFile_from_database):
                             current_res.select('name %s' % chi2_dict[current_res.getResname()][3]))
                         x2_templist.append(chi2[0])
 
-            x1_bins = bin_me(x1_templist)
-            xangles_dict['%s%s' % (mutation[0], mutation[1])]['X1'] = x1_bins
+            # Adds raw X angles to output dictionary
+            xangles_dict['%s%s' % (mutation[1], mutation[0])]['X1'] = x1_templist
 
             if x2_templist != []:
-                x2_bins = bin_me(x2_templist)
-                xangles_dict['%s%s' % (mutation[0], mutation[1])]['X2'] = x2_bins
+                xangles_dict['%s%s' % (mutation[1], mutation[0])]['X2'] = x2_templist
+
+            # x1_bins = bin_me(x1_templist)
+            # xangles_dict['%s%s' % (mutation[0], mutation[1])]['X1'] = x1_bins
+            #
+            # if x2_templist != []:
+            #     x2_bins = bin_me(x2_templist)
+            #     xangles_dict['%s%s' % (mutation[0], mutation[1])]['X2'] = x2_bins
 
                 # Outputs Ramachandran-like plots for X1 and X2, Violin plots (in progress) if only X1 is present
                 # import pandas as pd
@@ -663,8 +669,6 @@ def do_math(outputdir, predID):
 
     MutagenesisID_list, mutations, PredID_Details, df, REU_list = Fetch_Mutant_ID(predID)
 
-    print MutagenesisID_list
-
     for Wildtype_PDB_ID, Mutant_PDB_ID, MutagenesisID_index in MutagenesisID_list:
         fresh_wt_pdb, tmp_wt_pdb, fresh_mut_pdb, tmp_mut_pdb, residue_maps, wt_to_mut_chains = Generate_PDBs_and_Resmaps(PredID_Details, Mutant_PDB_ID, MutagenesisID_index, df)
 
@@ -682,7 +686,7 @@ def do_math(outputdir, predID):
         mut_pdb_neighbors = neighborhood_coordinates(neighbors, input_pdbs, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type='Mutant PDB')
         mut_pdb_points = mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tmp_mut_pdb, tmp_wt_pdb, input_type = 'Mutant PDB')
 
-        # Get prody coordinates for RosettaOut Ensemble structures and reference WT crystal structure backbone
+        # Get prody coordinates for Mutant and WT reference crystal structure backbone
         #### wt_global_bb
         wt_pdb = prody.parsePDB(tmp_wt_pdb)
         atom_list = []
@@ -690,7 +694,7 @@ def do_math(outputdir, predID):
             if atom.getChid() + str(atom.getResnum()) in global_acceptable_atoms['RosettaOut']:
                 atom_list.append(str(atom.getIndex()))
         wt_global_bb = [wt_pdb.select('index ' + ' '.join(atom_list))]
-        global_ca_bb = global_ca
+        global_ca_bb = mut_pdb_global
 
         #### wt_neighbors_bb
         atom_list = []
@@ -698,34 +702,63 @@ def do_math(outputdir, predID):
             if (atom.getChid(), atom.getResnum(), atom.getName()) in [(waffle[0], waffle[2], waffle[3]) for waffle in neighborhood_acceptable_atoms]:
                 atom_list.append(str(atom.getIndex()))
         wt_neighbors_bb = [wt_pdb.select('index ' + ' '.join(atom_list))]
-        neighborhood_bb = [asdf.select('name C CA N') for asdf in neighborhood]
+        neighborhood_bb = [asdf.select('name C CA N') for asdf in mut_pdb_neighbors]
 
         #### wt_points_bb
         wt_points_bb = {}
         point_mutants_bb = {}
         for mutant_residue in point_mutants:
             wt_points_bb[mutant_residue] = [wt_pdb.select('name C CA N and chain %s and resnum %s' %(mutant_residue[:1], mutant_residue[1:]))]
-            point_mutants_bb[mutant_residue] = [waffle.select('name C CA N') for waffle in point_mutants[mutant_residue]]
+            point_mutants_bb[mutant_residue] = [waffle.select('name C CA N') for waffle in mut_pdb_points[mutant_residue]]
 
         # Add stuff to Output Dictionary
         return_output_dict['%s : %s' %(Wildtype_PDB_ID, Mutant_PDB_ID)] = {}
         #### Calculate RosettaOut - Mutant Reference RMSDs
-        return_output_dict['%s : %s' %(Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant - Point Mutant RMSD'] = rmsd( pyrmsd_calc, point_mutants, mut_pdb_points)
+        return_output_dict['%s : %s' %(Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant - Point_Mutant RMSD'] = rmsd( pyrmsd_calc, point_mutants, mut_pdb_points)
         return_output_dict['%s : %s' %(Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant - Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood, mut_pdb_neighbors)
         return_output_dict['%s : %s' %(Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant - Global RMSD'] = rmsd(pyrmsd_calc, global_ca, mut_pdb_global)
 
-        #### Calculate RosettaOut - WT Reference RMSDs
-        return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['WT BB - Point Mutant RMSD'] = rmsd(pyrmsd_calc, point_mutants_bb, wt_points_bb)
-        return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['WT BB - Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood_bb, wt_neighbors_bb)
-        return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['WT BB - Global RMSD'] = rmsd(pyrmsd_calc, global_ca_bb, wt_global_bb)
+        # #### Calculate RosettaOut - WT Reference RMSDs
+        # return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['WT_BB - Point_Mutant RMSD'] = rmsd(pyrmsd_calc, point_mutants_bb, wt_points_bb)
+        # return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['WT_BB - Neighborhood RMSD'] = rmsd(pyrmsd_calc, neighborhood_bb, wt_neighbors_bb)
+        # return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['WT_BB - Global RMSD'] = rmsd(pyrmsd_calc, global_ca_bb, wt_global_bb)
 
-        #### Extra Stuff
-        return_output_dict['%s : %s' %(Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant Complex REUs'] = REU_list
-        # chi_angles_output = chi_angles(input_pdbs, predID, mutations, fresh_pdb)
-        # if chi_angles_output != {}:
-        #     return_output_dict['X angles'] = chi_angles_output
-        # else:
-        #     print 'No X angles!'
+        #### RosettaOut Rossetta Energy Scores
+        return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant Complex REUs'] = REU_list
+
+        #### Mutant PDB Point Mutant X Angles
+
+        # DEBUGGING
+        pprint.pprint(residue_maps)
+        pprint.pprint(wt_to_mut_chains)
+
+        mutations_mut_num = []
+        for mutation in mutations:
+            print mutation
+            print wt_to_mut_chains[mutation[1]]
+            print residue_maps[(mutation[1], wt_to_mut_chains[mutation[1]])]['%s %s ' % (mutation[1], ('   ' + str(mutation[0]))[-3:])].split()[1]
+            mutations_mut_num.append([residue_maps[(mutation[1], wt_to_mut_chains[mutation[1]])]['%s %s ' % (mutation[1], ('   ' + str(mutation[0]))[-3:])].split()[1],
+                                      wt_to_mut_chains[mutation[1]],
+                                      mutation[2],
+                                      mutation[3]]
+                                     )
+
+        return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant PDB X Angles'] = chi_angles([tmp_mut_pdb], mutations_mut_num)
+
+        return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['WT-Mutant BackBone RMSDs'] = {}
+        return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['WT-Mutant BackBone RMSDs']['Global'] = rmsd(pyrmsd_calc, global_ca_bb, wt_global_bb)
+        return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['WT-Mutant BackBone RMSDs']['Neighborhood'] = rmsd(pyrmsd_calc, neighborhood_bb, wt_neighbors_bb)
+        return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['WT-Mutant BackBone RMSDs']['Point_Mutant'] = rmsd(pyrmsd_calc, point_mutants_bb, wt_points_bb)
+
+        chi_angles_output = chi_angles(input_pdbs, mutations)
+        #### X angle output
+
+        # print return_output_dict['%s : %s' %(Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant - Point_Mutant RMSD'][0]
+        for point_mutant in return_output_dict['%s : %s' %(Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant - Point_Mutant RMSD']:
+            if chi_angles_output != {}:
+                return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant - Point_Mutant RMSD'][point_mutant]['X Angles'] = chi_angles_output[point_mutant]
+            else:
+                return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant - Point_Mutant RMSD'][point_mutant]['X Angles'] = 'No X Angles!'
 
     return return_output_dict
 
@@ -781,13 +814,13 @@ def main():
 
     # CHANGE FOR EACH RUN
     job_name = 'ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014'
-    PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
+    # PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
 
     # job_name = 'zemu-psbrub_1.6-pv-nt50000-bruball'
     # PredID_list = [89049, 89051, 89052, 89115, 89245, 89253, 89270, 89271, 89308, 89309, 89310, 89311, 89312, 89354, 89355, 89356, 89357, 89358, 89359, 89407, 89571, 89573, 89574, 89575, 89576, 89577, 89578, 89579, 89580, 89581, 89590, 89611, 89614, 89618, 89621, 89993, 89996, 90004, 90021, 90114, 90119, 90153, 90158, 90167, 90171, 90203]
 
     # DEBUGGING
-    # PredID_list = [int(sys.argv[1])] #94535 has an RMSD of 22A for some reason...
+    PredID_list = [int(sys.argv[1])] #94535 has an RMSD of 22A for some reason...
 
     pool = multiprocessing.Pool(25)
     allmyoutput = pool.map(multiprocessing_stuff, PredID_list, 1)
