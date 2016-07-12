@@ -6,27 +6,59 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gs
 import pickle
 import re
+import pprint
+import math
 
 def dataframe_construction(StructuralMetrics_pickle):
-    mutant_df = pd.DataFrame(columns=('Prediction ID', 'WT PDBID', 'Mutant PDBID', 'RMSD Type', 'Point Mutant', 'RMSD', 'Predicted DDG', 'Experimental DDG', 'Absolute Error DDG', 'PDBID : Point Mutant', 'Mutant Complex REU'))
+    mutant_df = pd.DataFrame(columns=('Prediction ID',
+                                      'WT PDBID',
+                                      'Mutant PDBID',
+                                      'RMSD Type',
+                                      'Point Mutant',
+                                      'X1',
+                                      'X2',
+                                      'RMSD',
+                                      'WT-Mutant Backbone RMSD',
+                                      'Predicted DDG',
+                                      'Experimental DDG',
+                                      'Absolute Error DDG',
+                                      'PDBID : Point Mutant',
+                                      'Mutant Complex REU'
+                                      )
+                             )
     PDB_set = set()
     tossed_set = set()
     PredID_set = set()
     mutant_set = set()
 
-    def add_to_df(PredictionID, Mutant_PDB, rmsd_type, point_mutant, rmsd_value, mutant_df, REU_score):
-        temp_df = pd.DataFrame(columns=('Prediction ID', 'WT PDBID', 'Mutant PDBID', 'RMSD Type', 'Point Mutant', 'RMSD', 'PDBID : Point Mutant', 'Mutant Complex REU'))
+    def add_to_df(PredictionID, Mutant_PDB, rmsd_type, point_mutant, rmsd_value, mutant_df, REU_score, backbone_rmsd, x1, x2):
+        temp_df = pd.DataFrame(columns=('Prediction ID',
+                                        'WT PDBID',
+                                        'Mutant PDBID',
+                                        'RMSD Type',
+                                        'Point Mutant',
+                                        'X1',
+                                        'X2',
+                                        'RMSD',
+                                        'WT-Mutant Backbone RMSD',
+                                        'PDBID : Point Mutant',
+                                        'Mutant Complex REU'))
+
         temp_df.loc[Mutant_PDB.split()[0]] = pd.Series({'Prediction ID': PredictionID,
                                                         'WT PDBID': Mutant_PDB.split()[0],
                                                         'Mutant PDBID': Mutant_PDB,
-                                                        'PDBID : Point Mutant': '%s %s' %(Mutant_PDB, point_mutant),
-                                                        'RMSD Type': rmsd_type[:-5],
+                                                        'RMSD Type': rmsd_type.split()[2],
+                                                        'Point Mutant': point_mutant,
+                                                        'X1': x1,
+                                                        'X2': x2,
                                                         'RMSD': rmsd_value,
-                                                        'Point Mutant': Mutant_PDB,
+                                                        'WT-Mutant Backbone RMSD': backbone_rmsd,
+                                                        'PDBID : Point Mutant': '%s %s' %(Mutant_PDB, point_mutant),
                                                         'Mutant Complex REU': REU_score
                                                         }
                                                        )
         mutant_df = pd.concat([mutant_df, temp_df])
+
         return mutant_df
 
     with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/%s' %StructuralMetrics_pickle, 'rb') as input:
@@ -44,7 +76,7 @@ def dataframe_construction(StructuralMetrics_pickle):
                 tossed_set.add(RMSD_dict[PredictionID][PredictionID])
             else:
                 for Mutant_PDB in RMSD_dict[PredictionID][PredictionID]:
-                    if RMSD_dict[PredictionID][PredictionID][Mutant_PDB]['Global RMSD']['Mean'] > 10:
+                    if RMSD_dict[PredictionID][PredictionID][Mutant_PDB]['Mutant - Global RMSD']['Mean'] > 10:
                         tossed_set.add(Mutant_PDB)
                     else:
                         PDB_set.add(Mutant_PDB)
@@ -63,25 +95,79 @@ def dataframe_construction(StructuralMetrics_pickle):
                 tossed_set.add(RMSD_dict[PredictionID][PredictionID])
             else:
                 for Mutant_PDB in RMSD_dict[PredictionID][PredictionID]:
-                    if RMSD_dict[PredictionID][PredictionID][Mutant_PDB]['Global RMSD']['Mean'] > 10:
+                    bb_rmsd = RMSD_dict[PredictionID][PredictionID][Mutant_PDB]['WT-Mutant BackBone RMSDs']
+                    if RMSD_dict[PredictionID][PredictionID][Mutant_PDB]['Mutant - Global RMSD']['Mean'] > 10:
                         tossed_set.add(Mutant_PDB)
                     else:
                         PDB_set.add(Mutant_PDB)
+                        print Mutant_PDB
                         for rmsd_type in RMSD_dict[PredictionID][PredictionID][Mutant_PDB]:
-                            if type(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]) == list and len(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]) < 50 : # rmsd[0] = Point Mutant Position, rmsd[1] = Dict
+                            if 'Point_Mutant' in rmsd_type:
                                 for point_mutant in RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]:
-                                    mutant_set.add('%s %s' %(Mutant_PDB, point_mutant[0]))
-                                    for rmsd_value in point_mutant[1]['Raw']:
-                                        mutant_df = add_to_df(PredictionID, Mutant_PDB, 'Point Mutant', point_mutant[0], rmsd_value, mutant_df, None)
-                            elif type(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]) == dict:
+                                    mutant_set.add('%s %s' %(Mutant_PDB, point_mutant))
+                                    for entry, rmsd_value in enumerate(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type][point_mutant]['Raw']):
+                                        if 'X1' in RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type][point_mutant]['X Angles']:
+                                            if 'X2' in RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type][point_mutant]['X Angles']:
+                                                mutant_df = add_to_df(PredictionID,
+                                                                      Mutant_PDB,
+                                                                      rmsd_type,
+                                                                      point_mutant,
+                                                                      rmsd_value,
+                                                                      mutant_df,
+                                                                      None,
+                                                                      bb_rmsd['Point_Mutant'][point_mutant]['Mean'],
+                                                                      RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type][point_mutant]['X Angles']['X1'][entry - 1],
+                                                                      RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type][point_mutant]['X Angles']['X2'][entry - 1]
+                                                                      )
+                                            else:
+                                                mutant_df = add_to_df(PredictionID,
+                                                                      Mutant_PDB,
+                                                                      rmsd_type,
+                                                                      point_mutant,
+                                                                      rmsd_value,
+                                                                      mutant_df,
+                                                                      None,
+                                                                      bb_rmsd['Point_Mutant'][point_mutant]['Mean'],
+                                                                      RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type][point_mutant]['X Angles']['X1'][entry - 1],
+                                                                      None
+                                                                      )
+                                        else:
+                                            mutant_df = add_to_df(PredictionID,
+                                                                  Mutant_PDB,
+                                                                  rmsd_type,
+                                                                  point_mutant,
+                                                                  rmsd_value,
+                                                                  mutant_df,
+                                                                  None,
+                                                                  bb_rmsd['Point_Mutant'][point_mutant]['Mean'],
+                                                                  None,
+                                                                  None
+                                                                  )
+
+
+                            elif 'Global' in rmsd_type or 'Neighborhood' in rmsd_type:
                                 for rmsd_value, REU_score in zip(RMSD_dict[PredictionID][PredictionID][Mutant_PDB][rmsd_type]['Raw'], RMSD_dict[PredictionID][PredictionID][Mutant_PDB]['Mutant Complex REUs']):
-                                    mutant_df = add_to_df(PredictionID, Mutant_PDB, rmsd_type, None, rmsd_value, mutant_df, REU_score)
+                                    mutant_df = add_to_df(PredictionID,
+                                                          Mutant_PDB,
+                                                          rmsd_type,
+                                                          None,
+                                                          rmsd_value,
+                                                          mutant_df,
+                                                          REU_score,
+                                                          bb_rmsd[rmsd_type.split()[2]]['Mean'],
+                                                          None,
+                                                          None
+                                                          )
                             else:
-                                print Mutant_PDB
+                                print rmsd_type
+                                continue
+
         with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/%s' % Dataframe_pickle, 'wb') as output:
             pickle.dump(mutant_df, output, 0)
 
     mutant_df = mutant_df.reset_index(drop = True)
+    print 'Unique WT PDBs: %s' % len(mutant_df['WT PDBID'].unique())
+    print 'Unique Mutant PDBs: %s' % len(mutant_df['Mutant PDBID'].unique())
 
     # Import dataframes
     # CHANGE FOR EACH RUN
@@ -125,6 +211,11 @@ def dataframe_construction(StructuralMetrics_pickle):
         with open('mutant_df_DDGs_cached-%s' %StructuralMetrics_pickle[18:], 'wb') as output:
             pickle.dump(mutant_df, output, 0)
 
+    # # DEBUGGING
+    import pprint
+    pprint.pprint(mutant_df)
+    mutant_df.to_csv('Current_mutant_df.csv')
+
     return RMSD_dict, mutant_df, PDB_set, mutant_set
 
 def plot_stuff(mutant_df, PDB_set, mutant_set):
@@ -134,14 +225,107 @@ def plot_stuff(mutant_df, PDB_set, mutant_set):
 
     print 'Unique WT PDBs: %s' %len(mutant_df['WT PDBID'].unique())
     print 'Unique Mutant PDBs: %s' %len(mutant_df['Mutant PDBID'].unique())
+    print 'PDB_set length: %s' %len(PDB_set)
+
+    ################################################
+    # Backbone RMSD vs. Side Chain RMSD
+    ################################################
+
+    # Generates bb_vs_sidechain_df dataframe
+    RMSD_grouped = mutant_df.groupby('RMSD Type')
+    neighborhood = RMSD_grouped.get_group('Neighborhood')
+    point_mut = RMSD_grouped.get_group('Point_Mutant')
+
+    bb_vs_sidechain_df = pd.DataFrame(columns=('Prediction ID',
+                                               'WT PDBID',
+                                               'Mutant PDBID',
+                                               'Point Mutant',
+                                               'Point Mutant RMSD',
+                                               'WT-Mutant Backbone RMSD',
+                                               'PDBID : Point Mutant',
+                                               'Group'
+                                               )
+                                      )
+    for name, group in point_mut.groupby('PDBID : Point Mutant'):
+        for index, row in group.iterrows():
+            if 'None' in row['PDBID : Point Mutant']:
+                pass
+            else:
+                print row['PDBID : Point Mutant']
+                print neighborhood.groupby('Mutant PDBID').get_group(row['Mutant PDBID'])['WT-Mutant Backbone RMSD'].iloc[0]
+                print '\n'
+                temp_series = pd.Series({'Prediction ID': row['Prediction ID'],
+                                         'WT PDBID': row['WT PDBID'],
+                                         'Mutant PDBID': row['Mutant PDBID'],
+                                         'Point Mutant': row['Point Mutant'],
+                                         'Point Mutant RMSD': row['RMSD'],
+                                         'WT-Mutant Backbone RMSD': neighborhood.groupby('Mutant PDBID').get_group(row['Mutant PDBID'])['WT-Mutant Backbone RMSD'].iloc[0],
+                                         'PDBID : Point Mutant': row['PDBID : Point Mutant']
+                                         }
+                                        )
+                bb_vs_sidechain_df = bb_vs_sidechain_df.append(temp_series, ignore_index=True)
+
+    bb_vs_sidechain_df.sort_values('WT-Mutant Backbone RMSD', inplace=True)
+    bb_vs_sidechain_df = bb_vs_sidechain_df.reset_index(drop=True)
+
+    # Output to csv for reference
+    bb_vs_sidechain_df.to_csv('bb_vs_sidechain_df.csv')
+
+    number_of_bins = 5
+    bin_size = len(bb_vs_sidechain_df['WT-Mutant Backbone RMSD']) / number_of_bins + 1
+
+    print bin_size
+    print len(bb_vs_sidechain_df['WT-Mutant Backbone RMSD'])
+
+    # Assign arbitrary bin identifiers
+    for index, row in bb_vs_sidechain_df.iterrows():
+        bb_vs_sidechain_df.loc[index, 'Group'] = ((index + 1) // bin_size)
+
+    # Find bin boundaries and add to dict
+    bin_rename_dict = {}
+    for name, group in bb_vs_sidechain_df.groupby('Group'):
+        bin_rename_dict[name] = '%s - %s' % (group['WT-Mutant Backbone RMSD'].iloc[0], group['WT-Mutant Backbone RMSD'].iloc[len(group) - 1])
+
+    # Rename bin identifiers to bin boundary values
+    for index, row in bb_vs_sidechain_df.iterrows():
+        bb_vs_sidechain_df.loc[index, 'Group'] = bin_rename_dict[bb_vs_sidechain_df.loc[index, 'Group']]
+
+    # Plotting!
+    sns.set_style('white', {'axes.grid': True, 'axes.edgecolor': '0'})
+    sns.set_context('paper', font_scale=1.5, rc={'lines.linewidth': 1})
+
+    fig, ax = plt.subplots(figsize=(20, 10))
+    fig.suptitle('WT PDB - Mutant PDB Neighborhood Backbone RMSD vs. \nMutant PDB - RosettaOut Point Mutant Residues All-Atom RMSD', fontsize = 24)
+    sns.boxplot(x=bb_vs_sidechain_df['Group'],
+                y=bb_vs_sidechain_df['Point Mutant RMSD'],
+                ax=ax
+                )
+    ax.set(xlabel='Predicted DDG Absolute Error', ylabel='Point Mutant All-atom RMSD')
+    plt.show()
+
+    # Scatterplot for Boxplot data
+    fig, ax = plt.subplots(figsize=(20, 10))
+    fig.suptitle('WT PDB - Mutant PDB Neighborhood Backbone RMSD vs. \nMutant PDB - RosettaOut Point Mutant Residues All-Atom RMSD', fontsize = 24)
+    sns.regplot(x='WT-Mutant Backbone RMSD',
+                y='Point Mutant RMSD',
+                data = bb_vs_sidechain_df
+                )
+    ax.set(xlabel='Predicted DDG Absolute Error', ylabel='Point Mutant All-atom RMSD')
+
+    plt.show()
+    sys.exit()
+    # output_pdf.savefig(sns_fig.fig, pad_inches=1, bbox_inches='tight')
 
     for type, df_subset in mutant_df.groupby('RMSD Type'):
-        if type != 'Point M':
+        if type != 'Point_Mutant':
 
             if type == 'Global':
                 description = 'Global C-alpha RMSDs'
             if type == 'Neighborhood':
                 description = 'All-atom RMSDs for Residues within 8A of Mutation'
+
+            continue
+
             ################################################
             # Pairplot
             ################################################
@@ -271,6 +455,13 @@ def plot_stuff(mutant_df, PDB_set, mutant_set):
             plt.close()
 
         else:
+            ################################################
+            # X angles
+            ################################################
+
+
+
+
             ################################################
             # Scatter plot
             ################################################
