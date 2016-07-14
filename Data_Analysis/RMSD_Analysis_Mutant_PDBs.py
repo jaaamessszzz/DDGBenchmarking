@@ -178,7 +178,7 @@ def dataframe_construction(StructuralMetrics_pickle):
     # Modify mutant_df to include Predicted DDG values
     try:
         print 'Opening cached mutant_df\n'
-        with open('mutant_df_DDGs_cached-%s' %StructuralMetrics_pickle[18:], 'rb') as input:
+        with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/mutant_df_DDGs_cached-%s' %StructuralMetrics_pickle[18:], 'rb') as input:
             mutant_df = pickle.load(input)
 
     except:
@@ -208,18 +208,98 @@ def dataframe_construction(StructuralMetrics_pickle):
                                 data_row['Experimental_ZEMu'] - data_row['Predicted'])
                     break
 
-        with open('mutant_df_DDGs_cached-%s' %StructuralMetrics_pickle[18:], 'wb') as output:
+        with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/mutant_df_DDGs_cached-%s' %StructuralMetrics_pickle[18:], 'wb') as output:
             pickle.dump(mutant_df, output, 0)
 
-    # # DEBUGGING
-    import pprint
-    pprint.pprint(mutant_df)
-    pprint.pprint(RMSD_dict)
+    # Generates bb_vs_sidechain_df dataframe
+    RMSD_grouped = mutant_df.groupby('RMSD Type')
+    neighborhood = RMSD_grouped.get_group('Neighborhood')
+    point_mut = RMSD_grouped.get_group('Point_Mutant')
+
+    try:
+        print 'Opening cached bb_vs_sidechain_df\n'
+        with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/bb_vs_sidechain_df_cached-%s' % StructuralMetrics_pickle[18:], 'rb') as input:
+            bb_vs_sidechain_df = pickle.load(input)
+
+    except:
+        print 'bb_vs_sidechain_df cache does not exist, generating it now...\n'
+        bb_vs_sidechain_df = pd.DataFrame(columns=('Prediction ID',
+                                                   'WT PDBID',
+                                                   'Mutant PDBID',
+                                                   'Point Mutant',
+                                                   'Point Mutant RMSD',
+                                                   'WT-Mutant Backbone RMSD',
+                                                   'PDBID : Point Mutant',
+                                                   'Experimental DDG',
+                                                   'Predicted DDG',
+                                                   'BB Group',
+                                                   'DDG Group'
+                                                   )
+                                          )
+        for name, group in point_mut.groupby('PDBID : Point Mutant'):
+            for index, row in group.iterrows():
+                if 'None' in row['PDBID : Point Mutant']:
+                    pass
+                else:
+                    temp_series = pd.Series({'Prediction ID': row['Prediction ID'],
+                                             'WT PDBID': row['WT PDBID'],
+                                             'Mutant PDBID': row['Mutant PDBID'],
+                                             'Point Mutant': row['Point Mutant'],
+                                             'Point Mutant RMSD': row['RMSD'],
+                                             'WT-Mutant Backbone RMSD':
+                                                 neighborhood.groupby('Mutant PDBID').get_group(
+                                                     row['Mutant PDBID'])['WT-Mutant Backbone RMSD'].iloc[0],
+                                             'PDBID : Point Mutant': row['PDBID : Point Mutant'],
+                                             'Experimental DDG': row['Experimental DDG'],
+                                             'Predicted DDG': row['Predicted DDG']
+                                             }
+                                            )
+                    bb_vs_sidechain_df = bb_vs_sidechain_df.append(temp_series, ignore_index=True)
+
+        bb_vs_sidechain_df.sort_values('WT-Mutant Backbone RMSD', inplace=True)
+        bb_vs_sidechain_df = bb_vs_sidechain_df.reset_index(drop=True)
+
+        with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/bb_vs_sidechain_df_cached-%s' % StructuralMetrics_pickle[18:], 'wb') as output:
+            pickle.dump(bb_vs_sidechain_df, output, 0)
+
+    # Assemble X1/X2 dataframes with neighborhood backbone RMSD column
+    try:
+        print 'Opening cached X angle df\n'
+        with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/X1_angle_df_cached-%s' % StructuralMetrics_pickle[18:], 'rb') as input:
+            X1_angle_df = pickle.load(input)
+
+    except:
+        print 'X1_angle_df_cached does not exist, generating it now...\n'
+        X1_angle_df = mutant_df[pd.notnull(mutant_df['X1'])]
+        del X1_angle_df['WT-Mutant Backbone RMSD']  # These values are backbone RMSDs of single point mutant residues - we don't need that
+        for index, row in X1_angle_df.iterrows():
+            X1_angle_df.loc[index, 'BB RMSD'] = \
+            neighborhood.groupby('Mutant PDBID').get_group(row['Mutant PDBID'])['WT-Mutant Backbone RMSD'].iloc[
+                0]
+            X1_angle_df.loc[index, 'Mutant X1'] = \
+            RMSD_dict[row['Prediction ID']][row['Prediction ID']][row['Mutant PDBID']]['Mutant PDB X Angles'][
+                row['Point Mutant']]['X1'][0]
+            if 'X2' in RMSD_dict[row['Prediction ID']][row['Prediction ID']][row['Mutant PDBID']][
+                'Mutant PDB X Angles'][row['Point Mutant']]:
+                X1_angle_df.loc[index, 'Mutant X2'] = \
+                RMSD_dict[row['Prediction ID']][row['Prediction ID']][row['Mutant PDBID']][
+                    'Mutant PDB X Angles'][row['Point Mutant']]['X2'][0]
+
+        X1_angle_df.sort_values('BB RMSD', inplace=True)
+        X1_angle_df = X1_angle_df.reset_index(drop=True)
+
+        with open('/kortemmelab/home/james.lucas/DDGBenchmarks_Test/Data_Analysis/RMSD_Outfiles/X1_angle_df_cached-%s' % StructuralMetrics_pickle[18:], 'wb') as output:
+            pickle.dump(X1_angle_df, output, 0)
+
+
+    # Output to csv for reference
+    bb_vs_sidechain_df.to_csv('bb_vs_sidechain_df.csv')
+    X1_angle_df.to_csv('X1_angle_df.csv')
     mutant_df.to_csv('Current_mutant_df.csv')
 
-    return RMSD_dict, mutant_df, PDB_set, mutant_set
+    return mutant_df, PDB_set, mutant_set, RMSD_dict, bb_vs_sidechain_df, X1_angle_df
 
-def plot_stuff(mutant_df, PDB_set, mutant_set, RMSD_dict):
+def plot_stuff(mutant_df, PDB_set, mutant_set, RMSD_dict, bb_vs_sidechain_df, X1_angle_df):
     from matplotlib.backends.backend_pdf import PdfPages
     # output_pdf = PdfPages('RMSD_Analysis_Output_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000.pdf')
     output_pdf = PdfPages('RMSD_Analysis_Output_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000_X-Angle_Tests.pdf') # CHANGE FOR EACH RUN
@@ -231,51 +311,6 @@ def plot_stuff(mutant_df, PDB_set, mutant_set, RMSD_dict):
     ################################################
     # Backbone RMSD vs. Side Chain RMSD
     ################################################
-
-    # Generates bb_vs_sidechain_df dataframe
-    RMSD_grouped = mutant_df.groupby('RMSD Type')
-    neighborhood = RMSD_grouped.get_group('Neighborhood')
-    point_mut = RMSD_grouped.get_group('Point_Mutant')
-
-    bb_vs_sidechain_df = pd.DataFrame(columns=('Prediction ID',
-                                               'WT PDBID',
-                                               'Mutant PDBID',
-                                               'Point Mutant',
-                                               'Point Mutant RMSD',
-                                               'WT-Mutant Backbone RMSD',
-                                               'PDBID : Point Mutant',
-                                               'Experimental DDG',
-                                               'Predicted DDG',
-                                               'BB Group',
-                                               'DDG Group'
-                                               )
-                                      )
-    for name, group in point_mut.groupby('PDBID : Point Mutant'):
-        for index, row in group.iterrows():
-            if 'None' in row['PDBID : Point Mutant']:
-                pass
-            else:
-                print row['PDBID : Point Mutant']
-                print neighborhood.groupby('Mutant PDBID').get_group(row['Mutant PDBID'])['WT-Mutant Backbone RMSD'].iloc[0]
-                print '\n'
-                temp_series = pd.Series({'Prediction ID': row['Prediction ID'],
-                                         'WT PDBID': row['WT PDBID'],
-                                         'Mutant PDBID': row['Mutant PDBID'],
-                                         'Point Mutant': row['Point Mutant'],
-                                         'Point Mutant RMSD': row['RMSD'],
-                                         'WT-Mutant Backbone RMSD': neighborhood.groupby('Mutant PDBID').get_group(row['Mutant PDBID'])['WT-Mutant Backbone RMSD'].iloc[0],
-                                         'PDBID : Point Mutant': row['PDBID : Point Mutant'],
-                                         'Experimental DDG': row['Experimental DDG'],
-                                         'Predicted DDG': row['Predicted DDG']
-                                         }
-                                        )
-                bb_vs_sidechain_df = bb_vs_sidechain_df.append(temp_series, ignore_index=True)
-
-    bb_vs_sidechain_df.sort_values('WT-Mutant Backbone RMSD', inplace=True)
-    bb_vs_sidechain_df = bb_vs_sidechain_df.reset_index(drop=True)
-
-    # Output to csv for reference
-    bb_vs_sidechain_df.to_csv('bb_vs_sidechain_df.csv')
 
     # Make bins for BB RMSDs
     number_of_bins = 5
@@ -327,9 +362,7 @@ def plot_stuff(mutant_df, PDB_set, mutant_set, RMSD_dict):
                       )
 
     ax.set(xlabel='WT PDB - Mutant PDB Neighborhood Backbone RMSD', ylabel='Mutant PDB - RosettaOut Point Mutant Residues All-Atom RMSD')
-
     output_pdf.savefig(fig, pad_inches=1, bbox_inches='tight')
-    plt.show()
 
     # Scatterplot for Boxplot data
     box_scatter = sns.lmplot(x='WT-Mutant Backbone RMSD',
@@ -342,56 +375,103 @@ def plot_stuff(mutant_df, PDB_set, mutant_set, RMSD_dict):
     box_scatter.axes[0,0].set_xlim(0,)
     title = box_scatter.fig.suptitle('WT PDB - Mutant PDB Neighborhood Backbone RMSD vs. \nMutant PDB - RosettaOut Point Mutant Residues All-Atom RMSD', fontsize=24, y=1.05)
     output_pdf.savefig(box_scatter.fig, pad_inches=1, bbox_extra_artists=[title], bbox_inches='tight')
-    plt.show()
-    output_pdf.close()
 
     ################################################
     # X angles
     ################################################
 
-    # Assemble X1/X2 dataframes with neighborhood backbone RMSD column
-    X1_angle_df = mutant_df[pd.notnull(mutant_df['X1'])]
-    del X1_angle_df['WT-Mutant Backbone RMSD'] # These values are backbone RMSDs of single point mutant residues - we don't need that
-    X1_angle_df.to_csv('ashfjksdhfjksdhfkja.csv')
-    for index, row in X1_angle_df.iterrows():
-        X1_angle_df.loc[index, 'BB RMSD'] = neighborhood.groupby('Mutant PDBID').get_group(row['Mutant PDBID'])['WT-Mutant Backbone RMSD'].iloc[0]
-        print RMSD_dict[row['Prediction ID']]
-        print RMSD_dict[row['Prediction ID']][row['Prediction ID']]
-        print RMSD_dict[row['Prediction ID']][row['Prediction ID']][row['Mutant PDBID']]
-        print RMSD_dict[row['Prediction ID']][row['Prediction ID']][row['Mutant PDBID']]['Mutant PDB X Angles']
-        print RMSD_dict[row['Prediction ID']][row['Prediction ID']][row['Mutant PDBID']]['Mutant PDB X Angles'][row['Point Mutant']]
-        print RMSD_dict[row['Prediction ID']][row['Prediction ID']][row['Mutant PDBID']]['Mutant PDB X Angles'][row['Point Mutant']]['X1']
-        X1_angle_df.loc[index, 'Mutant X1'] = RMSD_dict[row['Prediction ID']][row['Prediction ID']][row['Mutant PDBID']]['Mutant PDB X Angles'][row['Point Mutant']]['X1'][0]
-        if 'X2' in RMSD_dict[row['Prediction ID']][row['Prediction ID']][row['Mutant PDBID']]['Mutant PDB X Angles'][row['Point Mutant']]:
-            X1_angle_df.loc[index, 'Mutant X2'] = RMSD_dict[row['Prediction ID']][row['Prediction ID']][row['Mutant PDBID']]['Mutant PDB X Angles'][row['Point Mutant']]['X2'][0]
-
-    X1_angle_df.to_csv('ashfjksdhfjksdhfkja.csv')
-    sys.exit()
-
     # Make bins for BB RMSDs
     number_of_bins = 5
     X1_bin_size = len(X1_angle_df['BB RMSD']) / number_of_bins + 1
 
-    print bin_size
-    print len(bb_vs_sidechain_df['BB RMSD'])
+    print X1_bin_size
+    print len(X1_angle_df['BB RMSD'])
 
     # Assign arbitrary bin identifiers for BB Group
     for index, row in X1_angle_df.iterrows():
-        X1_angle_df.loc[index, 'BB Group'] = ((index + 1) // bin_size)
+        X1_angle_df.loc[index, 'BB Group'] = ((index + 1) // X1_bin_size)
+        print ((index + 1) // X1_bin_size)
+
     # Find bin boundaries for BB group and add to dict
     bin_rename_dict = {}
     for name, group in X1_angle_df.groupby('BB Group'):
-        bin_rename_dict[name] = '%s -\n%s' % (
-        group['BB RMSD'].iloc[0], group['BB RMSD'].iloc[len(group) - 1])
+        bin_rename_dict[name] = '%s -\n%s' % (group['BB RMSD'].iloc[0], group['BB RMSD'].iloc[len(group) - 1])
+
     # Rename bin identifiers to bin boundary values in BB group
-    for index, row in bb_vs_sidechain_df.iterrows():
+    for index, row in X1_angle_df.iterrows():
         X1_angle_df.loc[index, 'BB Group'] = bin_rename_dict[X1_angle_df.loc[index, 'BB Group']]
 
+    # Categorize X1 angles as acceptable or not
+    for index, row in X1_angle_df.iterrows():
+        X1_angle = int(row['X1'])
+        X1_upper_bound = int(row['Mutant X1'])+40
+        X1_lower_bound = int(row['Mutant X1'])-40
 
+        if X1_upper_bound > 180:
+            if 180 >= X1_angle > X1_lower_bound or (-360 + X1_upper_bound) > X1_angle >= -180:
+                X1_angle_df.loc[index, 'X1 within 40'] = 1
+            else:
+                X1_angle_df.loc[index, 'X1 within 40'] = 0
+        elif X1_lower_bound < -180:
+            if X1_upper_bound >= X1_angle > -180 or  180 > X1_angle >= (360 + X1_lower_bound):
+                X1_angle_df.loc[index, 'X1 within 40'] = 1
+            else:
+                X1_angle_df.loc[index, 'X1 within 40'] = 0
+        else:
+            if X1_upper_bound > X1_angle > X1_lower_bound:
+                X1_angle_df.loc[index, 'X1 within 40'] = 1
+            else:
+                X1_angle_df.loc[index, 'X1 within 40'] = 0
 
+    # Categorize X1+X2 angles as acceptable or not
+    for index, row in X1_angle_df.iterrows():
+        if pd.isnull(row['X2']):
+            pass
+        else:
+            X2_angle = int(row['X2'])
+            X2_upper_bound = int(row['Mutant X2'])+40
+            X2_lower_bound = int(row['Mutant X2'])-40
 
+            if X2_upper_bound > 180:
+                if (180 >= X2_angle > X2_lower_bound or (-360 + X2_upper_bound) > X2_angle >= -180) and row['X1 within 40'] == 1:
+                    X1_angle_df.loc[index, 'X1+X2 within 40'] = 1
+                else:
+                    X1_angle_df.loc[index, 'X1+X2 within 40'] = 0
+            elif X2_lower_bound < -180:
+                if (X2_upper_bound >= X2_angle > -180 or  180 > X2_angle >= (360 + X2_lower_bound)) and row['X1 within 40'] == 1:
+                    X1_angle_df.loc[index, 'X1+X2 within 40'] = 1
+                else:
+                    X1_angle_df.loc[index, 'X1+X2 within 40'] = 0
+            else:
+                if X2_upper_bound > X2_angle > X2_lower_bound and row['X1 within 40'] == 1:
+                    X1_angle_df.loc[index, 'X1+X2 within 40'] = 1
+                else:
+                    X1_angle_df.loc[index, 'X1+X2 within 40'] = 0
+    # Plotting!
+    fig, ax = plt.subplots(figsize=(10, 10))
+    asdf = sns.pointplot(x = 'BB Group',
+                         y = 'X1 within 40',
+                         data = X1_angle_df,
+                         ci = None,
+                         color = 'r',
+                         ax=ax)
+    qwer = sns.pointplot(x = 'BB Group',
+                         y = 'X1+X2 within 40',
+                         data = X1_angle_df,
+                         ci = None,
+                         color = 'b',
+                         ax=ax)
+    title = fig.suptitle(
+        'Point Mutant X-Angle Prediction',
+        fontsize=24, y=1.05)
+    ax.set(xlabel='WT PDB - Mutant PDB Neighborhood Backbone RMSD',
+           ylabel='Proportion of X angles Predicted within 40 Degrees')
+    output_pdf.savefig(fig, pad_inches=1, bbox_extra_artists=[title], bbox_inches='tight')
+    output_pdf.close()
     sys.exit()
 
+
+# Generates all RMSD Type specific plots
     for type, df_subset in mutant_df.groupby('RMSD Type'):
         if type != 'Point_Mutant':
 
@@ -591,7 +671,8 @@ def main():
     # CHANGE FOR EACH RUN
     StructuralMetrics_pickle = 'StructuralMetrics-ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014.pickle'
     # StructuralMetrics_pickle = 'StructuralMetrics-zemu-psbrub_1.6-pv-nt50000-bruball.pickle'
-    RMSD_dict, mutant_df, PDB_set, mutant_set = dataframe_construction(StructuralMetrics_pickle)
-    plot_stuff(mutant_df, PDB_set, mutant_set, RMSD_dict)
+
+    mutant_df, PDB_set, mutant_set, RMSD_dict, bb_vs_sidechain_df, X1_angle_df = dataframe_construction(StructuralMetrics_pickle)
+    plot_stuff(mutant_df, PDB_set, mutant_set, RMSD_dict, bb_vs_sidechain_df, X1_angle_df)
 
 main()

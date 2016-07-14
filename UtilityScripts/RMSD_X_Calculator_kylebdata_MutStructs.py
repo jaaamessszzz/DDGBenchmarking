@@ -115,11 +115,12 @@ def rmsd(pyrmsd_calc, coordinates, fresh_coords):
         #     x = coordinate_superposed[:, 0]
         #     y = coordinate_superposed[:, 1]
         #     z = coordinate_superposed[:, 2]
-        #     ax.scatter(x, y, -z, zdir='z', c='red')
+        #     ax.scatter(x, y, -z, zdir='z', c='red', s=200)
+        #     break
         # a = ref_coords[:, 0]
         # b = ref_coords[:, 1]
         # c = ref_coords[:, 2]
-        # ax.scatter(a, b, -c, zdir='z', c='blue', s=100)
+        # ax.scatter(a, b, -c, zdir='z', c='blue', s=500)
         # plt.show()
 
         return np.asarray(coordinates_superposed_tmp)
@@ -357,6 +358,7 @@ def mutant_coordinates(input_pdbs, mutations, residue_maps, wt_to_mut_chains, tm
 
     def generate_point_atom_list(input_pdbs, mutations, acceptable_atoms_wt_set, acceptable_atoms_mut_set, mut_key_dict, input_type):
         mutation_dict = {}
+
         for counter, mutation in enumerate(mutations):
             temp = []
             for input_pdb in input_pdbs:
@@ -563,6 +565,9 @@ def Fetch_Mutant_ID(predID):
     for score_method in scores:
         REU_list = [scores[score_method][ensemble_member]['MutantComplex']['total'] for ensemble_member in scores[score_method]]
 
+    # DEBUGGING
+    print mutations
+
     return MutagenesisID_list, mutations, PredID_Details, df, REU_list
 
 def Generate_PDBs_and_Resmaps(PredID_Details, Mutant_PDB_ID, MutagenesisID_index, df):
@@ -669,9 +674,9 @@ def do_math(outputdir, predID):
 
     MutagenesisID_list, mutations, PredID_Details, df, REU_list = Fetch_Mutant_ID(predID)
 
+
     for Wildtype_PDB_ID, Mutant_PDB_ID, MutagenesisID_index in MutagenesisID_list:
         fresh_wt_pdb, tmp_wt_pdb, fresh_mut_pdb, tmp_mut_pdb, residue_maps, wt_to_mut_chains = Generate_PDBs_and_Resmaps(PredID_Details, Mutant_PDB_ID, MutagenesisID_index, df)
-
         # PCA ANAYLSIS STUFF
         # PCA_Analysis(predID, input_pdbs, tmp_mut_pdb)
 
@@ -728,22 +733,24 @@ def do_math(outputdir, predID):
 
         #### Mutant PDB Point Mutant X Angles
 
-        # DEBUGGING
-        pprint.pprint(residue_maps)
-        pprint.pprint(wt_to_mut_chains)
-
         mutations_mut_num = []
+        mut_to_wt_positions = {}
         for mutation in mutations:
-            print mutation
-            print wt_to_mut_chains[mutation[1]]
-            print residue_maps[(mutation[1], wt_to_mut_chains[mutation[1]])]['%s %s ' % (mutation[1], ('   ' + str(mutation[0]))[-3:])].split()[1]
             mutations_mut_num.append([residue_maps[(mutation[1], wt_to_mut_chains[mutation[1]])]['%s %s ' % (mutation[1], ('   ' + str(mutation[0]))[-3:])].split()[1],
                                       wt_to_mut_chains[mutation[1]],
                                       mutation[2],
                                       mutation[3]]
                                      )
+            mut_to_wt_positions['%s%s' %(wt_to_mut_chains[mutation[1]], residue_maps[(mutation[1], wt_to_mut_chains[mutation[1]])]['%s %s ' % (mutation[1], ('   ' + str(mutation[0]))[-3:])].split()[1])] = '%s%s' %(mutation[1], mutation[0])
 
+        # X-angle dictionary keys are in mutant PDB numbering! (Chain, residue #)
         return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant PDB X Angles'] = chi_angles([tmp_mut_pdb], mutations_mut_num)
+
+        # Rename keys to WT numbering + remove mutant numbering keys
+        temp_X_angle_dict = {}
+        for key in return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant PDB X Angles']:
+            temp_X_angle_dict[mut_to_wt_positions[key]] =return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant PDB X Angles'][key]
+        return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['Mutant PDB X Angles'] = temp_X_angle_dict
 
         return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['WT-Mutant BackBone RMSDs'] = {}
         return_output_dict['%s : %s' % (Wildtype_PDB_ID, Mutant_PDB_ID)]['WT-Mutant BackBone RMSDs']['Global'] = rmsd(pyrmsd_calc, global_ca_bb, wt_global_bb)
@@ -789,7 +796,8 @@ def multiprocessing_stuff(predID):
             import traceback
             traceback.print_exc()
 
-        shutil.rmtree(my_tmp_dir)
+        # DEBUGGING!!!!!!!!
+        # shutil.rmtree(my_tmp_dir)
         return PredID_output_dict
 
     except IOError as MIA:
@@ -814,20 +822,21 @@ def main():
 
     # CHANGE FOR EACH RUN
     job_name = 'ddg_analysis_type_CplxBoltzWT16.0-prediction_set_id_zemu-brub_1.6-nt10000-score_method_Rescore-Talaris2014'
-    # PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
+    PredID_list = [94009, 94011, 94012, 94075, 94205, 94213, 94230, 94231, 94268, 94269, 94270, 94271, 94272, 94314, 94315, 94316, 94317, 94318, 94319, 94367, 94531, 94533, 94534, 94535, 94536, 94537, 94538, 94539, 94540, 94541, 94550, 94571, 94574, 94578, 94581, 94953, 94956, 94964, 94981, 95074, 95079, 95113, 95118, 95127, 95131, 95163]
 
     # job_name = 'zemu-psbrub_1.6-pv-nt50000-bruball'
     # PredID_list = [89049, 89051, 89052, 89115, 89245, 89253, 89270, 89271, 89308, 89309, 89310, 89311, 89312, 89354, 89355, 89356, 89357, 89358, 89359, 89407, 89571, 89573, 89574, 89575, 89576, 89577, 89578, 89579, 89580, 89581, 89590, 89611, 89614, 89618, 89621, 89993, 89996, 90004, 90021, 90114, 90119, 90153, 90158, 90167, 90171, 90203]
-
     # DEBUGGING
-    PredID_list = [int(sys.argv[1])] #94535 has an RMSD of 22A for some reason...
+    # PredID_list = [int(sys.argv[1])] #94535 has an RMSD of 22A for some reason...
 
     pool = multiprocessing.Pool(25)
     allmyoutput = pool.map(multiprocessing_stuff, PredID_list, 1)
     pool.close()
     pool.join()
 
-    print allmyoutput
+    pprint.pprint(allmyoutput)
+    print len(PredID_list)
+    print len (allmyoutput)
 
     print 'Dumping information to pickle'
     import pickle
