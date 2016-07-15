@@ -1,10 +1,9 @@
 <ROSETTASCRIPTS>
     <SCOREFXNS>
-        <fa_talaris2014 weights=talaris2014>
+        <fa_talaris2013 weights=talaris2013>
             <Reweight scoretype="atom_pair_constraint" weight=1.0/>
             <Reweight scoretype="mm_bend" weight=1.0/>
-        </fa_talaris2014>
-        <beta_nov15_soft weights=beta_nov15_soft/>
+        </fa_talaris2013>
     </SCOREFXNS>
     <TASKOPERATIONS>
         <ReadResfile name=readres filename="%%resfile_relpath%%/mutations_repack.resfile"/>
@@ -25,13 +24,13 @@
     <FILTERS>
     </FILTERS>
     <MOVERS>
-        <BackrubProtocol name=backrub pivot_residues="%%pivot_residues%%" mc_kt=1.6 ntrials=1000/>
+        <BackrubProtocol name=backrub pivot_residues="%%pivot_residues%%" mc_kt=1.6 ntrials=10000/>
         <AddConstraintsToCurrentConformationMover name=addcst use_distance_cst=1 coord_dev=1.0 min_seq_sep=0 max_distance=8 cst_weight=1.0 />
         <ClearConstraintsMover name=clearcst />
-        <MinMover name=minimize scorefxn=fa_talaris2014 chi=1 bb=1 type=lbfgs_armijo_nonmonotone tolerance=0.000001 max_iter=5000/>
-        <PackRotamersMover name=repack scorefxn=beta_nov15_soft task_operations="repackonly,norepack"/>
-        <PackRotamersMover name=mutate scorefxn=beta_nov15_soft task_operations="readres,norepack"/>
-        <ddG name=ddg scorefxn=fa_talaris2014 chain_name="%%chain%%"/>
+        <MinMover name=minimize scorefxn=fa_talaris2013 chi=1 bb=1 type=lbfgs_armijo_nonmonotone tolerance=0.000001 max_iter=5000/>
+        <PackRotamersMover name=repack scorefxn=fa_talaris2013 task_operations="repackonly,norepack"/>
+        <PackRotamersMover name=mutate scorefxn=fa_talaris2013 task_operations="readres,norepack"/>
+        <ddG name=ddg scorefxn=fa_talaris2013 chain_name="%%chain%%"/>
         <SavePoseMover name=savepose restore_pose=0 reference_name=backrubpdb/>
         <SavePoseMover name=restorepose restore_pose=1 reference_name=backrubpdb/>
         <DumpPdb name=dumppdb fname=WT.pdb tag_time=1/>
