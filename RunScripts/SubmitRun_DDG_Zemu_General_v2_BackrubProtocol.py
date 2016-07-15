@@ -120,7 +120,7 @@ def find_neighbors(filenum_dir, pdb_path, neighbor_distance = 8.0):
 
 #Parses dataset .json file and outputs chain to move and input PDB file directory
 def json_parser():
-    jsonload = open("data/blank_job_dict_updated.json") # Change for uniq jobs
+    jsonload = open("data/blank_job_dict.json") # Change for uniq jobs
     jsonfile = json.load(jsonload)
     key = sorted(jsonfile.keys())[sge_task_id-1]
     chaintomove = jsonfile[key]["%%chainstomove%%"]
@@ -282,7 +282,7 @@ except:
 
 import zipfile
 os.chdir(outputdir)
-with zipfile.ZipFile(os.path.join(outputdir, '%s.zip' %filenum), 'w', zipfile.ZIP_DEFLATED) as myzip:
+with zipfile.ZipFile('%s.zip' %filenum, 'w', zipfile.ZIP_DEFLATED) as myzip:
     for dirname, subdirs, files in os.walk(filenum):
         for filename in files:
             myzip.write(os.path.join(dirname, filename))
