@@ -221,6 +221,7 @@ def bash(chaintomove, inputdir, outputdir):
            '-parser:protocol',
            '../../../DDGBenchmarks_Test/RosettaScripts/DDG_Protocol_v1_BackrubProtocol.xml', # Change for unique runs
            '-ignore_unrecognized_res',
+           '-ignore_zero_occupancy',
            '-parser:script_vars',
            'resfile_relpath=%s' %(resfile_relpath),
            'pivot_residues=%s' %(pivot_residues),
@@ -279,10 +280,10 @@ try:
 except:
     print 'No error or out file!'
 
-import zipfile
-os.chdir(outputdir)
-with zipfile.ZipFile('%s.zip' %filenum, 'w', zipfile.ZIP_DEFLATED) as myzip:
-    for dirname, subdirs, files in os.walk(filenum):
-        for filename in files:
-            myzip.write(os.path.join(dirname, filename))
-shutil.rmtree(filenum, ignore_errors=True)
+# import zipfile
+# os.chdir(outputdir)
+# with zipfile.ZipFile('%s.zip' %filenum, 'w', zipfile.ZIP_DEFLATED) as myzip:
+#     for dirname, subdirs, files in os.walk(filenum):
+#         for filename in files:
+#             myzip.write(os.path.join(dirname, filename))
+# shutil.rmtree(filenum, ignore_errors=True)
