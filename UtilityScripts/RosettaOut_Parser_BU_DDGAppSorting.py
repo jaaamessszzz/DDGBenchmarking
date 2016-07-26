@@ -64,10 +64,12 @@ def parse_rosetta_out(workingdir, verbose = True):
                       "yhh_planarity",
                       "ref"]
         
-        #Determine which scoretype to enter under the StructID dict
+        # Determine which scoretype to enter under the StructID dict
         Unbound_scores = False
         Bound_scores = False
         Total_scores = False
+        # When to save scores
+        save_scores = False
 
         def return_scoretype(Unbound_scores, Bound_scores, Total_scores):
             if Unbound_scores == True:
@@ -77,14 +79,18 @@ def parse_rosetta_out(workingdir, verbose = True):
             if Total_scores == True:
                 return "Total Scores"
             
-        #Goes through line-by-line and decides what to add to dict and where
+        # Goes through line-by-line and decides what to add to dict and where
         for line in enumerate(open(filename, 'r')): #Just realized I don't need to enumerate things anymore... sorry future me
-            #WT or Mutant scores for current structID
+            if line[1] == '\n':
+                continue
+
+            # WT or Mutant scores for current structID
             if counter % 2 == 0:
                 struct_type = 'WT'
             else:
                 struct_type = 'Mutant'
-                
+
+            # Save scores under which score type
             if line[1].split()[0] == "Unbound":
                 Unbound_scores = True
                 Bound_scores = False
@@ -97,17 +103,29 @@ def parse_rosetta_out(workingdir, verbose = True):
                 Unbound_scores = False
                 Bound_scores = False
                 Total_scores = True
-                
+
+            # DDG score output: yah or nah?
+            print '*** %s ****' %line[1].split()[0]
+            print save_scores
+            if line[1].split()[0] == 'protocols.protein_interface_design.movers.ddG:':
+                save_scores = True
             #Looks for scoretype as first phrase in line, adds score to dict if present
-            for score in score_list:
-                if score in line[1].split()[0]:
-                    parsed_scores = line[1].split()
-                    temp_dict[struct_type][return_scoretype(Unbound_scores, Bound_scores, Total_scores)][parsed_scores[0]] = float( parsed_scores[1] )
-                
+
+            ##################################################################################################
+            # BACKRUB MOVER OUTPUTS SCORETERMS AS WELL, NEED TO ALTER SCRIPT TO ACCOUNT FOR THIS!!!!!!!!!!!! #
+            ##################################################################################################
+
+            if save_scores == True:
+                for score in score_list:
+                    if score in line[1].split()[0]:
+                        parsed_scores = line[1].split()
+                        temp_dict[struct_type][return_scoretype(Unbound_scores, Bound_scores, Total_scores)][parsed_scores[0]] = float( parsed_scores[1] )
             if "Sum ddg: " in line[1]:
                 parsed_sumscore = line[1].split()
                 temp_dict[struct_type][return_scoretype(Unbound_scores, Bound_scores, Total_scores)][parsed_sumscore[0]] = float( parsed_sumscore[2] )
                 counter = counter + 1
+                save_scores = False
+
                 if counter % 2 == 0:
                     if len(temp_dict['Mutant']) != 0:
                         #Add to fattydict and reset variables
@@ -130,15 +148,18 @@ def parse_rosetta_out(workingdir, verbose = True):
                 timeline = line[1].split()
                 fattydict[i]['structIDs'][structID]['Runtime'] = float( timeline[5] )
                 structID = structID + 1
-        
-        
+
         if verbose:
             print str(i) + ": " + str(structID - 1) + " structures completed"
         
         #Parse output file for Max VMem usage (GB), start/end times, and return code
         files = os.listdir(os.path.join(workingdir,  str(i)))
+        print files
         for doc in files:
-            if doc.startswith("SubmitRun_DDG_Zemu_General_v2.py.o"): ###Change for each run!!!!
+            print doc
+            print doc.startswith("SubmitRun_DDG_Zemu_General_v2_BackrubProtocol.py.o")
+            print 'ASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDFASDF'
+            if doc.startswith("SubmitRun_DDG_Zemu_General_v2_BackrubProtocol.py.o"): ###Change for each run!!!!
                 output = doc
 
                 date_format_string = '%Y-%m-%d %H:%M:%S'
@@ -164,6 +185,8 @@ def parse_rosetta_out(workingdir, verbose = True):
                         else:
                             print "Memory usage not measured in MB or GB!"
                         fattydict[i]['Max virtual memory usage:'] = float(mem_usage)
+        if 'Task return code' not in fattydict[i]:
+            fattydict[i]['Task return code'] = long(-42)
         
         #Sort both mutant and WT bound energy scores
         mutant_score_list = []
@@ -177,7 +200,6 @@ def parse_rosetta_out(workingdir, verbose = True):
         mutant_score_list = sorted(mutant_score_list)
             
         #Add new interface energy terms under each stuctID based on sorting (use a new temp dictionary)
-        
         another_temp_dict = {}
         
         for structure_ids in fattydict[i]['structIDs']:
@@ -212,7 +234,7 @@ def main():
     pprint.pprint (parsed_dict)
     #os.chdir(my_working_directory)
 
-    #open("DDG_Data.json", "w").write(json.dumps(parsed_dict, sort_keys=True,separators=(',', ': ')))
+    open("DDG_Data.json", "w").write(json.dumps(parsed_dict, sort_keys=True,separators=(',', ': ')))
 
 if __name__ == '__main__':
     main()
